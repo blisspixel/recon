@@ -38,7 +38,11 @@ def test_header_uses_the_queried_namespace_not_a_tenant_default_domain() -> None
     rendered = _render(info)
     structured = format_tenant_dict(info)
 
-    assert rendered.splitlines()[:2] == [structured["display_name"], structured["queried_domain"]]
+    assert rendered.splitlines()[:3] == [
+        f"{structured['display_name']} (unverified)",
+        structured["queried_domain"],
+        "Reserved name: results are public residue, not an organization.",
+    ]
     assert f"Tenant domain {structured['default_domain']}" in " ".join(rendered.split())
 
 
@@ -71,12 +75,13 @@ def test_key_facts_retain_the_canonical_structured_values() -> None:
 
     # The panel's default view compacts the record role out of the provider
     # line (ADR-0012) while the JSON record keeps it, so the two agree on the
-    # provider identity rather than on the exact string.
-    assert f"Provider     {compact_provider_line(str(structured['provider']))}" in rendered
-    assert f"Tenant       {structured['tenant_id']} • {structured['region']}" in rendered
-    assert f"Auth         {structured['auth_type']}" in rendered
-    assert f"Cloud        {structured['cloud_instance']} ({structured['tenant_region_sub_scope']})" in rendered
-    assert f"Confidence   ●●● {structured['confidence'].capitalize()} (3 sources)" in rendered
+    # provider identity rather than on the exact string. "Tenant domain" is
+    # present, so every key-fact value shares the 16th column.
+    assert f"Provider      {compact_provider_line(str(structured['provider']))}" in rendered
+    assert f"Tenant        {structured['tenant_id']} • {structured['region']}" in rendered
+    assert f"Auth          {structured['auth_type']}" in rendered
+    assert f"Cloud         {structured['cloud_instance']} ({structured['tenant_region_sub_scope']})" in rendered
+    assert f"Confidence    ●●● {structured['confidence'].capitalize()} (3 sources)" in rendered
 
 
 def test_multicloud_summary_excludes_evidence_from_an_unavailable_channel() -> None:

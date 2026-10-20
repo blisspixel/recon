@@ -440,7 +440,7 @@ def build_infrastructure_clusters(
             comms, modularity, algorithm = _louvain_partition(g)
         except (nx.NetworkXError, RuntimeError, ValueError) as exc:
             logger.warning(
-                "Louvain failed on %d-node graph: %s — falling back to connected components",
+                "Louvain failed on %d-node graph: %s; falling back to connected components",
                 node_count,
                 exc,
             )

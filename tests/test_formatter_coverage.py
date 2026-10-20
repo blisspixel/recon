@@ -501,7 +501,7 @@ class TestRenderTenantPanelEdgeCases:
 
         get_console().print(render_tenant_panel(info))
         out = _strip(buf.getvalue())
-        # Format: "Note" header + "Some sources unavailable (...)"
+        # Format: "Note" header + "N sources unavailable (...)"
         assert "Note" in out
         assert "crt.sh" in out
         assert "unavailable" in out

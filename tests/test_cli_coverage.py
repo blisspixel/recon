@@ -152,9 +152,9 @@ class TestDoctorFailures:
 
         result = runner.invoke(app, ["doctor"])
         # A failed core check (DNS here) now sets a non-zero exit so a script
-        # can gate on `recon doctor`; the FAIL row is still rendered.
+        # can gate on `recon doctor`; the fail row is still rendered.
         assert result.exit_code == 1
-        assert "FAIL" in result.output
+        assert "fail  DNS resolution" in result.output
 
 
 class TestBatchEdgeCases:

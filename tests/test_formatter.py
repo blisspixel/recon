@@ -407,7 +407,8 @@ class TestConfidenceColorMappingCompleteness:
     """Property 20: Confidence color mapping completeness.
 
     For any ConfidenceLevel value, CONFIDENCE_COLORS should contain a mapping for
-    that value, and the mapped color should be one of "green", "yellow", or "red".
+    that value, and the mapped color is the theme role for that level: High
+    success (green), Medium info (blue), Low warning (yellow).
 
     **Validates: Requirements 3.6**
     """
@@ -415,9 +416,10 @@ class TestConfidenceColorMappingCompleteness:
     @given(level=confidence_st)
     @settings(max_examples=100)
     def test_all_confidence_levels_have_valid_color(self, level: ConfidenceLevel):
+        expected = {ConfidenceLevel.HIGH: "green", ConfidenceLevel.MEDIUM: "blue", ConfidenceLevel.LOW: "yellow"}
         assert level in CONFIDENCE_COLORS, f"{level} not in CONFIDENCE_COLORS"
-        assert CONFIDENCE_COLORS[level] in {"#a3d9a5", "#7ec8e3", "#e07a5f"}, (
-            f"Color for {level} is {CONFIDENCE_COLORS[level]!r}, expected a valid palette color"
+        assert CONFIDENCE_COLORS[level] == expected[level], (
+            f"Color for {level} is {CONFIDENCE_COLORS[level]!r}, expected the {expected[level]!r} role"
         )
 
 

@@ -14,10 +14,11 @@ from typing import TYPE_CHECKING
 
 import typer
 
-from recon_tool.cli.shared import render_diagnostic_status_row as _render_status_row
+from recon_tool.cli.shared import render_status_row as _render_status_row
 from recon_tool.cli.shared import safe_diagnostic_markup as _safe_markup
 from recon_tool.exit_codes import EXIT_ERROR, EXIT_INTERNAL, EXIT_VALIDATION
 from recon_tool.formatter import get_console, get_err_console
+from recon_tool.formatter.theme import ERROR, SUCCESS, WARNING
 
 if TYPE_CHECKING:
     from rich.console import Console
@@ -62,7 +63,7 @@ def mcp_callback(ctx: typer.Context) -> None:
         from recon_tool.server import main as server_main
     except ImportError as exc:
         get_console().print(
-            "[red]MCP dependency unavailable in this environment.[/red]\n"
+            f"[{ERROR}]MCP dependency unavailable in this environment.[/{ERROR}]\n"
             "  Reinstall with: [bold]pip install -U recon-tool[/bold]"
         )
         raise SystemExit(EXIT_ERROR) from exc
@@ -123,7 +124,7 @@ def mcp_install_command(
 
     if client not in SUPPORTED_CLIENTS:
         console.print(
-            f"[red]Unknown client `{_safe_markup(client)}`.[/red]\n  Supported: {', '.join(SUPPORTED_CLIENTS)}"
+            f"[{ERROR}]Unknown client `{_safe_markup(client)}`.[/{ERROR}]\n  Supported: {', '.join(SUPPORTED_CLIENTS)}"
         )
         raise typer.Exit(EXIT_VALIDATION)
 
@@ -132,7 +133,9 @@ def mcp_install_command(
     elif scope in {"user", "workspace"}:
         resolved_scope = scope
     else:
-        console.print(f"[red]--scope must be `user`, `workspace`, or `auto` (got `{_safe_markup(scope)}`)[/red]")
+        console.print(
+            f"[{ERROR}]--scope must be `user`, `workspace`, or `auto` (got `{_safe_markup(scope)}`)[/{ERROR}]"
+        )
         raise typer.Exit(EXIT_VALIDATION)
 
     # `--config-path ~/foo.json` is a common reflex on macOS / Linux and
@@ -148,7 +151,7 @@ def mcp_install_command(
             force=force,
         )
     except (InstallError, ValueError) as exc:
-        console.print(f"[red]install refused:[/red] {_safe_markup(exc)}")
+        console.print(f"[{ERROR}]install refused:[/{ERROR}] {_safe_markup(exc)}")
         raise typer.Exit(EXIT_VALIDATION) from exc
 
     console.print()
@@ -160,7 +163,7 @@ def mcp_install_command(
     console.print(f"  action    {_safe_markup(plan.action)}")
     if plan.existing_block is not None and plan.action == "replace":
         console.print(
-            "  [yellow]existing recon block will be replaced.[/yellow] Use --dry-run to preview without writing."
+            f"  [{WARNING}]existing recon block will be replaced.[/{WARNING}] Use --dry-run to preview without writing."
         )
     if plan.parent_dirs_to_create:
         console.print(f"  mkdir     {len(plan.parent_dirs_to_create)} new parent dir(s)")
@@ -183,10 +186,10 @@ def mcp_install_command(
             dry_run=False,
         )
     except (InstallError, ValueError, OSError) as exc:
-        console.print(f"[red]install failed:[/red] {_safe_markup(exc)}")
+        console.print(f"[{ERROR}]install failed:[/{ERROR}] {_safe_markup(exc)}")
         raise typer.Exit(EXIT_INTERNAL) from exc
 
-    console.print(f"  [green]wrote {_safe_markup(result.path)}[/green]")
+    console.print(f"  [{SUCCESS}]wrote {_safe_markup(result.path)}[/{SUCCESS}]")
     console.print()
 
     # Emit the cwd-shadow warning when the fallback launch
@@ -195,7 +198,7 @@ def mcp_install_command(
     # so MCP clients on Python 3.11+ are protected.
     fallback_warning = warn_if_fallback()
     if fallback_warning is not None:
-        console.print(f"  [yellow]{_safe_markup(fallback_warning)}[/yellow]")
+        console.print(f"  [{WARNING}]{_safe_markup(fallback_warning)}[/{WARNING}]")
         console.print()
 
     _render_install_verification(client, result.path.absolute())
@@ -229,7 +232,7 @@ def _resolve_launch_cwd(launch_cwd: str | None) -> Path | None:
         is_dir = False
     if not is_dir or launch_dir is None:
         get_err_console().print(
-            f"[red]--launch-cwd is not an existing directory:[/red] {_safe_markup(launch_cwd)}",
+            f"[{ERROR}]--launch-cwd is not an existing directory:[/{ERROR}] {_safe_markup(launch_cwd)}",
             soft_wrap=True,
         )
         raise typer.Exit(EXIT_VALIDATION)
@@ -256,7 +259,7 @@ def mcp_doctor_command(
         from recon_tool.mcp_client.doctor import REQUIRED_RESOURCES, run_doctor, run_generated_launch_check
     except ImportError as exc:
         get_console().print(
-            "[red]MCP dependency unavailable in this environment.[/red]\n"
+            f"[{ERROR}]MCP dependency unavailable in this environment.[/{ERROR}]\n"
             "  Reinstall with: [bold]pip install -U recon-tool[/bold]"
         )
         raise SystemExit(EXIT_ERROR) from exc
@@ -289,30 +292,25 @@ def mcp_doctor_command(
         else:
             console.print(f"  [bold]{_safe_markup(title)}[/bold]")
         for check in report.checks:
-            mark = "ok" if check.status == "ok" else "FAIL"
-            style = "green" if check.status == "ok" else "red"
-            _render_status_row(
-                console,
-                mark=mark,
-                style=style,
-                name=check.name,
-                detail=check.detail,
-            )
+            _render_status_row(console, check.status, check.name, check.detail)
         console.print()
 
     console.print(f"  elapsed: {isolated.elapsed_seconds + generated.elapsed_seconds:.2f}s")
     console.print()
 
     if not (isolated.ok and generated.ok):
+        failed = sum(1 for check in (*isolated.checks, *generated.checks) if check.status == "fail")
+        noun = "check" if failed == 1 else "checks"
         console.print(
-            "  [red]MCP self-check failed.[/red] Run "
-            "[bold]recon doctor --mcp[/bold] for the static-shape "
-            "diagnostics, or check stderr from the spawned server."
+            f"  [{ERROR}]MCP self-check failed: {failed} {noun} failed. "
+            "Next: recon doctor --mcp for the static-shape diagnostics, "
+            f"or check stderr from the spawned server.[/{ERROR}]",
+            soft_wrap=True,
         )
         raise typer.Exit(EXIT_INTERNAL)
 
     exercised = generated.launch.cwd if generated.launch is not None else None
-    console.print("  [green]All checks passed.[/green]")
+    console.print(f"  [{SUCCESS}]All checks passed.[/{SUCCESS}]")
     console.print(f"  Verified: canonical tool registrations and {len(REQUIRED_RESOURCES)} local JSON resource reads.")
     console.print(
         f"  Generated launch verified from {_safe_markup(exercised or 'the current directory')} only; "

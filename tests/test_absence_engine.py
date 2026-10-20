@@ -157,7 +157,7 @@ class TestEvaluateAbsenceSignals:
         assert set(result[0].matched) == {"proofpoint", "mimecast", "barracuda"}
 
     def test_absence_signal_name_format(self) -> None:
-        """Absence signal name follows '{parent} — Missing Counterparts' pattern."""
+        """Absence signal name follows '{parent}: Missing Counterparts' pattern."""
         sig = _make_signal(
             "Synthetic Alpha AI",
             candidates=("openai",),
@@ -168,7 +168,7 @@ class TestEvaluateAbsenceSignals:
 
         result = evaluate_absence_signals([match], (sig,), detected)
         assert len(result) == 1
-        assert result[0].name == "Synthetic Alpha AI \u2014 Missing Counterparts"
+        assert result[0].name == "Synthetic Alpha AI: Missing Counterparts"
 
 
 # ── 14.2: Built-in expected_counterparts definitions ──────────────────
@@ -516,7 +516,7 @@ class TestProperty2AbsenceSignalBiconditional:
         fired_names = {m.name for m in fired_matches}
 
         for sig in all_signals:
-            absence_for_sig = [r for r in result if r.name == f"{sig.name} \u2014 Missing Counterparts"]
+            absence_for_sig = [r for r in result if r.name == f"{sig.name}: Missing Counterparts"]
 
             parent_fired = sig.name in fired_names
             has_counterparts = len(sig.expected_counterparts) > 0

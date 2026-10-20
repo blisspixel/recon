@@ -174,7 +174,7 @@ def _parse_detection_weight(raw_weight: Any, name: str, source: str) -> float:
         weight = float(raw_weight)
     except (TypeError, ValueError):
         logger.warning(
-            "Fingerprint %r detection has non-numeric weight %r in %s — defaulting to 1.0",
+            "Fingerprint %r detection has non-numeric weight %r in %s; defaulting to 1.0",
             name,
             raw_weight,
             source,
@@ -182,7 +182,7 @@ def _parse_detection_weight(raw_weight: Any, name: str, source: str) -> float:
         return 1.0
     if weight < 0.0 or weight > 1.0:
         logger.warning(
-            "Fingerprint %r detection has out-of-range weight %r in %s — defaulting to 1.0",
+            "Fingerprint %r detection has out-of-range weight %r in %s; defaulting to 1.0",
             name,
             raw_weight,
             source,
@@ -197,7 +197,7 @@ def _parse_cname_target_tier(det: dict[str, Any], name: str, source: str) -> str
     if isinstance(raw_tier, str) and raw_tier in _VALID_CNAME_TARGET_TIERS:
         return raw_tier
     logger.warning(
-        "Fingerprint %r cname_target detection has invalid tier %r in %s — defaulting to application",
+        "Fingerprint %r cname_target detection has invalid tier %r in %s; defaulting to application",
         name,
         raw_tier,
         source,
@@ -232,7 +232,7 @@ def _parse_detection_rule(det: Any, name: str, source: str) -> DetectionRule | N
     det_type = det.get("type")
     if not isinstance(det_type, str) or det_type not in _VALID_DETECTION_TYPES:
         logger.warning(
-            "Fingerprint %r has unknown detection type %r in %s — skipped",
+            "Fingerprint %r has unknown detection type %r in %s; skipped",
             name,
             det_type,
             source,
@@ -311,7 +311,7 @@ def _validate_fingerprint(fp: dict[str, Any], source: str) -> Fingerprint | None
     Does NOT mutate the input dict. Returns a frozen dataclass.
     """
     if not isinstance(fp, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
-        logger.warning("Non-dict fingerprint entry in %s — skipped", source)
+        logger.warning("Non-dict fingerprint entry in %s; skipped", source)
         return None
 
     name = fp.get("name")
@@ -322,7 +322,7 @@ def _validate_fingerprint(fp: dict[str, Any], source: str) -> Fingerprint | None
 
     detections_raw = fp.get("detections")
     if not isinstance(detections_raw, list) or not detections_raw:
-        logger.warning("Fingerprint %r has no detections in %s — skipped", name, source)
+        logger.warning("Fingerprint %r has no detections in %s; skipped", name, source)
         return None
 
     fields = _parse_fingerprint_fields(fp, name, source)
@@ -337,7 +337,7 @@ def _validate_fingerprint(fp: dict[str, Any], source: str) -> Fingerprint | None
             valid_detections.append(rule)
 
     if not valid_detections:
-        logger.warning("Fingerprint %r has no valid detections in %s — skipped", name, source)
+        logger.warning("Fingerprint %r has no valid detections in %s; skipped", name, source)
         return None
 
     def _opt_str(field_name: str) -> str | None:
@@ -384,7 +384,7 @@ def _load_from_path(path: Path) -> list[Fingerprint]:
         raw = loaded
     else:
         logger.warning(
-            "Unexpected YAML structure in %s — expected dict with 'fingerprints' key or list",
+            "Unexpected YAML structure in %s; expected dict with 'fingerprints' key or list",
             source,
         )
         return []

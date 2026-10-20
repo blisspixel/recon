@@ -17,6 +17,7 @@ from rich.markup import escape
 from recon_tool.cli.catalog_rendering import print_field, print_indented
 from recon_tool.exit_codes import EXIT_INTERNAL, EXIT_VALIDATION
 from recon_tool.formatter import get_console
+from recon_tool.formatter.theme import ERROR, WARNING
 from recon_tool.validator import strip_control_chars
 
 if TYPE_CHECKING:
@@ -103,16 +104,16 @@ def _render_listing_state(console: Console, listing: CacheListing[Any]) -> None:
             console,
             f"Overview limit: inspected {listing.inspected} of {listing.total} files; {omitted} not inspected.",
             indent=4,
-            style="yellow",
+            style=WARNING,
         )
-        print_indented(console, "Inspect every completed entry:", indent=4, style="yellow")
-        print_indented(console, "recon cache show --all", indent=6, style="yellow")
+        print_indented(console, "Inspect every completed entry:", indent=4, style=WARNING)
+        print_indented(console, "recon cache show --all", indent=6, style=WARNING)
     if listing.failed:
-        console.print(f"    [red]Inspection failures: {listing.failed}[/red]")
+        console.print(f"    [{ERROR}]Inspection failures: {listing.failed}[/{ERROR}]")
     if listing.temporary_files:
         console.print(
-            f"    [red]Temporary write artifacts: {listing.temporary_files} "
-            "(payload not inspected; remove with `recon cache clear --all`).[/red]"
+            f"    [{ERROR}]Temporary write artifacts: {listing.temporary_files} "
+            f"(payload not inspected; remove with `recon cache clear --all`).[/{ERROR}]"
         )
 
 
@@ -124,7 +125,7 @@ def _render_result_inspection(
 
     console.print("  [bold]Result cache[/bold]")
     if inspection.failed:
-        console.print("    Status:     [red]could not inspect[/red]")
+        console.print(f"    Status:     [{ERROR}]could not inspect[/{ERROR}]")
     elif inspection.entry is None:
         console.print("    Status:     no entry")
     else:
@@ -144,7 +145,7 @@ def _render_ct_inspection(console: Console, inspection: CacheInspection[CTCacheI
 
     console.print("  [bold]CT cache[/bold]")
     if inspection.failed:
-        console.print("    Status:     [red]could not inspect[/red]")
+        console.print(f"    Status:     [{ERROR}]could not inspect[/{ERROR}]")
     elif inspection.entry is None:
         console.print("    Status:     no entry")
     else:

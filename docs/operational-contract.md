@@ -127,10 +127,26 @@ text are returned only through the caller's private tool response and are not
 copied into operator logs. Successful validation is required before a domain
 value can appear in ordinary cache, resolution, or failure diagnostics.
 
-Interactive cache-miss lookups use one deterministic, outcome-neutral progress
-message; chain resolution uses a separate label for that selected operation.
-Progress text does not claim that an individual collector, inference pass, or
-posture analysis is currently running. `--debug` enables diagnostics from both
+Human cache-miss lookups (the panel and `--plain`, including the exposure,
+gaps and compare views) report collection on stderr through the source ladder:
+one row per source family, settled only by a progress event the resolver
+emits when that source returns, never by elapsed time. The ladder animates
+only on an interactive stderr and is static under `--no-color`, `NO_COLOR`,
+`TERM=dumb`, `CI`, `RECON_NO_ANIMATION`, and `--debug`. Every human cache-miss
+lookup ends its stderr progress with one source-health line, such as
+`6 sources: 4 matched, 2 no match`, counted per collection unit. `--json`,
+`--md` and `--explain-dag` print no ladder and no health line. Chain
+resolution keeps a separate outcome-neutral label for that operation. Progress
+text does not claim that an inference pass or posture analysis is running.
+
+Without `--debug`, warnings logged by collectors during a lookup, chain, batch
+or review are captured and printed once on stderr after collection, grouped by
+condition, deduplicated, bounded to three named hosts per line, and reduced to
+hostname characters: for example `1 host could not be resolved (...). Run recon
+doctor.` This applies to `--json` too, where the summary replaces raw warning
+lines on stderr and stdout carries only the payload. A DNS resolution failure
+is worded `could not resolve`; only a destination refused for a private
+address uses `skipped: resolves to a private address`. `--debug` enables diagnostics from both
 owned logger namespaces (`recon` and `recon_tool`), installs one CLI stderr
 handler per namespace without adding another on repeat configuration, and
 prevents propagation to host root handlers. Direct handlers explicitly
@@ -167,6 +183,18 @@ later phase fails. This live server check does not inspect a client's saved
 configuration; `recon doctor --client=<name>` covers that boundary.
 Default mode contacts Microsoft identity endpoints, DNS for `example.com`, and
 crt.sh using synthetic inputs; it does not accept or query a target namespace.
+It also asks the system resolver for one random name under the reserved
+`.invalid` top-level domain. Any answer other than NXDOMAIN is a `warn` row
+naming a resolver that answers names that should not exist, a condition that
+makes related-domain results unreliable (see
+[limitations](limitations.md#resolvers-that-answer-names-that-should-not-exist)).
+That query runs only in doctor; lookups add no probe for it.
+Every doctor mode prints the same lowercase status words, `ok`, `warn`, `fail`,
+and `info`, and closes with a summary in the color of its worst status. A
+failure summary counts the failed rows and ends with a `Next:` step.
+`recon doctor --json` and `recon doctor --client=<name> --json` emit the same
+rows as one JSON object on stdout with the human view's exit code; see
+[schema.md](schema.md#doctor-report-recon-doctor---json).
 The `--fix`, `--mcp`, and `--client` modes are local-only. Every dynamic doctor
 row strips control bytes, escapes terminal markup, and bounds displayed detail.
 Every ordinary `httpx.RequestError` becomes a named failed row for a core probe

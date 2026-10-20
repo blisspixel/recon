@@ -17,6 +17,8 @@ from rich.text import Text
 
 from recon_tool.exposure import ExposureAssessment, GapReport
 from recon_tool.exposure_models import ExposureIndex
+from recon_tool.formatter.layout import BORDERED_PANEL_WIDTH, FittedPanel
+from recon_tool.formatter.theme import ERROR, GAP_SEVERITY_ROLE, MUTED, SUCCESS, WARNING, glyph
 
 
 def _evidence_list(refs: tuple[Any, ...]) -> list[dict[str, str]]:
@@ -186,7 +188,7 @@ def _append_hardening_status(text: Text, assessment: ExposureAssessment) -> None
     for control in assessment.hardening_status.controls:
         unavailable = control.detail == "source unavailable"
         mark = "?" if unavailable else "+" if control.present else "-"
-        style = "yellow" if unavailable else "green" if control.present else "red"
+        style = WARNING if unavailable else SUCCESS if control.present else ERROR
         text.append("    ")
         text.append(mark, style=style)
         text.append(f" {control.name}: {control.detail}\n")
@@ -291,14 +293,16 @@ def render_exposure_panel(assessment: ExposureAssessment) -> Panel:
     if assessment.consistency_observations:
         text.append("\n  Consistency\n", style="bold")
         for obs in assessment.consistency_observations:
-            text.append(f"    - {obs.observation}\n", style="#e6c07b")
+            text.append("    ")
+            text.append("-", style=f"bold {WARNING}")
+            text.append(f" {obs.observation}\n")
 
     _append_hardening_status(text, assessment)
 
-    return Panel(
+    return FittedPanel(
         text,
         title="Exposure Assessment",
-        width=80,
+        width=BORDERED_PANEL_WIDTH,
         padding=(1, 2),
         border_style="dim",
     )
@@ -306,16 +310,14 @@ def render_exposure_panel(assessment: ExposureAssessment) -> Panel:
 
 # ── Gap report rendering ────────────────────────────────────────────────
 
-_SEVERITY_COLORS: dict[str, str] = {
-    "high": "#e07a5f",
-    "medium": "#e6c07b",
-    "low": "#7ec8e3",
-}
+# Severity role colors come from the single table in formatter/theme.py.
+_SEVERITY_COLORS: dict[str, str] = dict(GAP_SEVERITY_ROLE)
 
+# Glyph names, resolved through theme.glyph() so ASCII mode prints H, M, L.
 _SEVERITY_INDICATORS: dict[str, str] = {
-    "high": "●",
-    "medium": "◐",
-    "low": "○",
+    "high": "salience_high",
+    "medium": "salience_medium",
+    "low": "salience_low",
 }
 
 _GAP_STATE_LABELS: dict[str, str] = {
@@ -385,8 +387,10 @@ def render_gaps_panel(report: GapReport) -> Panel:
     text.append(f"{report.domain}\n")
 
     if report.unavailable_controls:
-        text.append("\n  Collection unavailable for: ", style="yellow")
-        text.append(", ".join(report.unavailable_controls), style="yellow")
+        text.append("\n  ")
+        text.append(f"{glyph('warn')} ", style=f"bold {WARNING}")
+        text.append("Collection unavailable for: ", style="bold")
+        text.append(", ".join(report.unavailable_controls))
         text.append(". No absence conclusion is drawn for those controls.\n", style="dim")
 
     if not report.gaps:
@@ -405,20 +409,20 @@ def render_gaps_panel(report: GapReport) -> Panel:
         for category, gaps in groups.items():
             text.append(f"\n  {category.replace('_', ' ').title()}\n", style="bold")
             for gap in gaps:
-                indicator = _SEVERITY_INDICATORS.get(gap.severity, "○")
-                color = _SEVERITY_COLORS.get(gap.severity, "dim")
+                indicator = glyph(_SEVERITY_INDICATORS.get(gap.severity, "salience_low"))
+                color = _SEVERITY_COLORS.get(gap.severity, MUTED)
                 state_label = _GAP_STATE_LABELS.get(gap.observation_state or "", "lineage unavailable")
                 text.append(f"    {indicator} ", style=color)
-                text.append(f"[{gap.severity}] [{state_label}] ", style=color)
+                text.append(f"[{gap.severity}] [{state_label}] ", style="bold")
                 text.append(f"{gap.observation}\n")
-                text.append(f"      → {gap.recommendation}\n", style="dim")
+                text.append(f"      {glyph('arrow')} {gap.recommendation}\n", style=MUTED)
 
     text.append(f"\n  {report.disclaimer}", style="dim italic")
 
-    return Panel(
+    return FittedPanel(
         text,
         title="Hardening Gaps",
-        width=80,
+        width=BORDERED_PANEL_WIDTH,
         padding=(1, 2),
         border_style="dim",
     )

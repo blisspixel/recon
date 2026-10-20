@@ -47,7 +47,7 @@ def test_terminal_demo_width_is_independent_of_dumb_term(monkeypatch: pytest.Mon
     noninteractive = render_terminal_demo_svg()
 
     assert noninteractive == ordinary
-    assert 'viewBox="0 0 1019 757.5999999999999"' in noninteractive
+    assert 'viewBox="0 0 1019 782.0"' in noninteractive
     assert "demo@recon" in render_terminal_demo_text()
 
 

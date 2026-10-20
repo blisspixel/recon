@@ -356,6 +356,18 @@
             "type": "boolean"
           },
           {
+            "default": false,
+            "is_flag": true,
+            "kind": "option",
+            "multiple": false,
+            "name": "ascii_glyphs",
+            "required": false,
+            "tokens": [
+              "--ascii"
+            ],
+            "type": "boolean"
+          },
+          {
             "is_flag": true,
             "kind": "option",
             "multiple": false,
@@ -1036,6 +1048,18 @@
               "--config-path"
             ],
             "type": "text"
+          },
+          {
+            "default": false,
+            "is_flag": true,
+            "kind": "option",
+            "multiple": false,
+            "name": "json_output",
+            "required": false,
+            "tokens": [
+              "--json"
+            ],
+            "type": "boolean"
           }
         ],
         "path": [
@@ -2187,6 +2211,7 @@
       "degraded_sources",
       "detection_scores",
       "display_name",
+      "display_name_verified",
       "dmarc_pct",
       "dmarc_policy",
       "dns_name_status",
@@ -2217,6 +2242,7 @@
       "record_type",
       "region",
       "related_domains",
+      "reserved_name",
       "schema_version",
       "services",
       "shared_display_name",

@@ -12,6 +12,7 @@ import types
 from typing import Any
 
 from recon_tool.formatter import panel as _panel
+from recon_tool.formatter import terminal as _terminal
 from recon_tool.formatter.explanations import (
     format_explanations_list,
     render_explanations_panel,
@@ -34,7 +35,6 @@ from recon_tool.formatter.panel import (
     _categorize_services,
     _is_gws_service,
     _is_m365_service,
-    _make_console,
     _markdown_escape,
     _plain_lines,
     _slug_to_relationship_metadata,
@@ -74,16 +74,20 @@ from recon_tool.formatter.panel import (
     render_tenant_panel,
     render_verbose_sources,
     render_warning,
-    set_color_override,
     set_console,
-    set_err_console,
 )
 from recon_tool.formatter.review import format_review_bundle_markdown
 from recon_tool.formatter.roles import POSTERIOR_DECISION_THRESHOLD as _POSTERIOR_DECISION_THRESHOLD
 from recon_tool.formatter.roles import posterior_dot_fill as _posterior_dot_fill
+from recon_tool.formatter.terminal import (
+    _make_console,
+    set_ascii_override,
+    set_color_override,
+    set_err_console,
+)
 
 panel = _panel
-_PROXIED_STATE = frozenset({"_console", "_err_console", "_color_override"})
+_PROXIED_STATE = frozenset({"_console", "_err_console", "_color_override", "_ascii_override"})
 
 __all__ = [
     "CONFIDENCE_COLORS",
@@ -149,6 +153,7 @@ __all__ = [
     "render_tenant_panel",
     "render_verbose_sources",
     "render_warning",
+    "set_ascii_override",
     "set_color_override",
     "set_console",
     "set_err_console",
@@ -161,16 +166,16 @@ def __getattr__(name: str) -> Any:
 
 
 class _FormatterFacade(types.ModuleType):
-    """Proxy historical mutable console state to `formatter.panel`."""
+    """Proxy historical mutable console state to `formatter.terminal`."""
 
     def __getattribute__(self, name: str) -> Any:
         if name in _PROXIED_STATE:
-            return getattr(_panel, name)
+            return getattr(_terminal, name)
         return super().__getattribute__(name)
 
     def __setattr__(self, name: str, value: Any) -> None:
         if name in _PROXIED_STATE:
-            setattr(_panel, name, value)
+            setattr(_terminal, name, value)
         super().__setattr__(name, value)
 
 

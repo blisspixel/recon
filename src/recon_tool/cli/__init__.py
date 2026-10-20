@@ -25,14 +25,22 @@ from recon_tool.cli.options import (
     LookupOptions,
     LookupOutputOptions,
 )
+from recon_tool.cli.shared import (
+    ascii_callback,
+    color_callback,
+    non_negative_int,
+    positive_finite_float,
+    raise_lookup_error,
+)
 from recon_tool.cli.shared import fmt_exc as _fmt_exc
 from recon_tool.cli.shared import help_markup_mode as _help_markup_mode
 from recon_tool.cli.shared import is_closed_pipe as _is_closed_pipe
-from recon_tool.cli.shared import non_negative_int, positive_finite_float, raise_lookup_error
-from recon_tool.cli.shared import render_usage_rows as _render_usage_rows
 from recon_tool.cli.shared import resolve_fusion_transition as _resolve_fusion_transition
 from recon_tool.cli.shared import silence_closed_standard_streams as _silence_closed_standard_streams
+from recon_tool.cli.welcome import print_welcome_banner
 from recon_tool.formatter import get_console, get_err_console
+from recon_tool.formatter.terminal import prepare_output
+from recon_tool.formatter.theme import ERROR, WARNING
 
 # Command-implementation re-export facade (see cli_lookup / cli_batch / cli_doctor).
 _lookup = cli_lookup.lookup
@@ -110,8 +118,9 @@ class _DomainGroup(typer.core.TyperGroup):  # pyright: ignore[reportUntypedBaseC
     language. Requiring a dot used to force undotted attempts such as
     ``recon alpha`` into Click's "No such command" path.
 
-    Before parsing, trailing ``--color``/``--no-color`` move in front of the
-    command so ``recon DOMAIN --no-color`` equals ``recon --no-color DOMAIN``.
+    Before parsing, trailing ``--color``/``--no-color``/``--ascii`` move in
+    front of the command so ``recon DOMAIN --no-color`` equals
+    ``recon --no-color DOMAIN``.
     """
 
     def parse_args(self, ctx: click.Context, args: list[str]) -> list[str]:
@@ -179,15 +188,6 @@ def version_callback(value: bool) -> None:
         raise typer.Exit()
 
 
-def _color_callback(value: bool | None) -> None:
-    """Force (--color) or disable (--no-color) colored output."""
-    if value is None:
-        return
-    from recon_tool.formatter import set_color_override
-
-    set_color_override(value)
-
-
 def _debug_callback(value: bool) -> None:
     """Enable debug logging when --debug is passed."""
     if value:
@@ -233,11 +233,23 @@ def main(
     color: bool | None = typer.Option(
         None,
         "--color/--no-color",
-        callback=_color_callback,
+        callback=color_callback,
         is_eager=True,
         help=(
-            "Force or disable colored output (overrides NO_COLOR / TTY detection). "
-            "Accepted before or after the domain or command; the last one given wins."
+            "Force or disable colored output. Overrides NO_COLOR, TERM=dumb, FORCE_COLOR "
+            "and terminal detection, in that order. Accepted before or after the domain "
+            "or command; the last one given wins."
+        ),
+    ),
+    ascii_glyphs: bool = typer.Option(
+        False,
+        "--ascii",
+        callback=ascii_callback,
+        is_eager=True,
+        help=(
+            "Print ASCII in place of Unicode glyphs ([##-] for dots, ok/x for marks). "
+            "Automatic under TERM=dumb or a terminal that cannot show the glyphs. "
+            "Accepted before or after the domain or command."
         ),
     ),
 ) -> None:
@@ -248,75 +260,10 @@ def main(
     observations, domain-control indicators, and their provenance.
     All from public sources. No credentials needed.
     """
+    prepare_output()  # resolve the glyph set before any renderer builds text
     if ctx.invoked_subcommand is None:
-        _print_welcome_banner()
+        print_welcome_banner()
         raise typer.Exit()
-
-
-def _print_welcome_banner() -> None:
-    """Print the curated onboarding banner shown when ``recon`` is run
-    with no arguments. Replaces the raw Typer help dump that was
-    shown before.
-
-    Kept tight - fits on ~15 lines - with a one-line value prop, the
-    recommended first command, progressive disclosure, three real
-    examples, and a doctor hint. No emojis, no hype, no wall of
-    flags. Users who want the full flag list can run
-    ``recon lookup --help`` or ``recon --help <subcommand>``.
-    """
-    from recon_tool import __version__
-
-    console = get_console()
-    # Subtle cyan for the header and section labels - matches the
-    # panel redesign tone. No red, no yellow, no alarmism.
-    console.print(f"[bold cyan]recon {__version__}[/bold cyan] - Passive domain intelligence")
-    console.print()
-    console.print(
-        "Observe what a domain publishes through public DNS and identity endpoints.\n"
-        "Evidence is role-scoped and hedged. Zero credentials. Zero scanning."
-    )
-    console.print(
-        "DNS queries may be observed by recursive and authoritative infrastructure.\n"
-        "The only default target-owned HTTP request fetches the MTA-STS policy.\n"
-        "Google CSE and BIMI direct probes run only with --direct-probes."
-    )
-    console.print()
-    console.print("[bold cyan]Usage[/bold cyan]")
-    _render_usage_rows(
-        console,
-        (
-            ("recon <domain>", "clean summary (recommended)"),
-            ("recon <domain> --plain", "panel as linear text for screen readers and grep"),
-            ("recon <domain> --md", "grouped Markdown; --full is the connection map"),
-            ("recon <domain> --json", "structured automation"),
-            ("recon <domain> --explain", "evidence and explanation"),
-            ("recon review <domain>", "fresh evidence-linked review handoff"),
-            ("recon batch domains.txt", "process multiple domains"),
-            ("recon doctor", "check online source connectivity"),
-            ("recon mcp install --help", "connect an MCP client"),
-        ),
-    )
-    console.print()
-    console.print("[bold cyan]Common examples[/bold cyan]")
-    console.print("  recon example.com")
-    console.print("  recon review example.com")
-    console.print("  recon example.com --verbose")
-    console.print("  recon example.com --full --json")
-    console.print(
-        "[dim]These are real lookup commands, not an offline demo. Ordinary lookups may "
-        "reuse the default 24-hour result cache; pass --no-cache for fresh collection. "
-        "These examples use reserved example.com to show flag shapes. Reserved names return "
-        "stray public residue at High confidence, not a company result. Point recon at a "
-        "domain you want to review.[/dim]"
-    )
-    console.print(
-        "[dim]Pass a public-suffix domain (for example, example.com). Bare hostnames without a "
-        "dot are rejected as invalid domain format.[/dim]"
-    )
-    console.print(
-        '[dim]Use "recon --version" or "python -m recon_tool --version" for an offline '
-        'install check; "recon doctor" tests online sources.[/dim]'
-    )
 
 
 @app.command(short_help="Look up a domain.")
@@ -715,24 +662,31 @@ def batch(
     Per-domain failures are output records and keep exit 0. In JSON or NDJSON,
     inspect record_type; in CSV, inspect error.
     """
+    from recon_tool.cli.collection_warnings import capture_collection_warnings, print_collection_warnings
+
     concurrency = max(1, min(20, concurrency))
-    asyncio.run(
-        _batch(
-            file,
-            json_output,
-            markdown,
-            concurrency,
-            timeout,
-            csv_output=csv_output,
-            include_unclassified=include_unclassified,
-            skip_ct=no_ct,
-            ndjson=ndjson,
-            include_ecosystem=include_ecosystem,
-            fusion=_resolve_fusion_transition(ctx, fusion),
-            summary=summary,
-            summary_schema=summary_schema,
-        )
-    )
+    # Library warnings from every domain become one summary on stderr.
+    with capture_collection_warnings() as warnings:
+        try:
+            asyncio.run(
+                _batch(
+                    file,
+                    json_output,
+                    markdown,
+                    concurrency,
+                    timeout,
+                    csv_output=csv_output,
+                    include_unclassified=include_unclassified,
+                    skip_ct=no_ct,
+                    ndjson=ndjson,
+                    include_ecosystem=include_ecosystem,
+                    fusion=_resolve_fusion_transition(ctx, fusion),
+                    summary=summary,
+                    summary_schema=summary_schema,
+                )
+            )
+        finally:
+            print_collection_warnings(warnings, get_err_console())
 
 
 @app.command(short_help="Find fingerprint candidates.")
@@ -800,22 +754,27 @@ def doctor(
         "--config-path",
         help="With --client, inspect only this explicit MCP config file (including user profiles).",
     ),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Emit the check rows and summary as JSON on stdout (default mode and --client).",
+    ),
 ) -> None:
     """Check installation health and online source connectivity.
-    Synthetic checks: Microsoft identity endpoints, DNS for example.com, and crt.sh. No user-supplied target is queried.
-    --fix, --mcp, and --client are local-only modes."""
-    cli_doctor.validate_doctor_mode(fix=fix, mcp=mcp, client=client, config_path=config_path)
+    Synthetic checks: Microsoft identity endpoints, DNS for example.com and one reserved .invalid name, and crt.sh.
+    No user-supplied target is queried. --fix, --mcp, and --client are local-only modes."""
+    cli_doctor.validate_doctor_mode(fix=fix, mcp=mcp, client=client, config_path=config_path, json_output=json_output)
     if fix:
         if not _doctor_fix():
             raise typer.Exit(code=EXIT_ERROR)
         return
     if client is not None:
-        _doctor_client(client, config_path=config_path)
+        _doctor_client(client, config_path=config_path, json_output=json_output)
         return
     if mcp:
         _doctor_mcp()
         return
-    asyncio.run(_doctor())
+    asyncio.run(_doctor(json_output=json_output))
 
 
 @app.command(short_help="Check for updates.")
@@ -906,7 +865,7 @@ def delta(
         if json_output:
             typer.echo(format_delta_json(diff))
         else:
-            console.print(render_delta_panel(diff))
+            console.print(render_delta_panel(diff), crop=False)
         # Update cache with fresh snapshot so the next delta compares
         # against today's state, not the baseline from two runs ago.
         cache_put(validated, info)
@@ -928,7 +887,7 @@ def run() -> None:
     try:
         app()
     except KeyboardInterrupt:
-        get_err_console().print("[yellow]Interrupted.[/yellow]")
+        get_err_console().print(f"[{WARNING}]Interrupted.[/{WARNING}]")
         raise SystemExit(130) from None
     except SystemExit as exc:
         # Typer converts an EPIPE OSError into sys.exit(1) inside its own
@@ -965,7 +924,7 @@ def run() -> None:
             crash_path = None
         if crash_path is None:
             get_err_console().print(
-                "[red]recon hit an unexpected error and could not create a crash log.[/red]\n"
+                f"[{ERROR}]recon hit an unexpected error and could not create a crash log.[/{ERROR}]\n"
                 "Confirm the system temporary directory is writable, then rerun the command. "
                 "If the failure persists, report the command shape and exit code 4 at "
                 "https://github.com/blisspixel/recon/issues without including private inputs."
@@ -973,7 +932,7 @@ def run() -> None:
         else:
             where = f"[link={crash_path.as_uri()}]{escape(str(crash_path))}[/link]"
             get_err_console().print(
-                f"[red]recon hit an unexpected error.[/red] Details written to {where}\n"
+                f"[{ERROR}]recon hit an unexpected error.[/{ERROR}] Details written to {where}\n"
                 "Review and redact the log before sharing it at "
                 "https://github.com/blisspixel/recon/issues; it may contain local paths, "
                 "domain inputs, configuration values, or exception details."

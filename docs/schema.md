@@ -38,6 +38,7 @@ without guessing.
 | `recon capsule replay <file> --json` | a single `observation_capsule_replay` object | n/a |
 | `recon capsule compare <before> <after> --json` | a single `observation_capsule_delta` object | n/a |
 | `recon batch <file> --summary --json` | a single `cohort_summary` object (`record_type: "cohort_summary"`, `schema_version: "2.1"` by default; select `--summary-schema 2.2` explicitly) | n/a (aggregate-only; no per-domain records) |
+| `recon doctor --json` / `recon doctor --client=<name> --json` | a single doctor report object `{schema_version, mode, recon_version, checks, summary, notes}` | each `checks` element is `{name, status, detail, next}`; see [Doctor report](#doctor-report-recon-doctor---json) |
 
 The machine-readable form of each shape lives in
 [`recon-schema.json`](recon-schema.json): the document root is the
@@ -52,6 +53,38 @@ records, and classified capsule deltas use the separate Draft 2020-12
 [`observation-capsules.md`](observation-capsules.md) for collection, replay,
 comparison, integrity, privacy, and retention semantics. The small capture
 write receipt is command status, not a retained evidence artifact.
+
+### Doctor report (`recon doctor --json`)
+
+`recon doctor --json` and `recon doctor --client=<name> --json` render the same
+check list as the human view, as one JSON object on stdout with no human
+header and no terminal escape codes. The process exit code matches the human
+view: `1` for a failed default-mode check, `3` for a failed `--client` check,
+and `0` when only `warn` or `info` rows are present. `--json` is refused with
+exit code `2` for `--fix` (which writes files rather than reporting checks) and
+`--mcp` (whose stdout is already the `mcpServers` reference config).
+
+| Field | Type | Meaning |
+|---|---|---|
+| `schema_version` | integer | `1`. Raised only for a breaking change to this object. |
+| `mode` | string | `doctor` or `client`. |
+| `recon_version` | string | The running package version. |
+| `client` | string | `--client` mode only: the inspected client name. |
+| `checks` | array | One object per rendered row, in display order. |
+| `checks[].name` | string | Row label, for example `DNS resolution`. |
+| `checks[].status` | string | `ok`, `warn`, `fail`, or `info`, the same word the human row prints. |
+| `checks[].detail` | string | Row detail text. |
+| `checks[].next` | string or null | Next step for a failed or warning row; null when none applies. |
+| `summary.status` | string | Worst status present: `fail`, `warn`, or `ok` (`info` rows never raise it). |
+| `summary.ok` / `warn` / `fail` / `info` / `total` | integer | Row counts. |
+| `summary.message` | string | The closing line the human view prints. |
+| `summary.next` | string or null | The first failing row's next step, else the first warning's, else null. |
+| `summary.exit_code` | integer | The process exit code. |
+| `notes` | array of strings | `--client` teaching notes; empty in default mode. |
+
+Row names and detail text are diagnostics, not a contract: automation should
+key on `status`, the counts, and `exit_code`. This object is outside
+`recon-schema.json` and additive fields may appear in a minor release.
 
 NamespaceReviewBundle artifacts are also intentionally outside
 `recon-schema.json`. `recon review <domain> --json`, its optional `--output`
@@ -171,6 +204,7 @@ table above. Field order in emitted JSON is not guaranteed; use the key name.
 |---|---|---|---|---|---|
 | `tenant_id` | string | yes | UUID | stable | Microsoft 365 tenant UUID when observed. `null` means no UUID was observed; it does not distinguish a non-M365 domain from unavailable, incomplete, or non-disclosing tenant discovery. |
 | `display_name` | string | no | n/a | stable | Best available public display label, which may be an identity-provider federation brand; falls back to the queried domain. It is not a verified legal organization name or ownership claim. |
+| `display_name_verified` | bool | no | `false` | stable | Additive; always `false` on current records. recon never verifies `display_name`: it is a provider-reported string (for Microsoft 365, the GetUserRealm federation brand name, which the tenant administrator sets) or the queried-domain fallback. The panel, `--plain`, `--md` and MCP text mark a provider-reported name `(unverified)`. Optional in the schema so older records still validate; treat absence as `false`. |
 | `default_domain` | string | no | n/a | stable | Primary domain within the tenant. Falls back to the queried domain when no tenant was detected. |
 | `queried_domain` | string | no | n/a | stable | The registrable apex (eTLD+1) recon analyzed, after validating and normalizing the input. A pasted URL or sub-host is reduced to its apex (`mail.example.co.uk` → `example.co.uk`); `--exact` keeps the literal host. |
 
@@ -198,6 +232,7 @@ table above. Field order in emitted JSON is not guaranteed; use the key name.
 | `partial` | bool | no | n/a | stable | `true` when a **core** source or core collector-channel marker is in `degraded_sources`. CT-only degradation does not flip this flag, matching `docs/recon-schema.json`. |
 | `degraded_sources` | `list[string]` | no | n/a | stable | Stable source, collector-channel, or detector identifiers that failed or were unavailable, such as `dns_records`, `dns:dmarc`, `dns:mx`, or `detector:email_security`. Values can be finer-grained than top-level `sources`; an unavailable channel is unobserved, not a negative result. |
 | `dns_name_status` | string | n/a (conditional) | `nxdomain` | stable | Conditional and additive: present only when the configured resolver returned NXDOMAIN for the queried name itself (the registrable apex, or the literal host under `--exact`) and returned no NOERROR response for it. A clean, observed-empty response, so it is not listed in `degraded_sources`, does not change `partial`, and does not change the exit code. It is not DNSSEC-validated denial. The field is absent for NoAnswer, resolver failure, a missing subdomain under an existing apex, and older records, so absence does not establish that the name exists. |
+| `reserved_name` | bool | n/a (conditional) | `true` | stable | Conditional and additive: present only as `true` when `queried_domain` is, or sits below, a reserved special-use name: `example.com`, `example.net`, `example.org`, `.example`, `.test`, `.invalid`, `.localhost` (RFC 2606, RFC 6761), `.local` (RFC 6762), `.onion` (RFC 7686), `.alt` (RFC 9476), and the forward special-use names under `arpa` (`home.arpa`, `ipv4only.arpa`, `resolver.arpa`, `service.arpa`, `6tisch.arpa`, `eap-noob.arpa`). Public answers for such a name are residue, not evidence about an organization; human surfaces print `Reserved name: results are public residue, not an organization.` under the title. Absent for every other name and for older records. |
 
 ### Services & detection
 

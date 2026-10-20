@@ -14,6 +14,7 @@ Item {
 
         function init() {
             view.deltaResult = null;
+            view.lightTheme = false;
         }
 
         function test_domain_validation_data() {
@@ -132,6 +133,21 @@ Item {
             verify(findText(view, "Removed Services: not compared") !== null);
             verify(findText(view, "+ Suppressed addition") === null);
             verify(findText(view, "- Suppressed removal") === null);
+        }
+
+        function distinctRoles(colors) {
+            var roles = [colors.success, colors.warning, colors.error, colors.info];
+            return roles.every(function(value, index) { return !!value && roles.indexOf(value) === index; });
+        }
+
+        function test_preview_fallback_follows_light_flag() {
+            var dark = view.colors;
+            verify(distinctRoles(dark));
+            view.lightTheme = true;
+            var light = view.colors;
+            verify(light.background !== dark.background);
+            verify(distinctRoles(light));
+            compare(view.color.toString(), light.background);
         }
     }
 }

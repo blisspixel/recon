@@ -23,6 +23,7 @@ from typing import Any
 
 import httpx
 
+from recon_tool import collection_progress
 from recon_tool.merger import merge_results
 from recon_tool.models import InsightClaim, ReconLookupError, SourceResult, TenantInfo
 from recon_tool.sources.base import LookupSource
@@ -180,15 +181,22 @@ async def _safe_lookup(
     domain: str,
     **kwargs: Any,
 ) -> SourceResult:
-    """Run a single source lookup, capturing any unexpected exceptions."""
+    """Run a single source lookup, capturing any unexpected exceptions.
+
+    Reports the source's start and settled result to an optional progress
+    listener (``collection_progress``); with no listener this is a no-op.
+    """
+    collection_progress.emit(source.name, "start")
     try:
-        return await source.lookup(domain, **kwargs)
+        result = await source.lookup(domain, **kwargs)
     except Exception as exc:
-        return SourceResult(
+        result = SourceResult(
             source_name=source.name,
             error=f"Unexpected error: {exc}",
             source_unavailable=True,
         )
+    collection_progress.emit(source.name, "done", result=result)
+    return result
 
 
 async def _enrich_from_related(
@@ -338,7 +346,10 @@ async def _enrich_from_related(
         *(lightweight_subdomain_lookup(d) for d in lightweight_subs),
         *(_safe_lookup(dns_source, d, **separate_kwargs) for d in capped_separate),
     ]
-    related_results = await asyncio.gather(*all_tasks)
+    # Related lookups reuse the DNS source on other names. Their progress
+    # events must not settle the queried domain's rows, so silence them.
+    with collection_progress.suppressed():
+        related_results = await asyncio.gather(*all_tasks)
 
     # Collect additional services and slugs from related domains
     extra_services: set[str] = set(info.services)

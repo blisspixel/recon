@@ -26,11 +26,89 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
-### Security
+## [2.21.0] - 2026-10-19
 
-- Bump the locked mutation-testing dependency aiohttp from 3.14.3 to 3.14.5 for
-  CVE-2026-111063, CVE-2026-111064 and GHSA-2g87-pp6c-29x5. aiohttp is not a
-  runtime dependency of the published package.
+Report collection truth when every source fails or a name does not exist, stop
+reusing degraded cache entries, start the generated MCP launcher from any
+working directory, adopt Python 3.15 as the default toolchain, and bring the
+interface up to the retro-but-modern rules: theme color roles, an ASCII
+fallback, a source ladder, narrow-terminal layout, caveat parity and one
+doctor vocabulary with JSON output.
+
+### Added
+
+- `--ascii` (also automatic under `TERM=dumb` and on terminals that cannot
+  encode the glyphs) prints pure ASCII: `[##-]`, `ok - x`, `H M L` and a `-`
+  divider, instead of substituting `?` (#226).
+- `recon doctor --json` and `recon doctor --client=<name> --json` emit the
+  same checks as the human view as one JSON object on stdout with the same
+  exit code (#230).
+- `recon doctor` names a resolver that answers names that should not exist,
+  using one doctor-only query for a reserved `.invalid` name (#230).
+- `RECON_NO_ANIMATION` turns off the animated source ladder (#227).
+
+### Changed
+
+- Python 3.15 is supported and is the default toolchain. CI tests 3.11
+  through 3.15 on Linux, macOS and Windows plus a non-blocking free-threaded
+  3.15t probe; single-version and release jobs run on 3.15; the draft container
+  uses `python:3.15.0-slim-trixie` pinned by digest. Install helpers prefer
+  Python 3.15, and `recon doctor` treats 3.11 through 3.15 as the tested range
+  (#225).
+- CI moves to Node 24 LTS and current action releases (checkout v7,
+  setup-python v7, setup-node v7, setup-uv v10, codeql-action v4.39.0,
+  scorecard-action v2.5.0). Locked dependencies were refreshed to releases with
+  3.15 wheels, and pip-api 0.0.35 restores pip-audit on 3.15 (#225).
+- `recon mcp doctor` labels its isolated empty-directory check and adds a
+  generated-launch check that runs the installer's exact command, arguments,
+  and environment from the current directory or `--launch-cwd`, naming the
+  launch it exercised (#220).
+- A near-miss command typo followed by more arguments (`recon lookpu
+  example.com`) now reports `Unknown command "lookpu". Did you mean "lookup"?`
+  with exit 2 (#229).
+- Colors come from one role table on the terminal's 16 named colors (accent
+  cyan, success green, warning yellow, error red, info blue, muted dim), so a
+  theme switch recolors recon. Role color marks state on markers while the
+  state word stays in the default foreground; contrast is measured on dark and
+  light Omarchy palettes. Low confidence uses the warning color (#226).
+- Color precedence is `--color`/`--no-color` > `NO_COLOR` > `TERM=dumb` >
+  `FORCE_COLOR` > TTY. `--no-color` removes every escape sequence on stdout
+  and stderr, and `FORCE_COLOR=0` no longer forces color (#226).
+- Collection progress is a source ladder on stderr: one row per source family
+  that settles to matched, no match or unavailable, then collapses into one
+  source-health line such as `6 sources: 4 matched, 2 no match`. Animation is
+  synchronized, capped at 12 frames per second, and off under `--no-color`,
+  `NO_COLOR`, `TERM=dumb`, `CI`, `RECON_NO_ANIMATION`, `--debug` and
+  non-terminal stderr (#227).
+- Collector warnings no longer print raw between spinner frames. Lookup,
+  chain, batch and review print one deduplicated stderr summary such as `2
+  hosts could not be resolved (...). Run recon doctor.` A DNS failure reads
+  `could not resolve` rather than an SSRF refusal; a refused private
+  destination reads `skipped: resolves to a private address`. The collection
+  note counts unavailable sources instead of saying "Some" (#227).
+- Below 78 columns the lookup panel is laid out once at the real console
+  width, so text no longer wraps twice. UUIDs, hostnames, URLs and email
+  addresses never break across lines, key-fact values share one column, and
+  bordered panels render flat when an 80-column box does not fit. Wide output
+  keeps its layout (#228).
+- Display names are marked `(unverified)` on the panel, `--plain`, `--md` and
+  MCP text, and lookup JSON adds `display_name_verified: false`. A reserved
+  special-use name prints `Reserved name: results are public residue, not an
+  organization.` on every human surface and adds the conditional JSON field
+  `reserved_name: true`. Unavailable values print `n/a`, and output text uses
+  a colon for label and value with no em dashes (#229).
+- Absence signal names now separate the signal from `Missing Counterparts`
+  with a colon (`<signal>: Missing Counterparts`) instead of a spaced em dash.
+  Automation that matches the old name string should match the new separator
+  (#229).
+- `recon doctor`, `--mcp`, `--client` and `recon mcp doctor` share one status
+  vocabulary: `ok`, `warn`, `fail`, `info`. A failing run ends with a red
+  summary that counts failures and names a `Next:` step; DNS failures are
+  explained in plain language (#230).
+- The Omarchy panel colors success, warning, error and info from the active
+  theme's green, yellow, red and blue, read at open and on theme change, so a
+  warning no longer looks like a failure and Medium confidence shows as info.
+  The standalone preview gains a light fallback set (#231).
 
 ### Fixed
 
@@ -56,25 +134,16 @@ operator, corporate group, ownership, or control.
   the leading form; the last one given wins. A trailing `--debug`, `-V`, or
   `--version` explains that it is a global option (#224).
 
-### Changed
+### Security
 
-- Python 3.15 is supported and is the default toolchain. CI tests 3.11
-  through 3.15 on Linux, macOS and Windows plus a non-blocking free-threaded
-  3.15t probe; single-version and release jobs run on 3.15; the draft container
-  uses `python:3.15.0-slim-trixie` pinned by digest. Install helpers prefer
-  Python 3.15, and `recon doctor` treats 3.11 through 3.15 as the tested range
-  (#225).
-- CI moves to Node 24 LTS and current action releases (checkout v7,
-  setup-python v7, setup-node v7, setup-uv v10, codeql-action v4.39.0,
-  scorecard-action v2.5.0). Locked dependencies were refreshed to releases with
-  3.15 wheels, and pip-api 0.0.35 restores pip-audit on 3.15 (#225).
-- `recon mcp doctor` labels its isolated empty-directory check and adds a
-  generated-launch check that runs the installer's exact command, arguments,
-  and environment from the current directory or `--launch-cwd`, naming the
-  launch it exercised (#220).
-- A near-miss command typo followed by more arguments (`recon lookpu
-  example.com`) now reports `Unknown command "lookpu". Did you mean "lookup"?`
-  with exit 2 (#229).
+- Bump the locked mutation-testing dependency aiohttp from 3.14.3 to 3.14.5 for
+  CVE-2026-111063, CVE-2026-111064 and GHSA-2g87-pp6c-29x5. aiohttp is not a
+  runtime dependency of the published package.
+
+### Tool Surface Changes
+
+- Tool surface changes: added flags `--ascii` to `recon`, `--json` to
+  `recon doctor`, `--launch-cwd` to `recon mcp doctor`.
 
 ## [2.20.1] - 2026-10-11
 

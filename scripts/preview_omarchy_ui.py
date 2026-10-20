@@ -1,5 +1,10 @@
-"""Render ReconView.qml to an offscreen PNG image for visual inspection."""
+"""Render ReconView.qml to an offscreen PNG image for visual inspection.
 
+Pass ``--light`` to render the light fallback set instead of the dark one, and
+``--output PATH`` to write somewhere other than the tracked preview image.
+"""
+
+import argparse
 import os
 import sys
 from pathlib import Path
@@ -16,8 +21,8 @@ QML_FILE = REPO_ROOT / "integrations" / "omarchy" / "ReconView.qml"
 OUTPUT_PNG = REPO_ROOT / "docs" / "assets" / "omarchy-recon-preview.png"
 
 
-def render_preview() -> None:
-    app = QGuiApplication(sys.argv)
+def render_preview(light: bool, output_png: Path) -> None:
+    app = QGuiApplication(sys.argv[:1])
 
     # Load system font for offscreen rendering
     font_path = Path("C:/Windows/Fonts/segoeui.ttf")
@@ -70,6 +75,7 @@ def render_preview() -> None:
         "removed_services": ["Legacy Mail Gateway"],
     }
 
+    root_item.setProperty("lightTheme", light)
     root_item.setProperty("lookupResult", mock_lookup)
     root_item.setProperty("deltaResult", mock_delta)
     root_item.setProperty("activeDomain", "alpha.invalid")
@@ -80,13 +86,17 @@ def render_preview() -> None:
 
     # Grab offscreen frame
     image = view.grabWindow()
-    OUTPUT_PNG.parent.mkdir(parents=True, exist_ok=True)
-    if image.save(str(OUTPUT_PNG)):
-        print(f"Rendered QML preview successfully saved to {OUTPUT_PNG}")
+    output_png.parent.mkdir(parents=True, exist_ok=True)
+    if image.save(str(output_png)):
+        print(f"Rendered QML preview successfully saved to {output_png}")
     else:
-        print(f"Error: Failed to save image to {OUTPUT_PNG}", file=sys.stderr)
+        print(f"Error: Failed to save image to {output_png}", file=sys.stderr)
         sys.exit(1)
 
 
 if __name__ == "__main__":
-    render_preview()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--light", action="store_true", help="render the light fallback set")
+    parser.add_argument("--output", type=Path, default=OUTPUT_PNG, help="PNG path to write")
+    args = parser.parse_args()
+    render_preview(args.light, args.output)

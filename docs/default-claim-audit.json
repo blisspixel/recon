@@ -277,14 +277,17 @@
       "material": true,
       "producer_paths": [
         "src/recon_tool/merger.py#merge_results",
-        "src/recon_tool/formatter/serialize.py#format_tenant_dict"
+        "src/recon_tool/formatter/serialize.py#format_tenant_dict",
+        "src/recon_tool/formatter/caveats.py#qualified_display_name"
       ],
       "regression_tests": [
         "tests/test_merger.py",
-        "tests/test_json_schema_contract.py"
+        "tests/test_json_schema_contract.py",
+        "tests/test_caveat_parity.py"
       ],
       "renderer_obligations": [
-        "Label it as public display metadata and never as a verified legal organization name."
+        "Label it as public display metadata and never as a verified legal organization name.",
+        "Mark a provider-reported display label (unverified) on the panel, --plain, --md and MCP text; JSON carries display_name_verified false."
       ],
       "subject_scope": "best public display label returned for the queried namespace"
     },
@@ -640,23 +643,28 @@
       "classification": "direct_observation",
       "evidence_path": [
         "src/recon_tool/models.py#TenantInfo",
-        "src/recon_tool/validator.py#validate_domain"
+        "src/recon_tool/validator.py#validate_domain",
+        "src/recon_tool/validator.py#is_special_use_name"
       ],
       "limits": [
         "Default normalization reduces a valid sub-host to the registrable apex.",
-        "Exact mode retains the literal validated host."
+        "Exact mode retains the literal validated host.",
+        "A reserved special-use name returns public residue, not an organization."
       ],
       "lineage_status": "exact",
       "material": true,
       "producer_paths": [
         "src/recon_tool/validator.py#validate_domain",
-        "src/recon_tool/formatter/serialize.py#format_tenant_dict"
+        "src/recon_tool/formatter/serialize.py#format_tenant_dict",
+        "src/recon_tool/formatter/caveats.py#reserved_name_statement"
       ],
       "regression_tests": [
-        "tests/test_validator.py"
+        "tests/test_validator.py",
+        "tests/test_caveat_parity.py"
       ],
       "renderer_obligations": [
-        "Call the apex a queried namespace or domain, never a company or legal entity."
+        "Call the apex a queried namespace or domain, never a company or legal entity.",
+        "State the reserved-name note on every human surface for a reserved special-use queried name; JSON carries reserved_name true."
       ],
       "subject_scope": "validated registrable public namespace coordinate"
     },
@@ -681,7 +689,7 @@
         "src/recon_tool/formatter/classify.py#provider_line",
         "src/recon_tool/formatter/key_facts.py#key_facts_auth_line",
         "src/recon_tool/formatter/key_facts.py#key_facts_multicloud_line",
-        "src/recon_tool/formatter/panel.py#_render_key_facts",
+        "src/recon_tool/formatter/key_facts_block.py#render_key_facts",
         "src/recon_tool/formatter/panel.py#render_tenant_panel",
         "src/recon_tool/formatter/serialize.py#format_tenant_dict",
         "src/recon_tool/server/lookup.py#_format_lookup_tenant",
@@ -1154,6 +1162,7 @@
       "degraded_sources": "runtime.collection-status.v1",
       "detection_scores": "runtime.catalog-indicator.v1",
       "display_name": "runtime.display-label.v1",
+      "display_name_verified": "runtime.display-label.v1",
       "dmarc_pct": "runtime.email-control-observation.v1",
       "dmarc_policy": "runtime.email-control-observation.v1",
       "dns_name_status": "runtime.collection-status.v1",
@@ -1184,6 +1193,7 @@
       "record_type": "runtime.structured-transport.v1",
       "region": "runtime.identity-and-tenant.v1",
       "related_domains": "runtime.related-namespace.v1",
+      "reserved_name": "runtime.namespace-coordinate.v1",
       "schema_version": "runtime.structured-transport.v1",
       "services": "runtime.catalog-indicator.v1",
       "shared_display_name": "runtime.cross-domain-overlap.v1",
@@ -1229,12 +1239,14 @@
       "test_hypothesis": "runtime.hypothesis-assessment.v1"
     },
     "panel_producers": {
+      "src/recon_tool/formatter/caveats.py#render_panel_title": "runtime.display-label.v1",
       "src/recon_tool/formatter/comparison.py#format_comparison_dict": "runtime.exposure-index.v1",
       "src/recon_tool/formatter/delta.py#render_delta_panel": "runtime.collection-status.v1",
       "src/recon_tool/formatter/explanations.py#format_explanations_list": "runtime.explanation-provenance.v1",
       "src/recon_tool/formatter/explanations.py#render_explanations_panel": "runtime.explanation-provenance.v1",
       "src/recon_tool/formatter/exposure.py#render_exposure_panel": "runtime.exposure-index.v1",
       "src/recon_tool/formatter/exposure.py#render_gaps_panel": "runtime.hardening-guidance.v1",
+      "src/recon_tool/formatter/key_facts_block.py#render_key_facts": "runtime.panel-assembly.v1",
       "src/recon_tool/formatter/panel.py#_render_certs": "runtime.ct-observation.v1",
       "src/recon_tool/formatter/panel.py#_render_degraded_note": "runtime.collection-status.v1",
       "src/recon_tool/formatter/panel.py#_render_explain_conflicts": "runtime.collection-status.v1",
@@ -1242,7 +1254,6 @@
       "src/recon_tool/formatter/panel.py#_render_full_related": "runtime.related-namespace.v1",
       "src/recon_tool/formatter/panel.py#_render_full_tenant_domains": "runtime.related-namespace.v1",
       "src/recon_tool/formatter/panel.py#_render_insights": "runtime.generated-insight.v1",
-      "src/recon_tool/formatter/panel.py#_render_key_facts": "runtime.panel-assembly.v1",
       "src/recon_tool/formatter/panel.py#_render_passive_dns_ceiling": "runtime.related-namespace.v1",
       "src/recon_tool/formatter/panel.py#_render_related_compact": "runtime.related-namespace.v1",
       "src/recon_tool/formatter/panel.py#_render_services": "runtime.service-label.v1",
@@ -1410,7 +1421,7 @@
     ],
     "surface_digest_algorithm": "sha256(sorted UTF-8 surface IDs joined by LF)",
     "surface_digests": {
-      "json_fields": "65b05487fa48c056a719db1d283ecc94e26d4460ad866be4a2ca3f97b34ce305",
+      "json_fields": "f4a7621c002881993418c0701a34c3d29cd59b8e599cab9e63d58b2a47ff226a",
       "mcp_tools": "c5606814d74e8f27a9885d094f0f80d4bb76df0fa467733eb42b496a0f241d1c"
     }
   },

@@ -21,8 +21,8 @@ from recon_tool.exit_codes import (
     EXIT_VALIDATION,
 )
 from recon_tool.formatter import get_console, get_err_console
+from recon_tool.formatter.theme import spinner_kwargs
 
-_STATUS_MESSAGE = "Collecting and correlating public evidence..."
 _CHAIN_STATUS_MESSAGE = "Following related-domain evidence..."
 
 
@@ -114,21 +114,26 @@ def _build_explanations(
 async def _resolve_with_spinner(
     console: Any, validated: str, *, timeout: float, skip_ct: bool, quiet: bool, active_probes: bool = False
 ) -> tuple[Any, list[Any]]:
-    """Resolve a tenant, showing a status spinner unless output is machine-readable."""
+    """Resolve a tenant under the source ladder unless output is machine-readable.
+
+    The ladder, its source-health line and the collection-warning summary all
+    go to stderr, so they never contaminate the stdout data stream. Machine
+    output (``--json``, ``--md``) gets no ladder and no health line; the
+    warning summary still replaces the raw warning lines on stderr.
+    """
+    from recon_tool.cli.collection_warnings import capture_collection_warnings, print_collection_warnings
+    from recon_tool.cli.source_ladder import run_with_source_ladder
     from recon_tool.resolver import resolve_tenant
 
-    if quiet:
-        return await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct, active_probes=active_probes)
-
+    err_console = get_err_console()
     coro = resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct, active_probes=active_probes)
-    # Spinner goes to stderr so it never contaminates the stdout data stream.
-    return await _run_with_status(get_err_console(), coro)
-
-
-async def _run_with_status(console: Any, coro: Any) -> Any:
-    """Await ``coro`` under one outcome-neutral progress message."""
-    with console.status(_STATUS_MESSAGE):
-        return await coro
+    with capture_collection_warnings() as warnings:
+        try:
+            if quiet:
+                return await coro
+            return await run_with_source_ladder(err_console, coro, skip_ct=skip_ct, active_probes=active_probes)
+        finally:
+            print_collection_warnings(warnings, err_console)
 
 
 async def _resolve_cached(
@@ -233,7 +238,7 @@ async def _lookup_compare(
     if options.json_output:
         typer.echo(format_delta_json(delta))
     else:
-        console.print(render_delta_panel(delta))
+        console.print(render_delta_panel(delta), crop=False)
 
 
 async def _lookup_chain(
@@ -253,11 +258,17 @@ async def _lookup_chain(
         active_probes=options.active_probes,
     )
     try:
-        if not options.quiet:
-            with get_err_console().status(_CHAIN_STATUS_MESSAGE):
-                report = await resolve_chain(validated, chain_options)
-        else:
-            report = await resolve_chain(validated, chain_options)
+        from recon_tool.cli.collection_warnings import capture_collection_warnings, print_collection_warnings
+
+        with capture_collection_warnings() as warnings:
+            try:
+                if not options.quiet:
+                    with get_err_console().status(_CHAIN_STATUS_MESSAGE, **spinner_kwargs()):
+                        report = await resolve_chain(validated, chain_options)
+                else:
+                    report = await resolve_chain(validated, chain_options)
+            finally:
+                print_collection_warnings(warnings, get_err_console())
     except ReconLookupError as exc:
         raise_lookup_error(exc, domain=validated)
     except Exception as exc:
@@ -280,14 +291,14 @@ async def _lookup_chain(
                         domain_entry["conflicts"] = serialize_conflicts(chain_info.merge_conflicts)
         typer.echo(json.dumps(chain_dict, indent=2))
     else:
-        console.print(render_chain_panel(report))
+        console.print(render_chain_panel(report), crop=False)
         if options.show_explain:
             from recon_tool.formatter import render_explanations_panel
 
             for r in report.results:
                 explanations = _build_explanations(r.info, [])
                 if explanations:
-                    console.print(render_explanations_panel(explanations))
+                    console.print(render_explanations_panel(explanations), crop=False)
 
 
 async def _lookup_exposure(
@@ -316,7 +327,7 @@ async def _lookup_exposure(
         if options.json_output:
             typer.echo(format_exposure_json(assessment))
         else:
-            console.print(render_exposure_panel(assessment))
+            console.print(render_exposure_panel(assessment), crop=False)
             _print_cache_reuse_note(console, info_exp)
     except ReconLookupError as exc:
         raise_lookup_error(exc, domain=domain)
@@ -351,7 +362,7 @@ async def _lookup_gaps(
         if options.json_output:
             typer.echo(format_gaps_json(report))
         else:
-            console.print(render_gaps_panel(report))
+            console.print(render_gaps_panel(report), crop=False)
             _print_cache_reuse_note(console, info_gaps)
     except ReconLookupError as exc:
         raise_lookup_error(exc, domain=domain)
@@ -400,7 +411,7 @@ async def _lookup_resolve_standard(
             validated,
             timeout=options.timeout,
             skip_ct=options.skip_ct,
-            quiet=options.quiet,
+            quiet=options.quiet or options.explain_dag,
             active_probes=options.active_probes,
         )
     else:
@@ -699,7 +710,10 @@ def _lookup_emit_panel(
             verbose=verbose,
             explain=show_explain,
             confidence_mode=confidence_mode,
-        )
+        ),
+        # An identifier wider than a narrow console runs past the edge on its
+        # own line instead of being cropped (formatter/layout.py width rule).
+        crop=False,
     )
     _print_cache_reuse_note(console, info, spacer=False)
 
@@ -712,7 +726,7 @@ def _lookup_emit_panel(
 
         posture_panel = render_posture_panel(observations)
         if posture_panel:
-            console.print(posture_panel)
+            console.print(posture_panel, crop=False)
 
     # Explanations panel after posture
     if show_explain:
@@ -727,11 +741,11 @@ def _lookup_emit_panel(
 
         status_panel = render_source_status_panel(status_results)
         if status_panel:
-            console.print(status_panel)
+            console.print(status_panel, crop=False)
 
         explanations = _build_explanations(info, visible_results, observations)
         if explanations:
-            console.print(render_explanations_panel(explanations))
+            console.print(render_explanations_panel(explanations), crop=False)
 
 
 async def _lookup_standard(

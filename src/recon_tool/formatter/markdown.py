@@ -15,6 +15,7 @@ import string
 
 from recon_tool.explanation_lineage import explanation_lineage_label
 from recon_tool.formatter.briefing import BriefingView
+from recon_tool.formatter.caveats import display_name_is_reported, reserved_name_statement
 from recon_tool.formatter.classify import (
     SERVICE_CATEGORIES_ORDER,
     categorize_services,
@@ -69,13 +70,21 @@ def _md_header(info: TenantInfo, view: BriefingView, detailed: bool) -> list[str
     and promoting it to the document title is the strongest assertion the format
     can make about an unverified string (the same reasoning the CSV path uses for
     formula injection). It is carried below, labelled unverified, on the full
-    escape. The block leads with the vendor roles, mirroring the panel and
-    ``--plain`` (ADR-0015), so the report answers who handles mail.
+    escape, when it is provider-reported rather than the queried-domain
+    fallback. A reserved special-use queried name gets its note under the title,
+    the same wording every human surface uses (``formatter/caveats.py``). The
+    block leads with the vendor roles, mirroring the panel and ``--plain``
+    (ADR-0015), so the report answers who handles mail.
     """
     lines: list[str] = []
     source_noun = "source" if view.source_count == 1 else "sources"
     lines.append(f"# Tenant Report: {markdown_escape(info.queried_domain)}")
     lines.append("")
+    reserved = reserved_name_statement(info)
+    if reserved is not None:
+        # Static recon-authored prose, so it needs no escaping.
+        lines.append(f"**{reserved}**")
+        lines.append("")
     if view.is_split:
         lines.append(f"**Mail:** {markdown_escape(view.mail or '')}{MARKDOWN_HARD_BREAK}")
         lines.append(f"**Identity:** {markdown_escape(view.identity or '')}{MARKDOWN_HARD_BREAK}")
@@ -83,7 +92,7 @@ def _md_header(info: TenantInfo, view: BriefingView, detailed: bool) -> list[str
     else:
         provider = view.provider_detailed if detailed else view.provider
         lines.append(f"**Provider:** {markdown_escape(provider)}{MARKDOWN_HARD_BREAK}")
-    if info.display_name:
+    if display_name_is_reported(info):
         lines.append(f"**Display name (unverified):** {markdown_escape(info.display_name)}{MARKDOWN_HARD_BREAK}")
     if info.tenant_id:
         lines.append(f"**Tenant ID:** {_markdown_identifier(info.tenant_id)}{MARKDOWN_HARD_BREAK}")

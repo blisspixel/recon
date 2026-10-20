@@ -25,6 +25,7 @@ from recon_tool.formatter import (
     format_tenant_json,
     format_tenant_markdown,
 )
+from recon_tool.formatter.caveats import qualified_display_name, reserved_name_statement
 from recon_tool.formatter.classify import (
     categorize_services,
     compact_categorized_services,
@@ -105,7 +106,10 @@ def _lookup_tenant_text(info: TenantInfo) -> str:
 
     view = build_briefing(info, confidence_mode="hedged", detailed=False)
     source_noun = "source" if view.source_count == 1 else "sources"
-    lines = [f"Display name: {info.display_name}", f"Domain: {info.queried_domain}"]
+    lines = [f"Display name: {qualified_display_name(info)}", f"Domain: {info.queried_domain}"]
+    reserved = reserved_name_statement(info)
+    if reserved is not None:
+        lines.append(reserved)
     if info.default_domain != info.queried_domain:
         lines.append(f"Default domain: {info.default_domain}")
     lines.extend(_lookup_tenant_role_lines(view))

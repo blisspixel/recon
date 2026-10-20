@@ -9,6 +9,7 @@ from rich.text import Text
 
 from recon_tool.explanation import serialize_explanation
 from recon_tool.explanation_lineage import explanation_lineage_label
+from recon_tool.formatter.layout import BORDERED_PANEL_WIDTH, FittedPanel
 from recon_tool.models import ExplanationRecord
 from recon_tool.validator import strip_control_chars
 
@@ -50,10 +51,10 @@ def format_explanations_text(explanations: list[ExplanationRecord]) -> str:
 
 def render_explanations_panel(explanations: list[ExplanationRecord]) -> Panel:
     """Render explanation records with an explicit lineage qualification."""
-    return Panel(
+    return FittedPanel(
         _explanation_text(explanations),
         title="Explanations",
-        width=80,
+        width=BORDERED_PANEL_WIDTH,
         padding=(1, 2),
         border_style="dim",
     )

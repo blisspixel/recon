@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import "ThemePalette.js" as ThemePalette
 
 Rectangle {
     id: root
@@ -25,14 +26,10 @@ Rectangle {
     property bool noBaseline: false
     property string rawJson: ""
     property string fontFamily: "Sans Serif"
-    // Standalone previews use a fallback; the host supplies live native roles.
-    property var colors: ({
-        background: "#181825", surface: "#1e1e2e", foreground: "#cdd6f4",
-        secondary: "#a6adc8", muted: "#6c7086", border: "#313244",
-        accent: "#89b4fa", onAccent: "#11111b", success: "#a6e3a1",
-        warning: "#f9e2af", error: "#f38ba8", successFill: "#1e3a2f",
-        warningFill: "#3d3525", errorFill: "#3e1f29"
-    })
+    // Standalone previews use a light or dark fallback set picked by
+    // lightTheme; inside Omarchy the panel supplies live theme roles.
+    property bool lightTheme: false
+    property var colors: root.lightTheme ? ThemePalette.fallback.light : ThemePalette.fallback.dark
     readonly property var incompleteDelta: root.deltaResult ? root.deltaResult.incomplete_comparison : null
     readonly property bool deltaComparisonIncomplete: !!root.incompleteDelta
 
@@ -494,18 +491,18 @@ Rectangle {
 
                             Item { Layout.fillWidth: true }
 
-                            // Confidence Badge
+                            // Confidence badge: High is success, Medium info, Low warning, as in the CLI.
                             Rectangle {
                                 Layout.preferredHeight: 22
                                 Layout.preferredWidth: confText.implicitWidth + 14
                                 radius: 4
                                 color: {
                                     var c = root.lookupResult ? (root.lookupResult.confidence || "low") : "low";
-                                    return c === "high" ? root.colors.successFill : (c === "medium" ? root.colors.warningFill : root.colors.surface);
+                                    return c === "high" ? root.colors.successFill : (c === "medium" ? root.colors.infoFill : root.colors.warningFill);
                                 }
                                 border.color: {
                                     var c = root.lookupResult ? (root.lookupResult.confidence || "low") : "low";
-                                    return c === "high" ? root.colors.success : (c === "medium" ? root.colors.warning : root.colors.muted);
+                                    return c === "high" ? root.colors.success : (c === "medium" ? root.colors.info : root.colors.warning);
                                 }
                                 border.width: 1
 
@@ -521,7 +518,7 @@ Rectangle {
                                     font.weight: Font.DemiBold
                                     color: {
                                         var c = root.lookupResult ? (root.lookupResult.confidence || "low") : "low";
-                                        return c === "high" ? root.colors.success : (c === "medium" ? root.colors.warning : root.colors.foreground);
+                                        return c === "high" ? root.colors.success : (c === "medium" ? root.colors.info : root.colors.warning);
                                     }
                                 }
                             }

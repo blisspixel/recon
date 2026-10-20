@@ -16,7 +16,7 @@ pytest.importorskip("mcp")
 from typer.testing import CliRunner
 
 from recon_tool.cli import app
-from recon_tool.cli.doctor import _render_mcp_checks
+from recon_tool.cli.doctor import DoctorCheck, _render_mcp_checks
 from recon_tool.mcp_client.install import build_recon_block
 
 runner = CliRunner()
@@ -201,10 +201,10 @@ class TestDoctorMcp:
         )
 
         with patch("recon_tool.cli.doctor.get_err_console", return_value=console):
-            _render_mcp_checks([("Resources enumerated", False, detail)])
+            _render_mcp_checks([DoctorCheck("Resources enumerated", "fail", detail)])
 
         lines = output.getvalue().splitlines()
-        assert lines[0].strip() == "FAIL  Resources enumerated:"
+        assert lines[0].strip() == "fail  Resources enumerated:"
         assert all(line.startswith("        ") for line in lines[1:])
         assert "recon://surface-inventory" in output.getvalue()
 
@@ -213,10 +213,10 @@ class TestDoctorMcp:
         console = Console(file=output, width=40, color_system=None)
 
         with patch("recon_tool.cli.doctor.get_err_console", return_value=console):
-            _render_mcp_checks([("resources/read recon://surface-inventory", False, "timed out after 30s")])
+            _render_mcp_checks([DoctorCheck("resources/read recon://surface-inventory", "fail", "timed out after 30s")])
 
         lines = output.getvalue().splitlines()
-        assert lines[0].strip() == "FAIL"
+        assert lines[0].strip() == "fail"
         assert all(line.startswith("        ") for line in lines[1:3])
         assert lines[-1].startswith("            ")
         assert not any(line.startswith("recon://") for line in lines)
@@ -227,7 +227,7 @@ class TestDoctorMcp:
         token = "x" * 100
 
         with patch("recon_tool.cli.doctor.get_err_console", return_value=console):
-            _render_mcp_checks([("Resources enumerated", False, token)])
+            _render_mcp_checks([DoctorCheck("Resources enumerated", "fail", token)])
 
         lines = output.getvalue().splitlines()
         assert len(lines) == 2

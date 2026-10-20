@@ -23,7 +23,7 @@ For the JSON output contract in full field-by-field detail, see
 |---|---|---|
 | `recon <domain>` / `recon lookup <domain>` | Stable | Default panel layout (section order, field names). |
 | `recon batch <file>` | Stable | One domain per line (comments with `#`), `--json` / `--md` / `--csv`. |
-| `recon doctor` | Stable | Check labels and exit codes. `--fix` and `--mcp` sub-flags. |
+| `recon doctor` | Stable | Check labels and exit codes. `--fix`, `--mcp`, and `--client` sub-flags. Rows use one status vocabulary: `ok`, `warn`, `fail`, `info`. `--json` (default mode and `--client`, additive) emits the doctor report object in [`schema.md`](schema.md#doctor-report-recon-doctor---json) with the human view's exit code. |
 | `recon mcp` | Stable | stdio transport only. |
 | `recon delta <domain>` | Stable | Auto-cache diff (v0.10.2). Diff panel + `--json`. |
 | `recon cache show [domain]` | Stable | Payload-free result and CT cache metadata; overview mode opens the first 100 completed JSON files per layer and reports exact totals, while `--all` explicitly inspects every completed JSON file. `--exact` selects literal-host keys. Missing, expired, inspection-failure, and temporary-residue states remain distinct. |
@@ -147,7 +147,7 @@ The full top-level JSON contract is in [`schema.md`](schema.md) and the
 machine-readable schema is [`recon-schema.json`](recon-schema.json). Summary of
 stability tags:
 
-- **59 top-level properties, 48 required on single-domain success output**,
+- **61 top-level properties, 48 required on single-domain success output**,
   covering identity, provider, sources, services, domains, email security, CT
   metadata, sovereignty, and nested `cert_summary` / `bimi_identity` objects.
 - **Bayesian fusion fields** (`slug_confidences`,
@@ -165,6 +165,10 @@ stability tags:
 - **`dns_name_status`** (conditional, additive): present only as `"nxdomain"`
   when the resolver returned NXDOMAIN for the queried name; absent otherwise.
   See [`schema.md`](schema.md).
+- **`display_name_verified`** (additive, optional): always `false`; recon
+  never verifies the provider-reported display name.
+- **`reserved_name`** (conditional, additive): present only as `true` when
+  the queried name is a reserved special-use name. See [`schema.md`](schema.md).
 
 The v2.0 schema-hardening pass also reshaped two surfaces before the lock:
 `slug_confidences` is now an object map, and `wildcard_sibling_clusters`
@@ -181,6 +185,13 @@ Removing or renaming existing fields, changing their types or meanings, or
 changing capsule digest canonicalization requires a new capsule schema version
 and a compatibility path. This guarantee does not make a digest a signature or
 the internal normalized snapshot part of the stable lookup JSON.
+
+The `recon doctor --json` report is a separate additive surface, documented in
+[`schema.md`](schema.md#doctor-report-recon-doctor---json). Its
+`schema_version` integer, the four status words, the summary counts, and
+`summary.exit_code` are stable. Row names, detail, and next-step text are
+diagnostics and may be reworded. Adding a check row or an optional field is
+additive.
 
 NamespaceReviewBundle artifacts use the separate
 [`review-bundle-schema.json`](review-bundle-schema.json) contract. Its
@@ -212,6 +223,7 @@ guarantee is on each file's schema, not on the directory it resolves to.
 | `~/.recon/cache/*.json` (TenantInfo cache) | Stable. Within the current cache version, entries lacking later additive fields remain readable and current writes include current fields. An explicit cache-version mismatch, wrong-shaped, corrupt, oversized, or numerically invalid file degrades to a clean miss. |
 | `~/.recon/ct-cache/*.json` (per-domain CT cache) | Stable. Older entries without certificate-summary or infrastructure-cluster extensions remain readable; current writes preserve those extensions. Wrong-shaped, corrupt, oversized, or numerically invalid files degrade to a clean miss. |
 | `RECON_CONFIG_DIR` environment variable | Stable. |
+| `RECON_NO_ANIMATION` environment variable | Stable. Any non-empty value other than `0`, `false` or `no` turns off the animated source ladder; the static source-health line on stderr remains. Presentation only: it never changes stdout, JSON, or exit codes. |
 | `recon_tool/data/observation-capsule-schema.json` | Byte-identical packaged copy of the documented capsule schema. Stable by its own `capsule_schema_version`, separate from lookup schema version `2.0`. |
 
 ---

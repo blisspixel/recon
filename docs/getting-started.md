@@ -241,8 +241,13 @@ one muted line, such as `Cached result from 3 hours ago. Use
 lookup JSON contract is unchanged. Reserved names such as `example.com` return a
 real panel of stray public residue from unrelated test configurations,
 including a meaningless display name, at High confidence. It shows you the
-shape of the output, not a result about any organization. Point recon at a
-domain you want to review to see a real footprint.
+shape of the output, not a result about any organization, and the result says
+so: every human surface prints `Reserved name: results are public residue, not
+an organization.` under the title, and `--json` adds `"reserved_name": true`.
+The display name itself is provider-reported, so the panel, `--plain`, `--md`
+and MCP text mark it `(unverified)` and `--json` carries
+`"display_name_verified": false`. Point recon at a domain you want to review to
+see a real footprint.
 
 Cache reuse follows three rules:
 
@@ -265,6 +270,35 @@ Cache reuse follows three rules:
 
 `--no-ct` and `--direct-probes` lookups never read or write the shared result
 cache, because their scope differs from a default lookup.
+
+### What you see while recon collects
+
+On an interactive terminal, a lookup that collects (not a cache hit) draws a
+short ladder on stderr, one row per source family: DNS records, Microsoft
+tenant discovery, Microsoft user realm, Google identity, MTA-STS policy and
+certificate transparency. Each row spins while it runs and settles to
+a check mark and `matched`, a dash mark and `no match`, or a cross and
+`unavailable (reason)` (`ok`, `-` and `x` in ASCII mode). When collection ends the ladder collapses into one source-health
+line above the panel:
+
+```text
+6 sources: 3 matched, 2 no match, 1 unavailable (CT: crt.sh, certspotter rate limited)
+```
+
+The ladder never animates under `--no-color`, `NO_COLOR`, `TERM=dumb`, `CI`,
+`--debug`, or when stderr is not a terminal; set `RECON_NO_ANIMATION=1` to
+turn it off anywhere else. In each of those cases the source-health line alone
+is printed. `--json`, `--md` and `--explain-dag` print neither, and stdout is
+never touched: `recon example.com 2>/dev/null` gives the same output with or
+without the ladder.
+
+Warnings from collectors are gathered during collection and summarized once
+on stderr after the ladder, for example
+`2 hosts could not be resolved (login.microsoftonline.com, autodiscover.example.com). Run recon doctor.`
+A name that does not resolve is worded `could not resolve`; a host recon
+refuses because it resolves to a private address is worded
+`skipped: resolves to a private address`. `--debug` keeps the detailed log
+lines instead of the summary.
 
 Use explicit synthetic identities under reserved namespaces in examples and
 docs. Public validation work with real apexes stays in gitignored local
@@ -386,10 +420,21 @@ This is the linear view for a standard single-domain lookup. Chain, compare,
 exposure, and gaps reports use their own formats; batch and delta have
 mode-specific output.
 
-`--color` and `--no-color` are global options, but they work in either
-position: `recon example.com --no-color` and `recon --no-color example.com` are
-the same, as is any subcommand form such as `recon review example.com
---no-color`. When both appear, the last one given wins. The other global
+Color follows one order, highest first: `--color` or `--no-color`, then a
+non-empty `NO_COLOR`, then `TERM=dumb`, then `FORCE_COLOR` (any value except
+empty or `0`), then terminal detection. `--no-color` removes every escape
+sequence, bold included, on stdout and stderr.
+
+`--ascii` replaces the Unicode glyphs with ASCII: `[##-]` for confidence dots,
+`ok`, `-` and `x` for source marks, `H`, `M` and `L` for salience, and `-` for
+the divider. It turns on automatically under `TERM=dumb` and on a terminal whose
+encoding cannot show the glyphs, so `TERM=dumb recon example.com` prints pure
+ASCII.
+
+`--color`, `--no-color` and `--ascii` are global options, but they work in
+either position: `recon example.com --no-color` and `recon --no-color
+example.com` are the same, as is any subcommand form such as `recon review
+example.com --no-color`. When both color flags appear, the last one given wins. The other global
 options must come first: use `recon --debug example.com`, and run
 `recon --version` on its own. A misplaced one is rejected with exit code 2 and
 a message that shows the working form.
@@ -479,7 +524,13 @@ search results keep relevance order and carry an explicit category and
 confidence instead of implying category grouping.
 
 If a lookup times out or every online source fails, run `recon doctor` to
-check source connectivity, then retry the lookup.
+check source connectivity, then retry the lookup. Each row reads `ok`, `warn`,
+`fail`, or `info`, and a failure summary ends with the next step to take.
+`recon doctor --json` returns the same rows for scripts, with the same exit
+code. If doctor prints `Resolver answers names that should not exist`, the
+system resolver is synthesizing answers, and related-domain results from that
+network are unreliable; see
+[limitations](limitations.md#resolvers-that-answer-names-that-should-not-exist).
 
 ## Namespace Review Bundles
 

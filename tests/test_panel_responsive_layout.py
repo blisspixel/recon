@@ -10,13 +10,15 @@ from rich.console import Console, Group, RenderableType
 from rich.text import Text
 
 from recon_tool.formatter import render_tenant_panel
-from recon_tool.formatter.layout import wrap_indented_text
+from recon_tool.formatter.layout import is_identifier, wrap_indented_text
 from scripts.generate_terminal_demo import demo_tenant_info
 
 
 def _render(renderable: RenderableType, width: int) -> str:
     stream = io.StringIO()
-    Console(file=stream, width=width, no_color=True, legacy_windows=False).print(renderable)
+    # The CLI prints panels with crop=False so an identifier wider than the
+    # console runs past the edge instead of being cut (formatter/layout.py).
+    Console(file=stream, width=width, no_color=True, legacy_windows=False).print(renderable, crop=False)
     return stream.getvalue()
 
 
@@ -35,16 +37,18 @@ def test_narrow_panel_preserves_content_and_indents_continuations(width: int, de
     rules = [line for line in lines if line and not line.strip("─")]
 
     assert rules == ["─" * min(width, 78)]
-    assert all(Text(line).cell_len <= width for line in lines)
+    # Only a line whose value is a single identifier may run past the edge.
+    assert all(Text(line).cell_len <= width or is_identifier(line.split()[-1]) for line in lines)
     assert _content(output) == _content(wide)
     # The same renderable may be displayed again at a different width.
     assert _render(panel, 120) == wide
     assert "AllCTprovidersunavailable" in _content(output)
     if width == 40:
-        provider_continuation = next(line for line in lines if line.strip().startswith("Proofpoint gateway"))
-        assert provider_continuation.startswith(" " * 15)
-        service_continuation = next(line for line in lines if line.strip().startswith("GitHub"))
-        assert service_continuation.startswith(" " * 19)
+        provider_row = next(index for index, line in enumerate(lines) if line.startswith("  Provider"))
+        # The value column is shared by every key fact (16 with "Tenant domain").
+        assert lines[provider_row + 1].startswith(" " * 16)
+        collaboration_row = next(index for index, line in enumerate(lines) if line.startswith("  Collaboration"))
+        assert lines[collaboration_row + 1].startswith(" " * 19)
     # Section headings remain distinct from indented body rows.
     assert "Services" in lines
     assert "Insights" in lines

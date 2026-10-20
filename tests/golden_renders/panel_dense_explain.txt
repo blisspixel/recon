@@ -1,5 +1,6 @@
-Synthetic Alpha Ltd
+Synthetic Alpha Ltd (unverified)
 alpha.invalid
+Reserved name: results are public residue, not an organization.
 ──────────────────────────────────────────────────────────────────────────────
   Provider     Microsoft 365 (MX delivery path) + Proofpoint gateway (MX
                delivery path)

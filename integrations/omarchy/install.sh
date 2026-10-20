@@ -26,7 +26,7 @@ install_plugin() {
         return 1
     fi
     mkdir -p -- "${target_dir}"
-    cp -- "${SCRIPT_DIR}"/{Panel.qml,ReconView.qml,ReconSettings.qml,ReconProcess.qml,Settings.js,README.md} "${target_dir}/"
+    cp -- "${SCRIPT_DIR}"/{Panel.qml,ReconView.qml,ReconSettings.qml,ReconProcess.qml,Settings.js,ThemePalette.js,README.md} "${target_dir}/"
     jq --arg launcher "${launcher}" '. + {defaultLauncher: $launcher}' "${SCRIPT_DIR}/manifest.json" >"${target_dir}/manifest.json"
     rm -f -- "${target_dir}/Widget.qml"
     host_call rescanPlugins >/dev/null || return 1

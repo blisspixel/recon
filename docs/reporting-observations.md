@@ -41,6 +41,20 @@ Say the observation, name the evidence, and stop before the verdict.
 | DMARC policy is set to reject | Their email security is strong |
 | Passive observation only; there may be controls we cannot see | This is their full security posture |
 | A CNAME points at an Okta endpoint | They authenticate with Okta |
+| The identity endpoint reports the display name "Synthetic Alpha Ltd" (unverified) | The domain belongs to Synthetic Alpha Ltd |
+
+The display name is provider-reported: for Microsoft 365 it is the federation
+brand name a tenant administrator sets, returned to anyone who asks. recon never
+verifies it, so every human surface marks it `(unverified)` and `--json`
+carries `"display_name_verified": false`. When no name was reported, the label
+falls back to the queried domain and carries no qualifier.
+
+A reserved special-use name (`example.com`, `.test`, `.invalid`, `.localhost`
+and the rest of the RFC 2606 and RFC 6761 list) can still return public DNS and
+identity answers. Those answers are residue from unrelated configurations, so
+the result opens with `Reserved name: results are public residue, not an
+organization.` and `--json` carries `"reserved_name": true`. Do not report a
+reserved-name lookup as a finding about anyone.
 
 Cite the evidence type when you state a fingerprint (MX, TXT, CNAME, NS, SRV,
 CAA, SPF, certificate SAN). Never call a gap a confirmed vulnerability; recon

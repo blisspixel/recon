@@ -671,7 +671,7 @@ class TestCLI:
 
         result = runner.invoke(app, ["mcp", "doctor"])
         assert result.exit_code != 0
-        assert "FAIL" in result.output
+        assert "fail  " in result.output
         assert "server spawn" in result.output
         assert "subprocess refused to start" in result.output
 
