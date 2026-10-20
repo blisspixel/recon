@@ -35,10 +35,11 @@ This map prepares evidence for the passing-level questionnaire. The repository
 [.project.d/bestpractices.json](../.project.d/bestpractices.json) proposes answers to all 67 current
 passing criteria using the service's [documented import format](https://github.com/coreinfrastructure/best-practices-badge/blob/main/docs/bestpractices-json.md).
 Unknown (`?`) answers are ignored by the service and require maintainer review.
-This file does not register a project, authenticate to the service or attest
-to a maintainer's knowledge or response history.
+This file does not register a project or authenticate to the service. Personal
+knowledge answers record the maintainer's explicit attestation below; response
+history answers retain their separate evidence requirements.
 
-The 2026-10-20 evidence review proposes 53 `Met`, 3 `N/A` and 11 unknown
+The 2026-10-20 evidence review proposes 55 `Met`, 3 `N/A` and 9 unknown
 answers. These are import proposals, not a badge result or completion percentage.
 The cryptography answers cite the shared transport, optional remote adapter,
 [HTTPX's SSL documentation](https://www.python-httpx.org/advanced/ssl/) and
@@ -99,11 +100,8 @@ were submitted.
 ## Remaining Unknown Answers
 
 Each unknown in the import file names the evidence still needed. The remaining
-11 answers fall into three groups:
+9 answers fall into two groups:
 
-- **Developer knowledge:** `know_secure_design` and `know_common_errors` require
-  a primary developer's own attestation. Architecture documents and CI cannot
-  provide that personal answer.
 - **Response and disclosure history:** `report_responses`,
   `enhancement_responses`, `vulnerability_report_response`,
   `release_notes_vulns`, `vulnerabilities_fixed_60_days` and
@@ -126,6 +124,36 @@ The `dynamic_analysis_unsafe` N/A proposal concerns project-owned code: recon
 ships a pure-Python universal wheel, with no project-owned memory-unsafe native
 extension. It does not describe the language or safety of third-party runtimes
 or dependencies. Python parser fuzzing still runs with the address sanitizer.
+
+## Maintainer Attestation And Response History
+
+On 2026-10-20 the primary maintainer personally attested to understanding both
+the secure design principles in `know_secure_design` and the common
+vulnerability classes and mitigations in `know_common_errors`. The two import
+proposals are now `Met` on that basis. Architecture documents, automated
+analysis and passing tests support project evidence; the personal answer
+comes from the maintainer.
+
+The maintainer also requested a check of existing issues and GitHub security
+review history. The 2026-10-20 public tracker snapshot contains 26 closed
+maintainer-authored issues: 11 bug reports and 10 enhancement requests. Five
+bug reports and all ten enhancement requests have public comments. For
+example, [issue 221](https://github.com/blisspixel/recon/issues/221) records a
+reported defect, follow-up, linked fix and closeout. This is real maintenance
+history. The questionnaire's automated guidance excludes top contributors
+when sampling external response history, so these records alone do not settle
+those two response criteria.
+
+The GitHub code-scanning history contains 80 fixed CodeQL alerts and 52
+dismissed CodeQL alerts whose recorded reason is `used in tests`; there are
+no open CodeQL alerts in this snapshot. All 80 fixed alerts have recorded
+fix timestamps within 60 days of creation, with a maximum of 42.27 days.
+An alert's severity and fix timestamp do not establish a confirmed runtime
+vulnerability, private-report acknowledgment time or public release date.
+The three open Scorecard alerts concern branch protection, independent
+review and badge registration. Keep those process gaps separate from runtime
+findings and retain unknown response answers when private email or disclosure
+dates remain unverified.
 
 ## Answers That Need Care
 

@@ -72,6 +72,8 @@ def insight_claims_from_cache(
     from recon_tool.insights import INSIGHT_GENERATOR_RULE_IDS
 
     claims: list[InsightClaim] = []
+    insight_index = set(insights)
+    evidence_index = set(evidence)
     items = cache_object_tuple(raw if raw is not None else [], "insight_claims")
     for index, item in enumerate(items):
         field = f"insight_claims[{index}]"
@@ -80,7 +82,7 @@ def insight_claims_from_cache(
             missing = ", ".join(sorted(missing_fields))
             raise ValueError(f"Cache field {field!r} is missing required fields: {missing}")
         text = cache_string(item.get("text"), f"{field}.text", nonempty=True)
-        if text not in insights:
+        if text not in insight_index:
             raise ValueError(f"Cache field {field!r} references an absent insight")
         generator_rule_id = cache_string(
             item.get("generator_rule_id"),
@@ -95,7 +97,7 @@ def insight_claims_from_cache(
                 cache_object_tuple(item.get("supporting_evidence", []), f"{field}.supporting_evidence")
             )
         )
-        if any(record not in evidence for record in supporting_evidence):
+        if any(record not in evidence_index for record in supporting_evidence):
             raise ValueError(f"Cache field {field!r} references evidence absent from the canonical record set")
         observation_scope = cache_string_tuple(item.get("observation_scope", []), f"{field}.observation_scope")
         unknown_scopes = set(observation_scope) - INSIGHT_OBSERVATION_SCOPES

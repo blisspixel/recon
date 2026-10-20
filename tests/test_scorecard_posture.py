@@ -574,13 +574,15 @@ def test_openssf_badge_readiness_blocks_fake_process_progress() -> None:
     proposals = json.loads((_ROOT / ".project.d/bestpractices.json").read_text(encoding="utf-8"))
     assert not {"id", "user_id", "badge_level", "badge_percentage_0"} & proposals.keys()
     for criterion in (
-        "know_secure_design",
-        "know_common_errors",
         "report_responses",
         "enhancement_responses",
         "vulnerability_report_response",
     ):
         assert proposals[f"{criterion}_status"] == "?"
+    for criterion in ("know_secure_design", "know_common_errors"):
+        assert proposals[f"{criterion}_status"] == "Met"
+        assert "personally attested" in proposals[f"{criterion}_justification"]
+        assert "2026-10-20" in proposals[f"{criterion}_justification"]
     for name, status in proposals.items():
         if name.endswith("_status") and status in {"Met", "N/A"}:
             assert "https://" in proposals[name.removesuffix("_status") + "_justification"]

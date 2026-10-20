@@ -18,6 +18,69 @@ notes, see [`docs/security.md`](security.md).
 
 ---
 
+## 2026-10-20: input and workspace boundary review
+
+Four low-severity paths were identified in the source prepared for 2.21.3.
+Their entry points are constrained: a concurrent writer in a shared local
+workspace, an explicit optional desktop lookup, a connected local MCP client,
+or a caller-opened capsule. None establishes unauthenticated remote code
+execution. The review covered packaged runtime source and selected privileged
+release/install/deployment surfaces; it was not a complete audit of every
+test, research artifact or third-party dependency.
+
+### Workspace MCP configuration parent substitution
+
+The installer rechecked workspace paths but later reopened parent directory
+names for JSON reads, temporary files and replacement. A concurrent workspace
+writer could substitute a parent after validation and redirect a write outside
+the workspace. Planning reads also need the same boundary: otherwise private
+fields from an external configuration could be incorporated into the plan.
+
+`mcp_client/workspace.py` retains directory authority through both planning and
+publication. POSIX opens actual cwd and descends with `O_NOFOLLOW` and
+`O_DIRECTORY`; JSON reads, temporary creation, replacement and cleanup remain
+relative to held descriptors. Windows retains each ancestor without delete
+sharing and refuses reparse points. It also retains an anchored, nondeletable
+temporary guard entry because
+[Windows permits reparse mutation through attribute access](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-fsa/4aeefef8-92c3-4abc-af7a-a610caf8a165).
+A nonempty directory cannot acquire a reparse point. Guard creation uses a
+directory-relative native handle and delete-on-close; attributes are checked
+again before name-based I/O. Unsupported operations fail closed. Explicit
+user-selected symlink configurations retain their existing behavior.
+
+`tests/test_mcp_workspace_races.py` substitutes POSIX parents before reads,
+temporary creation and replacement, including nested Kiro paths. Native Windows
+tests check ancestor rename denial, junction rejection and attribute-only
+reparse mutation, with an unguarded positive control for the same payload.
+
+### Desktop observation markup
+
+Qt `Text` and `Label` default automatic formatting could interpret a
+provider-reported federation brand as markup and load an inline image outside
+the guarded Python HTTP transport. The Omarchy view and settings now explicitly
+select `Text.PlainText` for display and diagnostic text. The offscreen QML
+regression supplies image-like observations and checks actual instantiated
+controls, without opening the live panel or changing desktop configuration.
+
+### Numeric regex repetition
+
+A short expression could encode a billion required zero-width assertion
+iterations while passing the existing structural and operator-count guards.
+The local MCP injection tool then ran specificity matching synchronously.
+The shared guard now caps numeric repetition bounds at 1024 before compilation
+or matching. Escape/class-aware scanning and verbose/comment normalization
+preserve literal braces and ordinary catalog patterns. Injection regressions
+fail if rejected expressions reach specificity matching.
+
+### Capsule evidence membership
+
+Caller-opened capsule snapshots reached a codec that searched the complete
+canonical evidence tuple for every supporting reference. Two large arrays
+could multiply work despite the artifact byte ceiling. The shared codec now
+indexes canonical evidence and insight strings once. Original tuples, order,
+duplicates and exact four-field evidence equality remain intact. An
+operation-count regression checks linear membership work without timing gates.
+
 ## 2026-10-20: certifi trust-store refresh
 
 The 2026-10-20 dependency audit detected `PYSEC-2026-4320`

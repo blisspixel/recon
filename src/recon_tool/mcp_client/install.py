@@ -33,6 +33,7 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+import secrets
 import sys
 import tempfile
 from dataclasses import dataclass
@@ -40,6 +41,7 @@ from pathlib import Path
 from typing import Literal
 
 from recon_tool.mcp_client.config_json import read_json_object
+from recon_tool.mcp_client.workspace import workspace_directory
 
 Scope = Literal["user", "workspace"]
 Client = Literal["claude-desktop", "claude-code", "cursor", "vscode", "windsurf", "kiro"]
@@ -348,7 +350,7 @@ def _validate_implicit_workspace_path(path: Path) -> None:
         curr = curr.parent
 
 
-def _read_existing(path: Path, *, allow_symlinks: bool = True) -> dict[str, object]:
+def _read_existing(path: Path, *, allow_symlinks: bool = True, directory_fd: int | None = None) -> dict[str, object]:
     """Read the existing config or return an empty dict.
 
     Refuses to proceed (raises InstallError) when the file exists but
@@ -360,7 +362,7 @@ def _read_existing(path: Path, *, allow_symlinks: bool = True) -> dict[str, obje
     silently consumed instead of confusing ``json.loads`` into a
     "Unexpected character" error.
     """
-    result = read_json_object(path, allow_symlinks=allow_symlinks)
+    result = read_json_object(path, allow_symlinks=allow_symlinks, directory_fd=directory_fd)
     if result.state in {"missing", "empty"}:
         return {}
     if result.state == "invalid":
@@ -409,6 +411,29 @@ def _merge_recon_block(
     return merged
 
 
+def _planned_input(path: Path, is_implicit_workspace: bool) -> tuple[Path, dict[str, object]]:
+    """Bind planning reads as well as writes so private fields cannot escape."""
+    if is_implicit_workspace:
+        target_path = path
+        try:
+            with workspace_directory(path, create=False) as directory_fd:
+                existing = (
+                    {}
+                    if directory_fd == -1
+                    else _read_existing(
+                        Path(path.name) if directory_fd is not None else path,
+                        allow_symlinks=False,
+                        directory_fd=directory_fd,
+                    )
+                )
+        except OSError as exc:
+            raise InstallError(f"cannot safely read workspace config {path}: {exc}") from exc
+    else:
+        target_path = path.resolve(strict=False) if path.is_symlink() else path
+        existing = _read_existing(path)
+    return target_path, existing
+
+
 def plan_install(
     client: Client,
     scope: Scope,
@@ -417,7 +442,9 @@ def plan_install(
     force: bool = False,
     platform_name: str | None = None,
 ) -> InstallPlan:
-    """Compute what an install would do without touching the filesystem.
+    """Compute what an install would do without changing client configuration.
+
+    Windows workspace planning briefly retains temporary directory guards.
 
     Used internally by `install(dry_run=True)` and by the CLI to pre-
     render the plan before asking the user for confirmation.
@@ -430,9 +457,7 @@ def plan_install(
     is_implicit_workspace = scope == "workspace" and config_path_override is None
     if is_implicit_workspace:
         _validate_implicit_workspace_path(path)
-
-    target_path = path.resolve(strict=False) if path.is_symlink() else path
-    existing = _read_existing(path, allow_symlinks=not is_implicit_workspace)
+    target_path, existing = _planned_input(path, is_implicit_workspace)
     canonical_block = build_recon_block(client)
     key = servers_key(client)
     mcp_servers = existing.get(key)
@@ -571,11 +596,28 @@ def install(
     is_implicit_workspace = scope == "workspace" and config_path_override is None
     if is_implicit_workspace:
         _validate_implicit_workspace_path(plan.path)
+        try:
+            with workspace_directory(plan.path) as directory_fd:
+                _write_plan(plan, client, workspace=True, directory_fd=directory_fd)
+        except OSError as exc:
+            raise InstallError(f"cannot safely write workspace config {plan.path}: {exc}") from exc
+    else:
+        plan.path.parent.mkdir(parents=True, exist_ok=True)
+        _write_plan(plan, client)
 
-    plan.path.parent.mkdir(parents=True, exist_ok=True)
+    return InstallResult(
+        path=plan.path,
+        action=plan.action,
+        final_block=plan.new_block,
+        target_path=plan.target_path,
+    )
 
+
+def _write_plan(plan: InstallPlan, client: Client, *, workspace: bool = False, directory_fd: int | None = None) -> None:
+    """Re-read, merge and publish while the workspace parent remains bound."""
     key = servers_key(client)
-    existing = _read_existing(plan.path, allow_symlinks=not is_implicit_workspace)
+    read_path = Path(plan.path.name) if directory_fd is not None else plan.path
+    existing = _read_existing(read_path, allow_symlinks=not workspace, directory_fd=directory_fd)
     mcp_servers_raw = existing.get(key)
     if isinstance(mcp_servers_raw, dict):
         mcp_servers: dict[str, object] = {str(k): v for k, v in mcp_servers_raw.items()}
@@ -588,17 +630,23 @@ def install(
     # comments or unicode field values the user may have in their
     # existing config) instead of munging them into \uXXXX escapes.
     rendered = json.dumps(existing, indent=2, sort_keys=False, ensure_ascii=False) + "\n"
-    _atomic_write_text(plan.path, rendered, target_path=plan.target_path)
-
-    return InstallResult(
-        path=plan.path,
-        action=plan.action,
-        final_block=plan.new_block,
+    _atomic_write_text(
+        plan.path,
+        rendered,
         target_path=plan.target_path,
+        workspace=workspace,
+        directory_fd=directory_fd,
     )
 
 
-def _atomic_write_text(path: Path, content: str, *, target_path: Path | None = None) -> None:
+def _atomic_write_text(
+    path: Path,
+    content: str,
+    *,
+    target_path: Path | None = None,
+    workspace: bool = False,
+    directory_fd: int | None = None,
+) -> None:
     """Write ``content`` to ``path`` atomically.
 
     Writes to a sibling tempfile in the same directory (so the rename
@@ -620,16 +668,21 @@ def _atomic_write_text(path: Path, content: str, *, target_path: Path | None = N
         expected_target = target_path
     else:
         expected_target = path.resolve(strict=False) if path.is_symlink() else path
-    write_path = path.resolve(strict=False) if path.is_symlink() else path
+    write_path = path if workspace else (path.resolve(strict=False) if path.is_symlink() else path)
     if write_path != expected_target:
         raise InstallError(
             f"target path changed during installation: {path} now resolves to {write_path} (expected {expected_target})"
         )
-    if write_path.is_symlink():
+    if not workspace and write_path.is_symlink():
         raise InstallError(f"target path must not be a symbolic link: {write_path}")
     parent = write_path.parent
-    parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp_path = tempfile.mkstemp(prefix=write_path.name + ".", suffix=".tmp", dir=str(parent))
+    if directory_fd is not None:
+        tmp_path = write_path.name + "." + secrets.token_hex(16) + ".tmp"
+        fd = os.open(tmp_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=directory_fd)
+    else:
+        if not workspace:
+            parent.mkdir(parents=True, exist_ok=True)
+        fd, tmp_path = tempfile.mkstemp(prefix=write_path.name + ".", suffix=".tmp", dir=str(parent))
     try:
         with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as fh:
             fh.write(content)
@@ -641,11 +694,17 @@ def _atomic_write_text(path: Path, content: str, *, target_path: Path | None = N
             # to write at all on unusual filesystems.
             with contextlib.suppress(OSError):
                 os.fsync(fh.fileno())
-        os.replace(tmp_path, write_path)
+        if directory_fd is not None:
+            os.replace(tmp_path, write_path.name, src_dir_fd=directory_fd, dst_dir_fd=directory_fd)
+        else:
+            os.replace(tmp_path, write_path)
     except Exception:
         # On any failure between mkstemp and replace, sweep the
         # partial tempfile so we don't leave debris next to the real
         # config every time something goes wrong.
         with contextlib.suppress(OSError):
-            os.unlink(tmp_path)
+            if directory_fd is not None:
+                os.unlink(tmp_path, dir_fd=directory_fd)
+            else:
+                os.unlink(tmp_path)
         raise

@@ -11,6 +11,9 @@ logger = logging.getLogger("recon")
 # Hard cap on pattern length. This is not sufficient by itself; structural
 # checks below reject the backtracking shapes accepted by Python's regex engine.
 _MAX_PATTERN_LENGTH = 500
+# Numeric repeat counts encode work independently of source/subject length,
+# particularly for zero-width assertions. The catalog uses bounds below 16.
+_MAX_NUMERIC_REPEAT = 1024
 
 # Keep compiled catalog expressions outside ``re``'s implementation-private
 # cache. The shipped catalog plus the bounded ephemeral allowance fit within
@@ -237,6 +240,16 @@ def _repetition_operator_count(pattern: str) -> int:
     return sum(1 for index in range(len(cleaned)) if _is_quantifier_at(cleaned, index))
 
 
+def _excessive_numeric_repeat(pattern: str) -> bool:
+    """Bound genuine numeric repetitions, retaining escaped/class literals."""
+    cleaned = _strip_escapes_and_classes(pattern, preserve_width=True)
+    for match in re.finditer(r"\{([0-9]*)(?:,([0-9]*))?\}", cleaned):
+        for bound in match.groups():
+            if bound and int(bound) > _MAX_NUMERIC_REPEAT:
+                return True
+    return False
+
+
 def validate_regex(pattern: str, source: str) -> bool:
     """Return whether a pattern compiles and meets the accepted complexity bounds.
 
@@ -255,9 +268,14 @@ def validate_regex(pattern: str, source: str) -> bool:
         )
         return False
     normalized = _normalize_regex_syntax(pattern)
-    if _REDOS_RE.search(normalized) or _alternation_redos(normalized) or _has_nested_quantifier(normalized):
+    if (
+        _excessive_numeric_repeat(normalized)
+        or _REDOS_RE.search(normalized)
+        or _alternation_redos(normalized)
+        or _has_nested_quantifier(normalized)
+    ):
         logger.warning(
-            "Potentially unsafe regex (catastrophic backtracking) %r in %s - skipped",
+            "Potentially unsafe regex (complexity bounds) %r in %s - skipped",
             pattern,
             source,
         )

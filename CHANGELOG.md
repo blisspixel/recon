@@ -29,7 +29,8 @@ operator, corporate group, ownership, or control.
 ## [2.21.3] - 2026-10-20
 
 Refresh the default CA bundle after an upstream security advisory and complete
-the source-verifiable repository assurance evidence.
+the source-verifiable repository assurance evidence. Close four bounded-input
+and filesystem gaps found in a fresh source review.
 
 ### Security
 
@@ -38,12 +39,24 @@ the source-verifiable repository assurance evidence.
   (`GHSA-6q48-6c7w-9gw2`). The default HTTPX trust store no longer includes the
   distrusted emSign ECC root. Custom trust stores and operator-managed remote
   TLS ingress remain outside this bundle update; rebuild existing containers.
+- Bind implicit workspace MCP configuration reads and atomic writes to retained
+  directories. POSIX uses directory-relative operations; Windows rejects
+  reparse points and retains ancestor locks and temporary guard entries.
+  Explicit user-selected configuration symlinks remain supported.
+- Render observed and diagnostic text literally in the Omarchy panel and
+  settings so provider-controlled markup cannot trigger Qt image loading.
+- Bound numeric regex repetition counts before compilation and specificity
+  matching, including repeated zero-width assertions submitted over local MCP.
+- Index capsule/cache insight and evidence references once during admission,
+  preventing quadratic tuple scans while preserving exact evidence identity,
+  order and duplicate occurrences.
 
 ### Documentation
 
 - Document the enabled private HTTPS vulnerability-reporting channel and refine
   the OpenSSF questionnaire evidence, including the optional remote adapter's
-  authentication boundary and the remaining maintainer attestations.
+  authentication boundary, dated maintainer knowledge attestations and checked
+  public issue/security-review history. Response-history gaps remain explicit.
 
 ### Tool Surface Changes
 

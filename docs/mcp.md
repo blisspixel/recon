@@ -60,7 +60,7 @@ refuses to start, exits with status 2, and explains why on stderr.
    ```bash
    recon mcp install --client=claude-desktop
    # supported: claude-desktop, claude-code, cursor, vscode, windsurf, kiro
-   recon mcp install --client=cursor --dry-run        # preview without writing
+   recon mcp install --client=cursor --dry-run        # preview configuration
    recon mcp install --client=cursor --scope=workspace  # project-local instead of user-global
    ```
 
@@ -70,8 +70,13 @@ refuses to start, exits with status 2, and explains why on stderr.
    survive a `--force` rerun; canonical launcher fields are refreshed, and
    unsupported legacy approval fields are removed for Claude Code and VS Code.
    Writes are atomic (sibling tempfile plus `os.replace`), so a partial-write
-   failure leaves the original config intact. When the config path is a
-   symlink, the installer updates its resolved target and preserves the link.
+   failure leaves the original config intact. Explicit user-selected config
+   symlinks retain their topology. Implicit workspace installs reject symlinks
+   and reparse points and retain directory authority throughout reads and
+   writes. On Windows this uses temporary guard entries in existing workspace
+   directories, including during planning; they are deleted when handles close
+   and do not change client configuration. Read-only or unsupported filesystems
+   can refuse this operation rather than weaken containment.
 
    **b. Reviewed manual install.** Generate the exact interpreter-bound block
    for the client, inspect it, and copy that preview only if automated writing
