@@ -6,7 +6,7 @@ in [CHANGELOG.md](../CHANGELOG.md). Historical planning lives in
 [release-process.md](release-process.md). Research and publication work is
 tracked separately from product work.
 
-> **Status:** v2.20.1 is current. The CLI, versioned JSON, local stdio MCP,
+> **Status:** v2.21.0 is current. The CLI, versioned JSON, local stdio MCP,
 > bounded collectors, evidence and renderer contracts, MCP compatibility matrix,
 > and verified release path are established. The resolver and detection engine
 > are feature-complete. Recent shipped work belongs in the
@@ -16,7 +16,11 @@ tracked separately from product work.
 > **Current priority: contract-preserving maintenance.** Installation and update
 > polish, agent-discovery declarations, supplied-domain service workflows, and
 > SPF, DKIM, BIMI and TLS-RPT admission corrections shipped in v2.19 maintenance
-> releases. Keep those behaviors under regression tests rather than treating
+> releases. v2.21 closed the October black-box issue sweep: collection truth for
+> total failure, NXDOMAIN and degraded cache reuse, the MCP launcher working
+> directory guard, the Python 3.15 toolchain, and the interface rules (theme
+> roles, ASCII fallback, source ladder, narrow layout, caveat parity, doctor
+> JSON). Keep those behaviors under regression tests rather than treating
 > completed work as a future tranche. Routine catalog maintenance uses public
 > specifications and synthetic evidence; company interviews and private
 > inventory confirmation are not release gates.
