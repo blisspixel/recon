@@ -65,6 +65,7 @@ generated discovery context, not stable runtime contracts. See
 | Contribution workflow | [../CONTRIBUTING.md](../CONTRIBUTING.md) |
 | Engineering practices | [engineering-practices.md](engineering-practices.md) |
 | Operator layout, visual semantics and brand direction | [design-language.md](design-language.md) |
+| Linux terminal and native-panel qualification evidence | [interface-qualification-2026-10-20.md](interface-qualification-2026-10-20.md) |
 | Catalog growth and quality strategy | [catalog-strategy.md](catalog-strategy.md) |
 | Corpus planning, catalog-round skills, and promotion limits | [catalog-maintenance.md](catalog-maintenance.md) |
 | Data-handling policy | [data-handling-policy.md](data-handling-policy.md) |

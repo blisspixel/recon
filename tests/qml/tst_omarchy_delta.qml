@@ -140,6 +140,20 @@ Item {
             return roles.every(function(value, index) { return !!value && roles.indexOf(value) === index; });
         }
 
+        function test_input_selection_follows_live_accent() {
+            view.prefill("selection.invalid", "lookup");
+            var input = findText(view, "selection.invalid");
+            verify(input !== null);
+            input.selectAll();
+            compare(input.selectedText, "selection.invalid");
+            compare(input.selectionColor.toString(), view.colors.accent);
+            compare(input.selectedTextColor.toString(), view.colors.onAccent);
+            view.lightTheme = true;
+            compare(input.selectionColor.toString(), view.colors.accent);
+            compare(input.selectedTextColor.toString(), view.colors.onAccent);
+            input.deselect();
+        }
+
         function test_preview_fallback_follows_light_flag() {
             var dark = view.colors;
             verify(distinctRoles(dark));

@@ -24,6 +24,10 @@ tracked separately from product work.
 > completed work as a future tranche. Routine catalog maintenance uses public
 > specifications and synthetic evidence; company interviews and private
 > inventory confirmation are not release gates.
+> The [Linux interface qualification](interface-qualification-2026-10-20.md)
+> covers real-terminal motion and live desktop palettes. Preserve its regressions
+> for idle redraws, QML singleton resolution and accent-colored input selection.
+> Node 26 remains gated on its 2026-10-28 LTS date.
 > The [October review](maintenance-review-2026-10-08.md) records the dependency
 > refresh, synchronized build graph, current bug fixes and local security
 > boundaries. The changelog records its release batch. The pip vendored-transport issue

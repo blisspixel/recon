@@ -200,6 +200,8 @@ def test_real_quickshell_panel_process_and_theme_contracts(tmp_path: Path, priva
     output = result.stdout + result.stderr
     assert result.returncode == 0, output
     assert "RECON_QML_FAILED" not in output, output
+    assert "TypeError:" not in output, output
+    assert "ReferenceError:" not in output, output
     marker = next(
         (line.partition("RECON_QML_PASSED ")[2] for line in output.splitlines() if "RECON_QML_PASSED " in line), ""
     )

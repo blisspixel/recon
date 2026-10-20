@@ -340,6 +340,33 @@ def test_live_region_stops_after_settle() -> None:
     assert output.count(SYNC_BEGIN) == output.count(SYNC_END)
 
 
+def test_settled_ladder_waits_without_redrawing_or_polling() -> None:
+    clock = _FakeClock()
+    console, _buffer = _terminal_console()
+    state = LadderState(["oidc_discovery"])
+
+    async def scenario() -> None:
+        live = LiveLadder(state, console, clock=clock, sleep=clock.sleep)
+        live.start()
+        await asyncio.sleep(0)
+        state.apply(_matched("oidc_discovery"))
+        # Let the outstanding frame interval finish and the final state draw.
+        for _ in range(20):
+            await asyncio.sleep(0)
+        frames, sleeps = live.frames, len(clock.sleeps)
+        assert frames >= 2
+        assert live.task is not None
+        assert not live.task.done()
+        for _ in range(50):
+            await asyncio.sleep(0)
+        assert live.frames == frames
+        assert len(clock.sleeps) == sleeps
+        await live.stop()
+        assert live.task.done()
+
+    asyncio.run(scenario())
+
+
 def test_events_never_draw() -> None:
     clock = _FakeClock()
     console, _buffer = _terminal_console()
