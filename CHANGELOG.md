@@ -75,6 +75,61 @@ operator, corporate group, ownership, or control.
 - A near-miss command typo followed by more arguments (`recon lookpu
   example.com`) now reports `Unknown command "lookpu". Did you mean "lookup"?`
   with exit 2 (#229).
+- Colors come from one role table on the terminal's 16 named colors (accent
+  cyan, success green, warning yellow, error red, info blue, muted dim), so a
+  theme switch recolors recon. Role color marks state on markers while the
+  state word stays in the default foreground; contrast is measured on dark and
+  light Omarchy palettes. Low confidence uses the warning color (#226).
+- Color precedence is `--color`/`--no-color` > `NO_COLOR` > `TERM=dumb` >
+  `FORCE_COLOR` > TTY. `--no-color` removes every escape sequence on stdout
+  and stderr, and `FORCE_COLOR=0` no longer forces color (#226).
+- Collection progress is a source ladder on stderr: one row per source family
+  that settles to matched, no match or unavailable, then collapses into one
+  source-health line such as `6 sources: 4 matched, 2 no match`. Animation is
+  synchronized, capped at 12 frames per second, and off under `--no-color`,
+  `NO_COLOR`, `TERM=dumb`, `CI`, `RECON_NO_ANIMATION`, `--debug` and
+  non-terminal stderr (#227).
+- Collector warnings no longer print raw between spinner frames. Lookup,
+  chain, batch and review print one deduplicated stderr summary such as `2
+  hosts could not be resolved (...). Run recon doctor.` A DNS failure reads
+  `could not resolve` rather than an SSRF refusal; a refused private
+  destination reads `skipped: resolves to a private address`. The collection
+  note counts unavailable sources instead of saying "Some" (#227).
+- Below 78 columns the lookup panel is laid out once at the real console
+  width, so text no longer wraps twice. UUIDs, hostnames, URLs and email
+  addresses never break across lines, key-fact values share one column, and
+  bordered panels render flat when an 80-column box does not fit. Wide output
+  keeps its layout (#228).
+- Display names are marked `(unverified)` on the panel, `--plain`, `--md` and
+  MCP text, and lookup JSON adds `display_name_verified: false`. A reserved
+  special-use name prints `Reserved name: results are public residue, not an
+  organization.` on every human surface and adds the conditional JSON field
+  `reserved_name: true`. Unavailable values print `n/a`, and output text uses
+  a colon for label and value with no em dashes (#229).
+- Absence signal names now separate the signal from `Missing Counterparts`
+  with a colon (`<signal>: Missing Counterparts`) instead of a spaced em dash.
+  Automation that matches the old name string should match the new separator
+  (#229).
+- `recon doctor`, `--mcp`, `--client` and `recon mcp doctor` share one status
+  vocabulary: `ok`, `warn`, `fail`, `info`. A failing run ends with a red
+  summary that counts failures and names a `Next:` step; DNS failures are
+  explained in plain language (#230).
+- The Omarchy panel colors success, warning, error and info from the active
+  theme's green, yellow, red and blue, read at open and on theme change, so a
+  warning no longer looks like a failure and Medium confidence shows as info.
+  The standalone preview gains a light fallback set (#231).
+
+### Added
+
+- `--ascii` (also automatic under `TERM=dumb` and on terminals that cannot
+  encode the glyphs) prints pure ASCII: `[##-]`, `ok - x`, `H M L` and a `-`
+  divider, instead of substituting `?` (#226).
+- `recon doctor --json` and `recon doctor --client=<name> --json` emit the
+  same checks as the human view as one JSON object on stdout with the same
+  exit code (#230).
+- `recon doctor` names a resolver that answers names that should not exist,
+  using one doctor-only query for a reserved `.invalid` name (#230).
+- `RECON_NO_ANIMATION` turns off the animated source ladder (#227).
 
 ## [2.20.1] - 2026-10-11
 
