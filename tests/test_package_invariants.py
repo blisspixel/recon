@@ -66,6 +66,7 @@ _CANONICAL_FINGERPRINT_SOURCES = {
 }
 
 _EXPECTED_RUNTIME_DEPENDENCIES = {
+    "certifi",  # Patched CA bundle for the default HTTPX trust store.
     "deal",
     "defusedxml",
     "dnspython",
@@ -259,3 +260,4 @@ def test_wheel_runtime_dependencies_stay_lean(tmp_path: Path) -> None:
     # The patched floor must survive the sdist-to-wheel path. A lock update
     # alone would let pip retain an affected version in an existing install.
     assert "pyjwt>=2.14.0" in (Parser().parsestr(metadata_text).get_all("Requires-Dist") or [])
+    assert "certifi>=2026.10.19" in (Parser().parsestr(metadata_text).get_all("Requires-Dist") or [])

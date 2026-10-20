@@ -26,11 +26,23 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Security
+
+- Require `certifi>=2026.10.19` in runtime package metadata and refresh the
+  locked CA bundle and fuzzing export for `PYSEC-2026-4320`
+  (`GHSA-6q48-6c7w-9gw2`). The default HTTPX trust store no longer includes the
+  distrusted emSign ECC root. Custom trust stores and operator-managed remote
+  TLS ingress remain outside this bundle update; rebuild existing containers.
+
 ### Documentation
 
 - Document the enabled private HTTPS vulnerability-reporting channel and refine
   the OpenSSF questionnaire evidence, including the optional remote adapter's
   authentication boundary and the remaining maintainer attestations.
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
 
 ## [2.21.2] - 2026-10-20
 

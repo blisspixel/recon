@@ -18,6 +18,33 @@ notes, see [`docs/security.md`](security.md).
 
 ---
 
+## 2026-10-20: certifi trust-store refresh
+
+The 2026-10-20 dependency audit detected `PYSEC-2026-4320`
+([upstream advisory](https://github.com/certifi/python-certifi/security/advisories/GHSA-6q48-6c7w-9gw2))
+in locked certifi 2026.6.17. The default HTTPX 0.x transport loads that bundle
+for collector and doctor HTTPS requests. Compromised intermediate CA keys can
+permit an on-path attacker to impersonate a TLS origin while the affected root
+is trusted. The dependency floor now requires certifi 2026.10.19 or later in
+installed package metadata, the development lock and the derived fuzzing
+requirements. A lock-only update would let an existing pip environment retain
+an affected bundle.
+
+The offline regression uses the real shared transport's TLS context and
+checks that the affected `emSign ECC Root CA - G3` is absent while an unrelated
+trusted root, hostname checking and certificate verification remain present.
+The sdist-to-wheel metadata regression checks that the patched dependency floor
+survives packaging. Both regressions failed before the update. These checks do
+not attempt to reproduce a live interception or use compromised private keys.
+
+Custom `SSL_CERT_FILE` / `SSL_CERT_DIR` stores, supplied HTTP clients and
+operator-managed remote TLS ingress remain separate trust configurations.
+HTTPX2 uses a system-store path; this refresh does not assert that every MCP
+connection loads certifi. Existing containers must be rebuilt to consume the
+new lock. No externally deployed container is claimed updated by this change.
+
+---
+
 ## v2.19.7: updater module isolation and comment-aware regex admission
 
 Updater-managed pip commands use the current interpreter with safe-path mode

@@ -52,6 +52,34 @@ def _resolver(*addresses: str) -> Callable[..., list[tuple[object, ...]]]:
 
 
 @pytest.mark.asyncio
+async def test_default_transport_distrusts_compromised_ca_without_disabling_verification(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Exercise the transport's real default context, without dialing a socket.
+    # Explicit operator trust stores are a separate deployment responsibility.
+    monkeypatch.delenv("SSL_CERT_FILE", raising=False)
+    monkeypatch.delenv("SSL_CERT_DIR", raising=False)
+    monkeypatch.delenv("SSLKEYLOGFILE", raising=False)
+    transport = _SSRFSafeTransport()
+    try:
+        context = transport._pool._ssl_context
+        assert isinstance(context, ssl.SSLContext)
+        common_names = {
+            value
+            for certificate in context.get_ca_certs()
+            for rdn in certificate["subject"]
+            for key, value in rdn
+            if key == "commonName"
+        }
+        assert "emSign ECC Root CA - G3" not in common_names
+        assert "ISRG Root X1" in common_names
+        assert context.check_hostname
+        assert context.verify_mode == ssl.CERT_REQUIRED
+    finally:
+        await transport.aclose()
+
+
+@pytest.mark.asyncio
 async def test_numeric_dial_preserves_tls_host_header_and_origin_pooling(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("recon_tool.http.socket.getaddrinfo", _resolver("8.8.8.8"))
     streams: list[_Stream] = []
