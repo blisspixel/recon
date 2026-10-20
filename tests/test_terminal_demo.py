@@ -47,7 +47,8 @@ def test_terminal_demo_width_is_independent_of_dumb_term(monkeypatch: pytest.Mon
     noninteractive = render_terminal_demo_svg()
 
     assert noninteractive == ordinary
-    assert 'viewBox="0 0 1019 782.0"' in noninteractive
+    assert 'viewBox="0 0 1019 806.4"' in noninteractive
+    assert 'height="100%"' in noninteractive
     assert "demo@recon" in render_terminal_demo_text()
 
 
@@ -77,6 +78,8 @@ def test_readme_embeds_and_labels_the_synthetic_demo() -> None:
     assert "No real organization is depicted" in normalized
     assert "<summary>Accessible text transcript</summary>" in readme
     assert render_terminal_demo_text() in readme
+    assert "6 sources: 5 matched, 1 no match" in render_terminal_demo_text()
+    assert "High (3 sources)" in render_terminal_demo_text()
 
     # The illustration must never read as a capture of `recon example.com`.
     # Keep the illustration boundary beside the image and the complete

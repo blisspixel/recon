@@ -11,8 +11,11 @@ from rich.console import Console
 from rich.terminal_theme import TerminalTheme
 from rich.text import Text
 
+from recon_tool.cli.source_ladder import print_health_line
+from recon_tool.collection_progress import ProgressEvent, UnitOutcome
 from recon_tool.constants import SVC_DKIM, SVC_DMARC, SVC_MTA_STS, SVC_SPF_STRICT
 from recon_tool.formatter import render_tenant_panel
+from recon_tool.formatter.source_ladder import LadderState
 from recon_tool.models import ConfidenceLevel, EvidenceRecord, TenantInfo
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -88,7 +91,7 @@ _MODERN_TERMINAL_SVG = """<svg class="rich-terminal"
     </clipPath>
     {lines}
     </defs>
-    <rect fill="#0b1220" stroke="#334155" stroke-width="1" x="1" y="1" width="1017" height="755.6" rx="14"/>
+    <rect fill="#0b1220" stroke="#334155" stroke-width="1" x="0.5" y="0.5" width="100%" height="100%" rx="14"/>
     <path fill="#111827" d="M 15 1 H 1003 A 14 14 0 0 1 1017 15 V 41 H 1 V 15 A 14 14 0 0 1 15 1 Z"/>
     <line x1="1" y1="41" x2="1017" y2="41" stroke="#253247" stroke-width="1"/>
     <g fill="none" stroke="#67e8f9" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">
@@ -122,7 +125,7 @@ def demo_tenant_info() -> TenantInfo:
         queried_domain="example.com",
         confidence=ConfidenceLevel.HIGH,
         region="NA",
-        sources=("dns_records", "oidc_discovery", "userrealm", "cert_transparency"),
+        sources=("dns_records", "oidc_discovery", "user_realm"),
         services=(
             "Microsoft 365",
             "Google Workspace",
@@ -251,6 +254,11 @@ def _render_demo(console: Console) -> None:
     # never reproduces the panel below.
     prompt.append("    # synthetic fixture, not a captured run", style="dim")
     console.print(prompt)
+    state = LadderState.planned(skip_ct=False, active_probes=False)
+    for unit in state.units:
+        outcome = UnitOutcome("no_match" if unit == "google_identity" else "match")
+        state.apply(ProgressEvent(unit, "done", outcome=outcome))
+    print_health_line(state, console)
     console.print(render_tenant_panel(demo_tenant_info()))
 
 

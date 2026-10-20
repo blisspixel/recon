@@ -650,6 +650,12 @@ to `--json` + pipe to the right tool.
 
 ## Pull request etiquette
 
+Outside contributors and prospective reviewers are welcome. Start with a
+bounded bug fix, catalog correction, documentation improvement or test, and
+open a pull request against `main` with its evidence and verification. The
+maintainer reviews external pull requests. A sustained review role can grow
+from useful contributions; no additional maintainer is currently appointed.
+
 - Keep PRs focused: one feature or fix per PR.
 - Fingerprint-only PRs are welcome and easy to review.
 - Include a brief description of what you changed and why.

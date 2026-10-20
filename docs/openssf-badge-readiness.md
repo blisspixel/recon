@@ -31,13 +31,17 @@ Do not add:
 
 ## Passing-Level Evidence Map
 
-This map prepares evidence for the passing-level questionnaire. It is not the
-questionnaire itself.
+This map prepares evidence for the passing-level questionnaire. The root
+[.project.d/bestpractices.json](../.project.d/bestpractices.json) proposes answers to all 67 current
+passing criteria using the service's [documented import format](https://github.com/coreinfrastructure/best-practices-badge/blob/main/docs/bestpractices-json.md).
+Unknown (`?`) answers are ignored by the service and require maintainer review.
+This file does not register a project, authenticate to the service or attest
+to a maintainer's knowledge or response history.
 
 | Criteria area | Local evidence | Current answer posture |
 |---|---|---|
 | Basics | README, Apache-2.0 license, public repository, PyPI package metadata, release tags, changelog, and documented install path. | Ready to answer from committed docs and package metadata. |
-| Change control | SemVer policy, `CHANGELOG.md`, release process, protected `main`, required checks, CODEOWNERS, and tagged releases. | Ready for single-maintainer workflow wording; do not imply mandatory reviewed PRs. |
+| Change control | SemVer policy, `CHANGELOG.md`, release process, protected `main`, required checks, CODEOWNERS, and tagged releases. | Ready for checked PR wording; do not imply independent approval of maintainer-authored PRs. |
 | Reporting | `SECURITY.md`, vulnerability contact path, issue templates, contribution policy, no-real-company-data policy, and neutral scope boundaries. | Ready to answer with repository links. |
 | Quality | `scripts/check.py`, branch coverage floor, pyright, ruff, property tests, fuzzing, generated-artifact drift checks, mutation gate, and release readiness. | Ready to answer with local and CI evidence. |
 | Security | CodeQL, secret scanning, workflow pinning, least-privilege tokens, dependency updates, `pip-audit`, SBOM, Trusted Publishing, PyPI attestations, GitHub build provenance, and remote release readiness. | Ready to answer from supply-chain docs and workflow files. |
@@ -71,7 +75,7 @@ Before submitting the questionnaire, collect this queue in the real
 | Criterion family | What must be checked manually | Acceptable answer boundary |
 |---|---|---|
 | Project sites and discussion | Repository, package, documentation, issue, and download URLs use HTTPS and remain publicly reachable. | Cite the live HTTPS URLs; do not infer reachability from local files. |
-| Contribution process | Public contribution instructions describe how changes are proposed and what standards apply. | Cite `CONTRIBUTING.md` and the current single-maintainer direct-main boundary; do not imply mandatory PR review. |
+| Contribution process | Public contribution instructions describe how changes are proposed and what standards apply. | Cite `CONTRIBUTING.md` and the current checked-PR boundary; do not imply independent approval of maintainer-authored changes. |
 | Issue and enhancement response history | Bug and enhancement reports from the prior 2-12 month window have enough public response history to answer honestly. | Use the public issue tracker state at submission time; if there is no applicable sample, use the questionnaire's permitted justification rather than inventing history. |
 | Vulnerability response history | Any vulnerability reports in the last 6 months were initially answered within the criteria window. | Cite `SECURITY.md` for process and answer the history question only from real report records. |
 | Secure-development knowledge | The primary maintainer can honestly attest to secure design knowledge for this Python network-client tool. | Treat this as a maintainer attestation, not as evidence created by Scorecard or CI. |
@@ -86,9 +90,12 @@ were submitted.
 
 Some answers must stay precise:
 
-- Reviewed changes: CODEOWNERS and required checks exist, but normal maintainer
-  work still lands through direct `main` commits. Do not claim a mandatory
-  reviewed-PR process until the workflow actually changes.
+- Reviewed changes: CODEOWNERS, strict checks and PRs are required, with no
+  bypass actors. Stale approvals are dismissed and review threads must resolve.
+  An independent approving reviewer is not currently available; automated checks
+  and author self-review do not count as a second human approval.
+  Do not claim a mandatory reviewed-PR process: required PRs and checks do not
+  establish independent approval.
 - Contributors: the project is single-maintainer today. Do not imply
   organization diversity that does not exist.
 - Badge status: the badge is absent until a real `bestpractices.dev` project

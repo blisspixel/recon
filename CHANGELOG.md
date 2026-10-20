@@ -26,6 +26,31 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.21.2] - 2026-10-20
+
+Adopt the current GA toolchain, strengthen repository assurance checks, and
+refresh the public terminal example.
+
+### Changed
+
+- Adopt Node 26 GA in the typecheck and release jobs, resolving the current
+  stable patch rather than waiting for the LTS designation (#240). Python
+  3.15.0 remains the development and release default; 3.11 through 3.15 stay
+  supported.
+- Refresh the README terminal illustration with the production source-health
+  summary and corrected source identifiers. The image and accessible transcript
+  are generated together from the same synthetic fixture.
+- Require stale-approval dismissal, resolved review threads and no bypass actors
+  in release readiness, matching strengthened live repository controls. Raise
+  the SAST regression floor from 7 to 10 after the public sample reaches 10.
+- Prepare evidence-backed OpenSSF questionnaire proposals and clarify the
+  external contribution path. Independent review and account-backed badge
+  registration remain separate requirements.
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
 ## [2.21.1] - 2026-10-20
 
 Fix Linux interface regressions found during real-terminal and desktop

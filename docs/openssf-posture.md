@@ -6,11 +6,11 @@ while the Best Practices Badge is an account-backed project questionnaire.
 
 ## Current Snapshot
 
-- Date checked: 2026-07-18.
+- Date checked: 2026-10-20.
 - Live API state at check time: public API rechecked for the exact current
   release `HEAD` after CI and publication completed.
-- Scorecard version: `v5.3.0`.
-- Score: `8.2`.
+- Scorecard version: `v5.6.0`.
+- Score: `8.4`.
 - Public source: `https://api.securityscorecards.dev/projects/github.com/blisspixel/recon`.
 
 The public API is authoritative for the exact commit behind the badge. Docs-only
@@ -18,28 +18,24 @@ commits can move `main` after a snapshot is written, so this file records the
 reviewed posture and the live API URL rather than treating a commit hash as a
 durable status promise. Remote release readiness queries that API for `HEAD`,
 requires an overall score of at least `8.0`, keeps the non-SAST required
-code-owned controls at `10`, and requires the documented SAST floor of `7`.
+code-owned controls at `10`, and requires the documented SAST floor of `10`.
 
-The measured non-SAST code-owned controls are green: dangerous workflow
-patterns, dependency update automation, token permissions, pinned dependencies,
-binary artifacts, security policy, known vulnerabilities, packaging, fuzzing,
-signed releases, and license all score `10`. CI-Tests also scores `10` because
-every sampled merged pull request ran CI. SAST scores `7`: CodeQL is detected,
-but the sample still includes merged pull-request heads from before PR-scoped
-CodeQL was required. Current pull requests provide supported SAST evidence; a
-default-branch scan does not rewrite older pull-request history. Pull requests
-targeting `main` and pushes to `main` run CodeQL, while weekly and manual main
-analysis remains available. The SAST gate can return to `10` only after the
-public API reports successful supported SAST checks for every merged pull
-request in its sampled window. The exact sample size and overall score remain
-dated external state; the enforced `8.0` overall and `7` SAST floors are the
-current regression policy.
+The measured code-owned controls are green: dangerous workflow patterns,
+dependency update automation, token permissions, pinned dependencies, binary
+artifacts, security policy, known vulnerabilities, packaging, fuzzing, signed
+releases, license and SAST all score `10`. CI-Tests also scores `10` because
+every sampled merged pull request ran CI. The public API reports successful
+supported SAST checks for every merged pull request in its sampled window.
+Current pull requests provide supported SAST evidence; pull requests targeting
+`main` and pushes to `main` run CodeQL, while weekly and manual main analysis
+remain available. The temporary SAST floor of `7` is retired. The sample size
+and overall score remain dated external state, not a permanent promise.
 
 The remaining low or unknown checks are process-bound:
 
 | Check | Current reason | Real next step |
 |---|---|---|
-| `Branch-Protection` | `main` is protected, but administrator bypass remains and PRs are not mandatory. | Keep the current required-check ruleset for clean-main work. If the project moves to a multi-maintainer flow, require PRs, remove administrator bypass, and require CODEOWNERS review. |
+| `Branch-Protection` | `main` requires PRs, strict CI, CodeQL and gitleaks, linear history, no deletion or force pushes, and no bypass actors. Independent approvals, last-push approval and required CODEOWNERS review are absent because there is one maintainer. | Stale approvals are dismissed and review threads must resolve. Release readiness enforces these controls. Add independent approval requirements when a second qualified reviewer is available. |
 | `Code-Review` | No human-approved changesets appear in Scorecard's sampled window; automated review comments are not approvals. | Use normal reviewed PRs for non-urgent work when there is another qualified reviewer. Do not manufacture review history. |
 | `CII-Best-Practices` | No OpenSSF Best Practices Badge project is linked. | Use [openssf-badge-readiness.md](openssf-badge-readiness.md) to answer the questionnaire from committed evidence; link a badge only after the real project page exists and the answers match the repository. |
 | `Contributors` | Scorecard sees no contributor diversity across organizations. | Accept this for a single-maintainer project. Do not add artificial contributors. |
@@ -50,7 +46,11 @@ The detailed worksheet lives in
 [openssf-badge-readiness.md](openssf-badge-readiness.md). The OpenSSF Best
 Practices Badge criteria are organized around basics, change control,
 reporting, quality, security, and analysis. recon already has local evidence
-for most passing-level questions:
+for many passing-level questions. The root
+[.project.d/bestpractices.json](../.project.d/bestpractices.json) supplies all 67 criterion proposals
+to the badge service, with unknown answers for personal attestations and
+unverified response history. It does not create a badge project or claim a
+passing result:
 
 | Area | Local evidence |
 |---|---|
@@ -71,8 +71,10 @@ not be added as a placeholder.
 `.github/CODEOWNERS` routes all repository paths to `@blisspixel` so external
 pull requests have clear ownership. This does not by itself create a
 Scorecard-reviewed workflow. It is preparation for a future branch ruleset that
-requires CODEOWNERS review if the project moves beyond single-maintainer direct
-mainline work.
+requires CODEOWNERS review when a second qualified maintainer is available.
+Maintainer changes already use checked pull requests; the author cannot supply
+an independent approval of their own change. Outside contributors and
+prospective reviewers are welcome through [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 ## Research Sources
 

@@ -27,7 +27,9 @@ tracked separately from product work.
 > The [Linux interface qualification](interface-qualification-2026-10-20.md)
 > covers real-terminal motion and live desktop palettes. Preserve its regressions
 > for idle redraws, QML singleton resolution and accent-colored input selection.
-> Node 26 remains gated on its 2026-10-28 LTS date.
+> The v2.21.2 maintenance batch adopts Node 26 GA before its 2026-10-28 LTS date.
+> Python 3.15.0 remains the latest GA default; older maintained versions are
+> compatibility targets, not the development or release default.
 > The [October review](maintenance-review-2026-10-08.md) records the dependency
 > refresh, synchronized build graph, current bug fixes and local security
 > boundaries. The changelog records its release batch. The pip vendored-transport issue
