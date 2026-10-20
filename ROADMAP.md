@@ -80,10 +80,12 @@ colors with an ASCII fallback, a source ladder on stderr, narrow-terminal
 layout that never breaks identifiers, the same qualifiers on every surface, one
 doctor vocabulary with JSON output, and theme-following Omarchy status colors.
 
-Open follow-ups from v2.21: move the typecheck and release jobs to Node 26 on or
-after its 2026-10-28 LTS date; capture the animated source ladder in a real
-terminal (flicker and idle CPU); verify the Omarchy panel colors on a running
-light and dark desktop; and drop PyYAML source builds once a cp315 wheel ships.
+The [Linux interface qualification](docs/interface-qualification-2026-10-20.md)
+exercises the source ladder and native panel on a running desktop. It identifies
+and corrects idle ladder redraws, palette singleton shadowing, and input
+selection that did not follow the accent; publication is tracked in the changelog.
+Remaining v2.21 follow-ups: move the typecheck and release jobs to Node 26 on or
+after its 2026-10-28 LTS date, and drop PyYAML source builds once a cp315 wheel ships.
 
 `main` is the single integration and release branch. Short-lived implementation
 and release-preparation branches merge through required checks and are deleted

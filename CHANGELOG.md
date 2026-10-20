@@ -26,6 +26,30 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.21.1] - 2026-10-20
+
+Fix Linux interface regressions found during real-terminal and desktop
+qualification of the v2.21 follow-ups.
+
+### Fixed
+
+- Stop redrawing the source ladder after every source settles. The final frame
+  waits without polling until collection returns, avoiding idle CPU use (#239).
+- Qualify Omarchy's palette and font singletons through an explicit QML import
+  namespace so Qt's `Color` type cannot shadow the host palette. Bind domain
+  input selection to the live accent and contrasting foreground (#238).
+
+### Validation
+
+- Qualify source-ladder rendering in Foot and the native panel in Quickshell on
+  a running Linux desktop, including light/dark colors, live theme changes,
+  idle CPU and stdout parity. See the
+  [qualification evidence](docs/interface-qualification-2026-10-20.md).
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
 ## [2.21.0] - 2026-10-19
 
 Report collection truth when every source fails or a name does not exist, stop

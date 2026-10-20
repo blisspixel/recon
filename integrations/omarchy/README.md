@@ -101,6 +101,10 @@ the focus and selection color. Every status chip and banner also carries its wor
 example "Degraded sources", "Changes Observed", "Partial comparison"), so the
 panel still reads correctly when a theme's colors are close or identical.
 
+The host palette and font singletons use an explicit `Commons` import namespace
+to avoid collisions with Qt type names. Domain input selection uses the live
+accent and its contrasting foreground.
+
 The host `Color` singleton exposes only `foreground`, `background`, `accent`,
 `urgent` and `muted`, with no green, yellow or light/dark flag. The panel
 therefore reads the active theme's own `colors.toml` from the host's
@@ -231,6 +235,11 @@ They exercise no real desktop, user configuration or external domain. Missing
 optional desktop runtimes are reported as skips. Light/dark rendering checks
 supply native palette roles in an isolated shell; they do not establish live
 compatibility with every Omarchy release or terminal.
+
+The [2026-10-20 qualification](../../docs/interface-qualification-2026-10-20.md)
+also exercises the panel in a running Omarchy desktop, with synthetic states on
+Tokyo Night and Catppuccin Latte and live theme switches. This is bounded
+compatibility evidence for the recorded versions.
 
 Primary contracts: [Quickshell Process](https://quickshell.org/docs/v0.2.0/types/Quickshell.Io/Process/),
 [Qt plain-text copying](https://doc.qt.io/qt-6/qml-qtquick-textedit.html#copy-method),

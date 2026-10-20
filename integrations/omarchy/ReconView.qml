@@ -281,6 +281,8 @@ Rectangle {
                     color: root.colors.foreground
                     font.pixelSize: 14
                     background: null
+                    selectionColor: root.colors.accent
+                    selectedTextColor: root.colors.onAccent
                     selectByMouse: true
                     enabled: !root.isRunning
 

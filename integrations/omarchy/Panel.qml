@@ -3,7 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
-import qs.Commons
+import qs.Commons as Commons
 import "Settings.js" as Settings
 import "ThemePalette.js" as ThemePalette
 
@@ -33,15 +33,15 @@ Item {
     property alias settingsEditor: settingsForm
     // Status keys parsed from the active theme's colors.toml (see ThemePalette.js).
     property var themeKeys: ({})
-    readonly property string themePath: typeof Color.currentThemePath === "string" && Color.currentThemePath.length > 0
-        ? Color.currentThemePath : Quickshell.env("HOME") + "/.local/state/omarchy/current/theme"
-    readonly property bool lightTheme: ThemePalette.isLight(root.themeKeys, Color.background)
-    readonly property var statusColors: ThemePalette.statusRoles(root.themeKeys, root.lightTheme, Color.urgent)
+    readonly property string themePath: typeof Commons.Color.currentThemePath === "string" && Commons.Color.currentThemePath.length > 0
+        ? Commons.Color.currentThemePath : Quickshell.env("HOME") + "/.local/state/omarchy/current/theme"
+    readonly property bool lightTheme: ThemePalette.isLight(root.themeKeys, Commons.Color.background)
+    readonly property var statusColors: ThemePalette.statusRoles(root.themeKeys, root.lightTheme, Commons.Color.urgent)
     readonly property var nativeColors: ({
-        background: Color.popups.background, surface: Color.popups.background,
-        foreground: Color.foreground, secondary: Color.foreground, muted: Color.muted,
-        border: Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.15),
-        accent: Color.accent, onAccent: Color.background,
+        background: Commons.Color.popups.background, surface: Commons.Color.popups.background,
+        foreground: Commons.Color.foreground, secondary: Commons.Color.foreground, muted: Commons.Color.muted,
+        border: Qt.rgba(Commons.Color.foreground.r, Commons.Color.foreground.g, Commons.Color.foreground.b, 0.15),
+        accent: Commons.Color.accent, onAccent: Commons.Color.background,
         success: root.statusColors.success, warning: root.statusColors.warning, error: root.statusColors.error,
         info: root.statusColors.info,
         successFill: root.statusColors.successFill,
@@ -232,7 +232,7 @@ Item {
         onFileChanged: themeReload.restart()
     }
     Connections {
-        target: Color
+        target: Commons.Color
         enabled: root.opened
         function onBackgroundChanged() { themeReload.restart(); }
         function onForegroundChanged() { themeReload.restart(); }
@@ -262,7 +262,7 @@ Item {
             visible: !root.showSettings
             colors: root.nativeColors
             lightTheme: root.lightTheme
-            fontFamily: Style.font.family
+            fontFamily: Commons.Style.font.family
             isRunning: runner.busy
             canRun: root.settingsReady
             rawJson: runner.rawJson
@@ -284,7 +284,7 @@ Item {
             anchors.fill: parent
             visible: root.showSettings
             padding: 20
-            font.family: Style.font.family
+            font.family: Commons.Style.font.family
             palette.window: root.nativeColors.background
             palette.windowText: root.nativeColors.foreground
             palette.base: root.nativeColors.surface

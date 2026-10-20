@@ -164,6 +164,9 @@ class LiveLadder:
     async def _run(self) -> None:
         while not self._stopping.is_set():
             self.draw()
+            if self._state.settled:
+                await self._stopping.wait()
+                break
             stop_wait = asyncio.ensure_future(self._stopping.wait())
             tick = asyncio.ensure_future(self._sleep(self._interval))
             try:

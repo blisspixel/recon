@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import Quickshell
 import Quickshell.Io
-import qs.Commons
+import qs.Commons as Commons
 import "Recon" as Recon
 
 ShellRoot {
@@ -119,7 +119,7 @@ ShellRoot {
     }
     property TextEdit clipboard: TextEdit { textFormat: TextEdit.PlainText }
     // Synthetic theme files under the private state root; the panel reads them
-    // through the fake host Color.currentThemePath, never a real user theme.
+    // through the fake host Commons.Color.currentThemePath, never a real user theme.
     property string themeDir: fixture + "/state/omarchy/current/theme"
     property string lightToml: ['mode = "light"', 'background = "#f3f3f3"', 'red = "#a01929"',
         'yellow = "#8a5d00"', 'green = "#1a7f37"', 'blue = "#0969da"', ''].join(String.fromCharCode(10))
@@ -135,11 +135,11 @@ ShellRoot {
             if (!test.lightApplied) {
                 test.lightApplied = true;
                 // The host switches its foundational roles after the files move.
-                Color.background = "#f3f3f3";
-                Color.foreground = "#202020";
-                Color.accent = "#174ba0";
-                Color.muted = "#575757";
-                Color.urgent = "#a01929";
+                Commons.Color.background = "#f3f3f3";
+                Commons.Color.foreground = "#202020";
+                Commons.Color.accent = "#174ba0";
+                Commons.Color.muted = "#575757";
+                Commons.Color.urgent = "#a01929";
             } else {
                 themeNameWriter.setText("renamed" + String.fromCharCode(10));
             }
@@ -420,7 +420,7 @@ ShellRoot {
         });
         add("dark render", function() { capture("dark.png"); }, function() {
             if (!imageReady) return false;
-            same(panel.view.color.toString(), Color.background.toString(), "Dark palette detached");
+            same(panel.view.color.toString(), Commons.Color.background.toString(), "Dark palette detached");
             same([panel.nativeColors.success, panel.nativeColors.warning, panel.nativeColors.error, panel.nativeColors.info],
                  ["#9ece6a", "#e0af68", "#f7768e", "#7aa2f7"], "Dark theme status roles not read from colors.toml");
             assertThat(!panel.lightTheme && distinctStatus(), "Dark status roles collapsed");

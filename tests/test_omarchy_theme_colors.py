@@ -32,14 +32,14 @@ def test_status_roles_are_distinct_and_not_accent_or_urgent() -> None:
     roles = {name: _native_role(name) for name in STATUS_ROLES}
     assert len(set(roles.values())) == 4, roles
     for expression in roles.values():
-        assert expression not in ("Color.accent", "Color.urgent"), roles
+        assert expression not in ("Commons.Color.accent", "Commons.Color.urgent"), roles
     fills = {name: _native_role(name + "Fill") for name in STATUS_ROLES}
     assert len(set(fills.values())) == 4, fills
     for expression in fills.values():
-        assert "Color.accent" not in expression, fills
-        assert "Color.urgent" not in expression, fills
+        assert "Commons.Color.accent" not in expression, fills
+        assert "Commons.Color.urgent" not in expression, fills
     # Accent stays the focus and selection role.
-    assert _native_role("accent") == "Color.accent"
+    assert _native_role("accent") == "Commons.Color.accent"
 
 
 def test_confidence_badge_matches_cli_roles() -> None:
@@ -63,12 +63,12 @@ def test_preview_fallback_has_light_and_dark_sets() -> None:
 def test_theme_colors_are_read_without_a_shell_and_follow_theme_changes() -> None:
     # Read through Quickshell FileView, from the host's own theme path, with no process.
     assert 'path: root.themePath + "/colors.toml"' in PANEL
-    assert "Color.currentThemePath" in PANEL
+    assert "Commons.Color.currentThemePath" in PANEL
     assert not re.search(r"command\s*=.*theme", PANEL, re.IGNORECASE)
     assert "omarchy-theme" not in PANEL
     # Reread at open and when the host palette or the theme name changes while open.
     assert "themeColorsFile.reload();" in PANEL.split("function open(", 1)[1].split("function close(", 1)[0]
-    assert "target: Color" in PANEL
+    assert "target: Commons.Color" in PANEL
     assert "enabled: root.opened" in PANEL
     assert "watchChanges: root.opened" in PANEL
     assert "onLoadFailed: root.themeKeys = ({})" in PANEL
