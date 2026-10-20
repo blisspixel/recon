@@ -223,6 +223,7 @@ guarantee is on each file's schema, not on the directory it resolves to.
 | `~/.recon/cache/*.json` (TenantInfo cache) | Stable. Within the current cache version, entries lacking later additive fields remain readable and current writes include current fields. An explicit cache-version mismatch, wrong-shaped, corrupt, oversized, or numerically invalid file degrades to a clean miss. |
 | `~/.recon/ct-cache/*.json` (per-domain CT cache) | Stable. Older entries without certificate-summary or infrastructure-cluster extensions remain readable; current writes preserve those extensions. Wrong-shaped, corrupt, oversized, or numerically invalid files degrade to a clean miss. |
 | `RECON_CONFIG_DIR` environment variable | Stable. |
+| `RECON_NO_ANIMATION` environment variable | Stable. Any non-empty value other than `0`, `false` or `no` turns off the animated source ladder; the static source-health line on stderr remains. Presentation only: it never changes stdout, JSON, or exit codes. |
 | `recon_tool/data/observation-capsule-schema.json` | Byte-identical packaged copy of the documented capsule schema. Stable by its own `capsule_schema_version`, separate from lookup schema version `2.0`. |
 
 ---
