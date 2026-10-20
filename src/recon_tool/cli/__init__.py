@@ -662,24 +662,31 @@ def batch(
     Per-domain failures are output records and keep exit 0. In JSON or NDJSON,
     inspect record_type; in CSV, inspect error.
     """
+    from recon_tool.cli.collection_warnings import capture_collection_warnings, print_collection_warnings
+
     concurrency = max(1, min(20, concurrency))
-    asyncio.run(
-        _batch(
-            file,
-            json_output,
-            markdown,
-            concurrency,
-            timeout,
-            csv_output=csv_output,
-            include_unclassified=include_unclassified,
-            skip_ct=no_ct,
-            ndjson=ndjson,
-            include_ecosystem=include_ecosystem,
-            fusion=_resolve_fusion_transition(ctx, fusion),
-            summary=summary,
-            summary_schema=summary_schema,
-        )
-    )
+    # Library warnings from every domain become one summary on stderr.
+    with capture_collection_warnings() as warnings:
+        try:
+            asyncio.run(
+                _batch(
+                    file,
+                    json_output,
+                    markdown,
+                    concurrency,
+                    timeout,
+                    csv_output=csv_output,
+                    include_unclassified=include_unclassified,
+                    skip_ct=no_ct,
+                    ndjson=ndjson,
+                    include_ecosystem=include_ecosystem,
+                    fusion=_resolve_fusion_transition(ctx, fusion),
+                    summary=summary,
+                    summary_schema=summary_schema,
+                )
+            )
+        finally:
+            print_collection_warnings(warnings, get_err_console())
 
 
 @app.command(short_help="Find fingerprint candidates.")

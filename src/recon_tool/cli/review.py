@@ -104,8 +104,16 @@ def review(
         )
         return bundle, 0
 
+    from recon_tool.cli.collection_warnings import capture_collection_warnings, print_collection_warnings
+    from recon_tool.formatter import get_err_console
+
+    # Library warnings become one summary on stderr; stdout keeps the bundle.
     try:
-        bundle, exit_code = asyncio.run(_collect())
+        with capture_collection_warnings() as warnings:
+            try:
+                bundle, exit_code = asyncio.run(_collect())
+            finally:
+                print_collection_warnings(warnings, get_err_console())
     except Exception as exc:
         logger.exception("Unexpected error composing a ReviewBundle for %s", validated)
         render_error(_UNEXPECTED_REVIEW_ERROR)

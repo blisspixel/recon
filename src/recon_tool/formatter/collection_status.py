@@ -83,7 +83,7 @@ class CollectionStatusProjection:
     ct_subdomain_count: int
     # True only when every default lookup source (DNS, OIDC discovery,
     # GetUserRealm, Google identity routing) is marked unavailable and nothing
-    # was observed or recovered, so the note can say "All" instead of "Some".
+    # was observed or recovered, so the note can say "All N" instead of "N".
     all_sources_unavailable: bool = False
 
     @property
@@ -138,10 +138,13 @@ def unavailable_sources_phrase(
     if not status.unavailable_sources:
         return None
     listed = ", ".join(escape(source) if escape else source for source in status.unavailable_sources)
+    count = len(status.unavailable_sources)
+    if count == 1:
+        infix = " was" if verb == "were" else (f" {verb}" if verb else "")
+        return f"1 source{infix} unavailable ({listed})"
     infix = f" {verb}" if verb else ""
-    if status.all_sources_unavailable:
-        return f"All {len(status.unavailable_sources)} sources{infix} unavailable ({listed})"
-    return f"Some sources{infix} unavailable ({listed})"
+    quantifier = "All " if status.all_sources_unavailable else ""
+    return f"{quantifier}{count} sources{infix} unavailable ({listed})"
 
 
 def collection_note_parts(status: CollectionStatusProjection) -> tuple[str, ...]:

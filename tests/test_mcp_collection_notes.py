@@ -16,7 +16,7 @@ from recon_tool.server.lookup import _lookup_tenant_text
     ("fields", "expected"),
     [
         ({}, None),
-        ({"degraded_sources": ("dns:mx",)}, "Some sources unavailable (dns:mx)"),
+        ({"degraded_sources": ("dns:mx",)}, "1 source unavailable (dns:mx)"),
         (
             {"degraded_sources": ("crt.sh", "certspotter")},
             "All CT providers unavailable (crt.sh, certspotter)",
@@ -41,7 +41,7 @@ from recon_tool.server.lookup import _lookup_tenant_text
                 "ct_subdomain_count": 4,
                 "ct_cache_age_days": 0,
             },
-            "Some sources unavailable (dns:dmarc); CT: from local cache, today (4 subdomains)",
+            "1 source unavailable (dns:dmarc); CT: from local cache, today (4 subdomains)",
         ),
         (
             {
@@ -49,7 +49,7 @@ from recon_tool.server.lookup import _lookup_tenant_text
                 "ct_provider_used": "certspotter",
                 "ct_subdomain_count": 0,
             },
-            "Some sources unavailable (dns:mx); CT recovered via certspotter",
+            "1 source unavailable (dns:mx); CT recovered via certspotter",
         ),
     ],
 )

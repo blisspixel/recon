@@ -123,11 +123,11 @@ async def test_connect_deadline_covers_dns(monkeypatch: pytest.MonkeyPatch) -> N
 
 @pytest.mark.asyncio
 async def test_request_validation_has_a_deadline(monkeypatch: pytest.MonkeyPatch) -> None:
-    async def stalled(_host: str) -> bool:
+    async def stalled(_host: str) -> None:
         await asyncio.Event().wait()
-        return False
+        return
 
-    monkeypatch.setattr("recon_tool.http._is_private_ip_async", stalled)
+    monkeypatch.setattr("recon_tool.http._destination_refusal_async", stalled)
     async with httpx.AsyncClient(transport=_SSRFSafeTransport(), timeout=0.01) as client:
         with pytest.raises(httpx.ConnectTimeout):
             await client.get("https://synthetic.invalid/")

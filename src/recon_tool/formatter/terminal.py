@@ -40,6 +40,7 @@ logger = logging.getLogger("recon")
 
 __all__ = [
     "ColorDecision",
+    "color_override",
     "get_console",
     "get_err_console",
     "prepare_output",
@@ -49,6 +50,7 @@ __all__ = [
     "set_color_override",
     "set_console",
     "set_err_console",
+    "stream_is_tty",
 ]
 
 # Default consoles. A module global rather than an injected parameter because
@@ -186,6 +188,16 @@ def set_color_override(value: bool | None) -> None:
     global _color_override  # noqa: PLW0603
     _color_override = value
     _reset_consoles()
+
+
+def color_override() -> bool | None:
+    """Return ``--color`` (True), ``--no-color`` (False) or neither (None)."""
+    return _color_override
+
+
+def stream_is_tty(stream: Any) -> bool:
+    """Return whether ``stream`` is a terminal, honoring ``TTY_COMPATIBLE``."""
+    return _stream_is_tty(stream, os.environ)
 
 
 def set_ascii_override(value: bool) -> None:

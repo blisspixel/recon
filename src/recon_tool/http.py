@@ -20,6 +20,8 @@ import math
 import socket
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
+from typing import Any, Literal
 
 import httpx
 
@@ -116,46 +118,95 @@ def _parse_ip_address(host: str) -> ipaddress.IPv4Address | ipaddress.IPv6Addres
         return None
 
 
-async def _is_private_ip_async(host: str) -> bool:
-    """Async check if a host must be refused by destination validation.
+@dataclass(frozen=True, slots=True)
+class DestinationRefusal:
+    """Why destination validation refused a host, in operator wording.
+
+    ``condition`` is ``unresolved_host`` (the name did not resolve, an
+    availability failure) or ``private_address`` / ``no_hostname`` (a real
+    policy refusal). The CLI groups these by condition into one summary line;
+    see ``cli/collection_warnings.py``.
+    """
+
+    condition: Literal["unresolved_host", "private_address", "no_hostname"]
+    host: str
+    address: str | None = None
+
+    def describe(self) -> str:
+        """Return the one-line explanation used in logs and connect errors."""
+        if self.condition == "unresolved_host":
+            return f"could not resolve {self.host}"
+        if self.condition == "no_hostname":
+            return "skipped: request has no hostname"
+        if self.address == self.host:
+            return f"{self.host} skipped: a private address"
+        return f"{self.host} skipped: resolves to a private address ({self.address})"
+
+
+def _log_refusal(refusal: DestinationRefusal) -> None:
+    """Log a refusal once, with structured fields the CLI summary groups on."""
+    logger.warning(
+        "%s",
+        refusal.describe(),
+        extra={
+            "recon_condition": refusal.condition,
+            "recon_host": refusal.host,
+            "recon_address": refusal.address,
+        },
+    )
+
+
+def _refusal_for_answers(host: str, addrinfos: list[Any]) -> DestinationRefusal | None:
+    """Admit a resolved answer only when every address is public unicast."""
+    if not addrinfos:
+        return DestinationRefusal("unresolved_host", host)
+    for _family, _type, _proto, _canonname, sockaddr in addrinfos:
+        ip_str = str(sockaddr[0])
+        if _parse_ip_address(ip_str) is None or _is_blocked_ip(ip_str):
+            return DestinationRefusal("private_address", host, ip_str)
+    return None
+
+
+async def _destination_refusal_async(host: str) -> DestinationRefusal | None:
+    """Async destination validation; returns the refusal, or None to admit.
 
     Two-layer defense against SSRF and DNS rebinding:
     1. If the host is a literal IP address, check it directly.
     2. If the host is a hostname, resolve it via getaddrinfo in a thread pool
        (non-blocking) and check all returned addresses.
 
-    Returns True if the host is non-public or cannot be resolved and therefore
-    cannot be validated safely.
+    A host that is non-public, or that cannot be resolved and therefore cannot
+    be validated safely, is refused. Hostname refusals are logged once.
     """
     # Layer 1: literal IP check (fast path, no I/O)
     addr = _parse_ip_address(host)
     if addr is not None:
-        return _addr_is_blocked(addr)
+        return DestinationRefusal("private_address", host, host) if _addr_is_blocked(addr) else None
 
     # Layer 2: resolve hostname in thread pool and check all returned IPs
     if not host:
-        logger.warning("SSRF validation refused: request has no hostname")
-        return True
-    try:
-        loop = asyncio.get_running_loop()
-        addrinfos = await loop.getaddrinfo(host, None, family=socket.AF_UNSPEC, type=socket.SOCK_STREAM)
-        if not addrinfos:
-            logger.warning("SSRF validation refused: hostname %s resolved to no addresses", host)
-            return True
-        for _family, _type, _proto, _canonname, sockaddr in addrinfos:
-            ip_str = str(sockaddr[0])
-            resolved = _parse_ip_address(ip_str)
-            if resolved is None or _is_blocked_ip(ip_str):
-                logger.warning(
-                    "SSRF blocked: hostname %s resolves to non-public IP %s",
-                    host,
-                    ip_str,
-                )
-                return True
-    except (socket.gaierror, OSError):
-        logger.warning("SSRF validation refused: hostname %s could not be resolved", host)
-        return True
-    return False
+        refusal: DestinationRefusal | None = DestinationRefusal("no_hostname", host)
+    else:
+        try:
+            loop = asyncio.get_running_loop()
+            addrinfos = await loop.getaddrinfo(host, None, family=socket.AF_UNSPEC, type=socket.SOCK_STREAM)
+        except (socket.gaierror, OSError):
+            refusal = DestinationRefusal("unresolved_host", host)
+        else:
+            refusal = _refusal_for_answers(host, list(addrinfos))
+    if refusal is not None:
+        _log_refusal(refusal)
+    return refusal
+
+
+async def _is_private_ip_async(host: str) -> bool:  # pyright: ignore[reportUnusedFunction]
+    """Return True when destination validation refuses *host* (async).
+
+    The boolean form of ``_destination_refusal_async``, kept for callers and
+    tests that need only the decision; the transport uses the refusal itself
+    so its error names the condition.
+    """
+    return await _destination_refusal_async(host) is not None
 
 
 async def _public_addresses_async(host: str) -> tuple[str, ...]:
@@ -198,27 +249,17 @@ def _is_private_ip(host: str) -> bool:  # pyright: ignore[reportUnusedFunction]
 
     # Layer 2: resolve hostname and check all returned IPs
     if not host:
-        logger.warning("SSRF validation refused: request has no hostname")
-        return True
-    try:
-        addrinfos = socket.getaddrinfo(host, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
-        if not addrinfos:
-            logger.warning("SSRF validation refused: hostname %s resolved to no addresses", host)
-            return True
-        for _family, _type, _proto, _canonname, sockaddr in addrinfos:
-            ip_str = str(sockaddr[0])
-            resolved = _parse_ip_address(ip_str)
-            if resolved is None or _is_blocked_ip(ip_str):
-                logger.warning(
-                    "SSRF blocked: hostname %s resolves to non-public IP %s",
-                    host,
-                    ip_str,
-                )
-                return True
-    except (socket.gaierror, OSError):
-        logger.warning("SSRF validation refused: hostname %s could not be resolved", host)
-        return True
-    return False
+        refusal: DestinationRefusal | None = DestinationRefusal("no_hostname", host)
+    else:
+        try:
+            addrinfos = socket.getaddrinfo(host, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
+        except (socket.gaierror, OSError):
+            refusal = DestinationRefusal("unresolved_host", host)
+        else:
+            refusal = _refusal_for_answers(host, list(addrinfos))
+    if refusal is not None:
+        _log_refusal(refusal)
+    return refusal is not None
 
 
 class _MaxBytesStream(httpx.AsyncByteStream):
@@ -294,14 +335,18 @@ class _SSRFSafeTransport(CoreHTTPTransport):
         timeout = request.extensions.get("timeout", {}).get("connect", DEFAULT_TIMEOUT)
         try:
             async with asyncio.timeout(timeout):
-                blocked = await _is_private_ip_async(host)
+                refusal = await _destination_refusal_async(host)
         except TimeoutError as exc:
             raise httpx.ConnectTimeout("Timed out validating destination", request=request) from exc
-        if blocked:
-            raise httpx.ConnectError(
-                f"SSRF blocked: request destination is non-public or could not be validated: {host}",
-                request=request,
+        if refusal is not None:
+            # A name that does not resolve is an availability failure, not a
+            # policy event; only a non-public destination is an SSRF refusal.
+            reason = (
+                f"{refusal.describe()}, so the destination could not be validated"
+                if refusal.condition == "unresolved_host"
+                else f"SSRF blocked, {refusal.describe()}"
             )
+            raise httpx.ConnectError(reason, request=request)
         response = await super().handle_async_request(request)
         if isinstance(response.stream, httpx.AsyncByteStream):
             stream = response.stream
