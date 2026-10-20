@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import json
 import os
 import re
 import shutil
@@ -333,15 +334,14 @@ def test_openssf_posture_docs_track_real_scorecard_limits() -> None:
     text = " ".join((_ROOT / "docs" / "openssf-posture.md").read_text(encoding="utf-8").split())
 
     for required in (
-        "2026-07-18",
-        "Score: `8.2`",
+        "2026-10-20",
+        "Score: `8.4`",
         "public API rechecked for the exact current release `HEAD`",
         "live API URL",
         "Remote release readiness queries that API for `HEAD`",
         "overall score of at least `8.0`",
-        "requires the documented SAST floor of `7`",
+        "requires the documented SAST floor of `10`",
         "every sampled merged pull request ran CI",
-        "sample still includes merged pull-request heads from before PR-scoped CodeQL was required",
         "Current pull requests provide supported SAST evidence",
         "pushes to `main` run CodeQL",
         "public API reports successful supported SAST checks for every merged pull request",
@@ -349,6 +349,8 @@ def test_openssf_posture_docs_track_real_scorecard_limits() -> None:
         "openssf-badge-readiness.md",
         "must not be added as a placeholder",
         "Branch-Protection",
+        "Stale approvals are dismissed and review threads must resolve",
+        "no bypass actors",
         "Code-Review",
         "CI-Tests",
         "CII-Best-Practices",
@@ -369,11 +371,10 @@ def test_supply_chain_docs_name_current_scorecard_recheck() -> None:
     text = " ".join((_ROOT / "docs" / "supply-chain.md").read_text(encoding="utf-8").split())
 
     for required in (
-        "2026-07-18 Scorecard recheck for the exact current-release `HEAD` reports score `8.2`",
-        "non-SAST measured code-owned controls are at `10`; SAST is `7`",
-        "sampled window still includes merged pull-request heads from before PR-scoped CodeQL was required",
+        "2026-10-20 Scorecard recheck for the exact current-release `HEAD` reports score `8.4`",
+        "All required measured code-owned controls, including SAST, are at `10`",
         "overall score of at least `8.0`",
-        "enforces the current SAST floor of `7`",
+        "enforces the current SAST floor of `10`",
         "public API reports successful supported SAST checks for every merged pull request",
         "Current pull requests and pushes to `main` run CodeQL",
         "retry exactly once only when their output matches a narrow set of recognized transport failures",
@@ -569,6 +570,20 @@ def test_openssf_badge_readiness_blocks_fake_process_progress() -> None:
         "no LTS branch is promised",
     ):
         assert required in text
+
+    proposals = json.loads((_ROOT / ".project.d/bestpractices.json").read_text(encoding="utf-8"))
+    assert not {"id", "user_id", "badge_level", "badge_percentage_0"} & proposals.keys()
+    for criterion in (
+        "know_secure_design",
+        "know_common_errors",
+        "report_responses",
+        "enhancement_responses",
+        "vulnerability_report_response",
+    ):
+        assert proposals[f"{criterion}_status"] == "?"
+    for name, status in proposals.items():
+        if name.endswith("_status") and status in {"Met", "N/A"}:
+            assert "https://" in proposals[name.removesuffix("_status") + "_justification"]
 
     for forbidden in (
         "https://bestpractices.dev/projects/",

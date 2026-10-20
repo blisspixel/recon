@@ -84,8 +84,10 @@ The [Linux interface qualification](docs/interface-qualification-2026-10-20.md)
 exercises the source ladder and native panel on a running desktop. It identifies
 and corrects idle ladder redraws, palette singleton shadowing, and input
 selection that did not follow the accent; publication is tracked in the changelog.
-Remaining v2.21 follow-ups: move the typecheck and release jobs to Node 26 on or
-after its 2026-10-28 LTS date, and drop PyYAML source builds once a cp315 wheel ships.
+The v2.21.2 maintenance batch adopts Node 26 GA for typecheck and release jobs
+without waiting for its 2026-10-28 LTS designation. Python 3.15.0 is the latest
+GA default; 3.11 through 3.15 remain the tested compatibility range. Drop PyYAML
+source builds once a cp315 wheel ships.
 
 `main` is the single integration and release branch. Short-lived implementation
 and release-preparation branches merge through required checks and are deleted

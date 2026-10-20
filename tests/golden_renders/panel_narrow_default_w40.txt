@@ -9,7 +9,7 @@ residue, not an organization.
                 • NA
   Tenant domain example-industries-international-holdings.onmicrosoft.example.com
   Auth          Federated
-  Confidence    ●●● High (4 sources)
+  Confidence    ●●● High (3 sources)
 
 
 Services

@@ -535,9 +535,16 @@ def _branch_ruleset_payload() -> dict[str, object]:
                     ],
                 },
             },
-            {"type": "pull_request"},
+            {
+                "type": "pull_request",
+                "parameters": {
+                    "required_approving_review_count": 0,
+                    "dismiss_stale_reviews_on_push": True,
+                    "required_review_thread_resolution": True,
+                },
+            },
         ],
-        "bypass_actors": [{"actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "always"}],
+        "bypass_actors": [],
     }
 
 
@@ -563,7 +570,7 @@ def test_remote_branch_ruleset_requires_and_reports_the_live_contract() -> None:
     assert check.status == "pass"
     assert "strict" in check.detail
     assert "ci-gate" in check.detail
-    assert "RepositoryRole#5(always)" in check.detail
+    assert "bypass actors: none" in check.detail
 
 
 @pytest.mark.parametrize(
@@ -592,6 +599,32 @@ def test_ruleset_problem_reports_exact_protection_drift(case: str, expected: str
     problems = release_readiness._ruleset_problems(payload)
 
     assert expected in "; ".join(problems)
+
+
+@pytest.mark.parametrize(
+    "field",
+    ["dismiss_stale_reviews_on_push", "required_review_thread_resolution"],
+)
+def test_ruleset_rejects_disabled_or_missing_review_handling(field: str) -> None:
+    payload = _branch_ruleset_payload()
+    rules = payload["rules"]
+    assert isinstance(rules, list)
+    rule = rules[-1]
+    assert isinstance(rule, dict)
+    parameters = rule["parameters"]
+    assert isinstance(parameters, dict)
+    for value in (False, None):
+        parameters[field] = value
+        assert release_readiness._ruleset_problems(payload)
+    del parameters[field]
+    assert release_readiness._ruleset_problems(payload)
+
+
+@pytest.mark.parametrize("actors", [None, [{"actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "always"}]])
+def test_ruleset_rejects_bypass_or_unknown_bypass_state(actors: object) -> None:
+    payload = _branch_ruleset_payload()
+    payload["bypass_actors"] = actors
+    assert "ruleset bypass actors" in "; ".join(release_readiness._ruleset_problems(payload))
 
 
 def _scorecard_payload(sha: str, score: float = 8.3, **check_overrides: int) -> dict[str, object]:
@@ -651,13 +684,14 @@ def test_scorecard_api_fails_on_regressed_code_owned_check() -> None:
     assert "Pinned-Dependencies=9" in problem
 
 
-def test_scorecard_api_fails_when_sast_drops_below_documented_floor() -> None:
+@pytest.mark.parametrize("score", [7, 9])
+def test_scorecard_api_fails_when_sast_drops_below_documented_floor(score: int) -> None:
     sha = "a" * 40
 
-    problem = release_readiness._scorecard_problem(_scorecard_payload(sha, SAST=6), sha)
+    problem = release_readiness._scorecard_problem(_scorecard_payload(sha, SAST=score), sha)
 
     assert problem is not None
-    assert "SAST=6" in problem
+    assert f"SAST={score}" in problem
     assert "below expected floor" in problem
 
 

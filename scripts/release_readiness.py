@@ -92,9 +92,9 @@ _REQUIRED_SCORECARD_TENS = (
     "Vulnerabilities",
 )
 _REQUIRED_SCORECARD_MINIMUMS = {
-    # The current Scorecard window includes merged PRs from before PR-scoped
-    # CodeQL. Require the configured-tool floor while retaining that history.
-    "SAST": 7,
+    # The 2026-10-20 public recheck reports supported SAST on the full sample.
+    # Retain that achieved control rather than the former transitional floor.
+    "SAST": 10,
 }
 _PYPI_PACKAGE = "recon-tool"
 _PYPI_ATTESTATION_REPOSITORY = "https://github.com/blisspixel/recon"
@@ -705,6 +705,21 @@ def _check_remote_workflows(runner: Runner) -> CheckResult:
     return _result("remote CI", "pass", "required workflows completed successfully for HEAD")
 
 
+def _review_rule_problems(rule: object, *, bypass_actors: object) -> list[str]:
+    """Require review handling and enforcement for all repository actors."""
+    parameters = rule.get("parameters") if isinstance(rule, dict) else None
+    if not isinstance(parameters, dict):
+        return ["pull request parameters are missing"]
+    problems: list[str] = []
+    if parameters.get("dismiss_stale_reviews_on_push") is not True:
+        problems.append("stale review dismissal is disabled")
+    if parameters.get("required_review_thread_resolution") is not True:
+        problems.append("review thread resolution is disabled")
+    if bypass_actors != []:
+        problems.append("ruleset bypass actors must be an explicit empty list")
+    return problems
+
+
 def _ruleset_problems(payload: dict[str, object]) -> list[str]:
     """Return exact default-branch protection drift for one active ruleset."""
     problems: list[str] = []
@@ -748,23 +763,8 @@ def _ruleset_problems(payload: dict[str, object]) -> list[str]:
             problems.append("required status check list is missing")
     elif status_rule is not None:
         problems.append("required status check parameters are missing")
+    problems.extend(_review_rule_problems(by_type.get("pull_request"), bypass_actors=payload.get("bypass_actors")))
     return problems
-
-
-def _ruleset_bypass_summary(payload: dict[str, object]) -> str:
-    actors = payload.get("bypass_actors")
-    if not isinstance(actors, list) or not actors:
-        return "none"
-    labels: list[str] = []
-    for actor in actors:
-        if not isinstance(actor, dict):
-            labels.append("unrecognized")
-            continue
-        labels.append(
-            f"{actor.get('actor_type', 'unknown')}#{actor.get('actor_id', 'unknown')}"
-            f"({actor.get('bypass_mode', 'unknown')})"
-        )
-    return ", ".join(labels)
 
 
 def _load_ruleset_summaries(runner: Runner, repo: str) -> list[object] | CheckResult:
@@ -822,12 +822,11 @@ def _check_remote_branch_ruleset(runner: Runner) -> CheckResult:
         problems = _ruleset_problems(payload)
         if not problems:
             name = payload.get("name", ruleset_id)
-            bypass = _ruleset_bypass_summary(payload)
             checks = ", ".join(sorted(_REQUIRED_BRANCH_CHECKS))
             return _result(
                 "branch ruleset",
                 "pass",
-                f"{name}: strict [{checks}]; bypass actors: {bypass}",
+                f"{name}: strict [{checks}]; bypass actors: none",
             )
         candidate_failures.append(f"ruleset {ruleset_id}: " + "; ".join(problems))
     return _result(

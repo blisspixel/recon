@@ -572,16 +572,14 @@ The repository also runs supply-chain posture checks outside the release flow:
 - `.github/CODEOWNERS` routes all repository paths to the maintainer account so
   external pull requests have a clear review owner.
 
-The 2026-07-18 Scorecard recheck for the exact current-release `HEAD` reports
-score `8.2`. The non-SAST measured code-owned controls are at `10`; SAST is `7`
-because the sampled window still includes merged pull-request heads from before
-PR-scoped CodeQL was required. Remote release readiness requires an overall
-score of at least `8.0`, keeps the other required code-owned controls at `10`,
-and enforces the current SAST floor of `7`. Current pull requests and pushes to
-`main` run CodeQL, and weekly and manual default-branch scans remain. The SAST
-requirement can return to `10` only after the public API reports successful
-supported SAST checks for every merged pull request in its sampled window. The
-sample size and dated `8.2` value are snapshots, not permanent promises.
+The 2026-10-20 Scorecard recheck for the exact current-release `HEAD` reports
+score `8.4`. All required measured code-owned controls, including SAST, are at
+`10`. The public API reports successful supported SAST checks for every merged
+pull request in its sampled window. Remote release readiness requires an
+overall score of at least `8.0` and enforces the current SAST floor of `10`.
+Current pull requests and pushes to `main` run CodeQL, and weekly and manual
+default-branch scans remain. The sample size and dated score are snapshots,
+not permanent promises.
 The June 28 review found one code-owned gap and several repository-process gaps.
 The code-owned gap was an
 unpinned installer download-and-run path; that path was removed at the time.
@@ -595,10 +593,11 @@ linear history.
 
 The remaining Scorecard limits are intentional or process-bound:
 
-- Branch-Protection is not maximal because repository administrators can bypass
-  the ruleset and PRs are not mandatory. That keeps the current clean-main
-  single-maintainer workflow usable. A future multi-maintainer process can
-  remove the bypass and require PRs.
+- Branch-Protection is not maximal because independent approvals, last-push
+  approval and required CODEOWNERS review need a second qualified reviewer.
+  PRs are mandatory, bypass actors are absent, stale approvals are dismissed,
+  and review threads must resolve. Release readiness rejects drift in these
+  controls. The project welcomes outside contributors and prospective reviewers.
 - Code-Review is low until normal work flows through reviewed pull requests.
   Creating fake review history would be worse than the score.
 - CII-Best-Practices is low until the OpenSSF Best Practices Badge questionnaire

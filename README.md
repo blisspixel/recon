@@ -30,6 +30,7 @@ reproduces this fixture.
 
 ```text
 demo@recon:~$ recon example.com    # synthetic fixture, not a captured run
+6 sources: 5 matched, 1 no match
 Example Industries Ltd (unverified)
 example.com
 Reserved name: results are public residue, not an organization.
@@ -38,7 +39,7 @@ Reserved name: results are public residue, not an organization.
   Tenant        a1b2c3d4-e5f6-7890-abcd-ef1234567890 • NA
   Tenant domain example-industries.onmicrosoft.example.com
   Auth          Federated
-  Confidence    ●●● High (4 sources)
+  Confidence    ●●● High (3 sources)
 
 
 Services
@@ -79,7 +80,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubus
 ```
 
 The installer sets up recon for your user account, including Python when needed.
-Open a new terminal afterward. Already have Python 3.11 through 3.15? Use
+Open a new terminal afterward. Python 3.15 is the default development and release
+runtime; 3.11 through 3.15 remain supported. Already have a supported Python? Use
 `pip install recon-tool` in a virtual environment, or `uv tool install --python 3.15 recon-tool` /
 `pipx install --python python3.15 recon-tool` on managed distributions like Arch Linux and Omarchy.
 For review-before-run instructions, other package managers, updates, and recovery,
