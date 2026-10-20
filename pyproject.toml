@@ -79,6 +79,9 @@ dependencies = [
     # MCP's JWT dependency must include the 2.14 security fixes even when pip
     # reuses an existing environment. Keep this floor until MCP requires it.
     "pyjwt>=2.14.0",
+    # PYSEC-2026-4320: exclude the compromised emSign trust root from HTTPX's
+    # default CA bundle, including when pip reuses an existing environment.
+    "certifi>=2026.10.19",
 ]
 
 [project.scripts]

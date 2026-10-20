@@ -4,6 +4,9 @@
 
 If you discover a security vulnerability in recon, please report it responsibly.
 
+**Private HTTPS report:** [Report a vulnerability](https://github.com/blisspixel/recon/security/advisories/new).
+This form sends a private report to the maintainer; it does not open a public issue.
+
 **Email:** nick@pueo.io
 
 **Please include:**

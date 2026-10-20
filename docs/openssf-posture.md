@@ -46,10 +46,13 @@ The detailed worksheet lives in
 [openssf-badge-readiness.md](openssf-badge-readiness.md). The OpenSSF Best
 Practices Badge criteria are organized around basics, change control,
 reporting, quality, security, and analysis. recon already has local evidence
-for many passing-level questions. The root
+for many passing-level questions. The repository
 [.project.d/bestpractices.json](../.project.d/bestpractices.json) supplies all 67 criterion proposals
 to the badge service, with unknown answers for personal attestations and
-unverified response history. It does not create a badge project or claim a
+unverified response history. A source and primary-documentation review leaves
+11 unknown answers; the other proposals comprise 53 `Met` and 3 `N/A` answers.
+Private HTTPS vulnerability reporting is enabled and linked from `SECURITY.md`.
+The import file does not create a badge project or claim a
 passing result:
 
 | Area | Local evidence |

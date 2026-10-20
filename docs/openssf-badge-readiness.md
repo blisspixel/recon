@@ -31,12 +31,22 @@ Do not add:
 
 ## Passing-Level Evidence Map
 
-This map prepares evidence for the passing-level questionnaire. The root
+This map prepares evidence for the passing-level questionnaire. The repository
 [.project.d/bestpractices.json](../.project.d/bestpractices.json) proposes answers to all 67 current
 passing criteria using the service's [documented import format](https://github.com/coreinfrastructure/best-practices-badge/blob/main/docs/bestpractices-json.md).
 Unknown (`?`) answers are ignored by the service and require maintainer review.
 This file does not register a project, authenticate to the service or attest
 to a maintainer's knowledge or response history.
+
+The 2026-10-20 evidence review proposes 53 `Met`, 3 `N/A` and 11 unknown
+answers. These are import proposals, not a badge result or completion percentage.
+The cryptography answers cite the shared transport, optional remote adapter,
+[HTTPX's SSL documentation](https://www.python-httpx.org/advanced/ssl/) and
+[Python's SSL defaults](https://docs.python.org/3.11/library/ssl.html#ssl.SSLContext).
+The latter documents forward secrecy, minimum key sizes and security level 2
+since Python 3.10, below recon's supported minimum. These default-client claims
+do not establish the configuration of custom Python builds or operator-managed
+TLS ingress for the optional remote container.
 
 | Criteria area | Local evidence | Current answer posture |
 |---|---|---|
@@ -76,15 +86,46 @@ Before submitting the questionnaire, collect this queue in the real
 |---|---|---|
 | Project sites and discussion | Repository, package, documentation, issue, and download URLs use HTTPS and remain publicly reachable. | Cite the live HTTPS URLs; do not infer reachability from local files. |
 | Contribution process | Public contribution instructions describe how changes are proposed and what standards apply. | Cite `CONTRIBUTING.md` and the current checked-PR boundary; do not imply independent approval of maintainer-authored changes. |
-| Issue and enhancement response history | Bug and enhancement reports from the prior 2-12 month window have enough public response history to answer honestly. | Use the public issue tracker state at submission time; if there is no applicable sample, use the questionnaire's permitted justification rather than inventing history. |
+| Issue and enhancement response history | Bug and enhancement reports from the prior 2-12 month window have enough public response history to answer honestly. | Use the public issue tracker state at submission time. The 2026-10-20 review found 26 issues, all maintainer-authored and closed; that is not an external response sample. Keep unknown when the applicable history cannot support an answer. |
 | Vulnerability response history | Any vulnerability reports in the last 6 months were initially answered within the criteria window. | Cite `SECURITY.md` for process and answer the history question only from real report records. |
 | Secure-development knowledge | The primary maintainer can honestly attest to secure design knowledge for this Python network-client tool. | Treat this as a maintainer attestation, not as evidence created by Scorecard or CI. |
-| Cryptography applicability | recon uses TLS-capable clients and package signing or provenance tooling but does not implement cryptographic primitives. | Mark implementation-specific cryptography criteria narrowly, with N/A only where the criterion permits it. |
+| Cryptography applicability | recon uses verified TLS defaults and standard-library SHA-256; it does not implement cryptographic primitives. The optional remote adapter authenticates an operator-provided random bearer token or trusts platform ingress. | Default client TLS supports the key-length, working-algorithm, weakness and forward-secrecy proposals. Password-database N/A does not mean the remote adapter lacks authentication. Operator token generation and remote TLS ingress remain deployment responsibilities. |
 | Static and dynamic analysis | CI, CodeQL, ruff, pyright, fuzzing, mutation, and tests are current for the release being described. | Cite public workflows and local gates; do not claim a third-party audit. |
 
 Do not use this queue as a substitute badge record. It is a checklist for
 answering the account-backed questionnaire, not a public claim that answers
 were submitted.
+
+## Remaining Unknown Answers
+
+Each unknown in the import file names the evidence still needed. The remaining
+11 answers fall into three groups:
+
+- **Developer knowledge:** `know_secure_design` and `know_common_errors` require
+  a primary developer's own attestation. Architecture documents and CI cannot
+  provide that personal answer.
+- **Response and disclosure history:** `report_responses`,
+  `enhancement_responses`, `vulnerability_report_response`,
+  `release_notes_vulns`, `vulnerabilities_fixed_60_days` and
+  `vulnerabilities_critical_fixed` require the applicable reports, disclosure
+  dates and released fixes. Check private email and private reports for the
+  six-month vulnerability-response question. An empty public advisory list
+  does not establish that no report was received.
+- **Finding dispositions and credentials:** `static_analysis_fixed`,
+  `dynamic_analysis_fixed` and `no_leaked_credentials` require confirmation of
+  finding history, timely fixes and credential handling. The 2026-10-20 live
+  review found no open CodeQL, Dependabot or secret-scanning alerts. The three
+  open Scorecard alerts concern repository process. These observations and
+  passing fuzz or secret scans do not prove an absence of vulnerabilities or
+  valid credentials outside scanner coverage. Never test a possible credential
+  against a service to validate a questionnaire answer.
+
+GitHub private vulnerability reporting was confirmed enabled on 2026-10-20.
+[SECURITY.md](../SECURITY.md) links the private HTTPS form as well as email.
+The `dynamic_analysis_unsafe` N/A proposal concerns project-owned code: recon
+ships a pure-Python universal wheel, with no project-owned memory-unsafe native
+extension. It does not describe the language or safety of third-party runtimes
+or dependencies. Python parser fuzzing still runs with the address sanitizer.
 
 ## Answers That Need Care
 
