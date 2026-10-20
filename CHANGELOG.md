@@ -26,6 +26,12 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Documentation
+
+- Document the enabled private HTTPS vulnerability-reporting channel and refine
+  the OpenSSF questionnaire evidence, including the optional remote adapter's
+  authentication boundary and the remaining maintainer attestations.
+
 ## [2.21.2] - 2026-10-20
 
 Adopt the current GA toolchain, strengthen repository assurance checks, and
