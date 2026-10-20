@@ -64,10 +64,26 @@ from version-pinned installs, release status in `recon doctor`, and clear pip
 instructions. Normal lookup output stays quiet. Acceptance requires fresh
 install and upgrade tests, PATH and failure handling, and release parity.
 
-The 2026-10-11 updater follow-up is implemented for the next maintenance batch:
-home-managed uv and pipx launchers retain their lexical dispatch and local
-destination checks. Regression coverage includes home and unrelated working
-directories plus project, Git, symlink and relative-path refusal boundaries.
+v2.20 shipped reliable installation and update recovery and replaced the
+Omarchy bar widget with an on-demand native panel; v2.20.1 kept home-managed uv
+and pipx updates available from any working directory.
+
+v2.21 closed the October black-box issue sweep without adding a collector,
+score or inference path. Collection truth: total collection failure exits 4,
+an apex NXDOMAIN is stated rather than narrated as a quiet domain, a collection
+with unavailable sources is never reused from the result cache, and the
+generated MCP launcher starts from the home directory or a filesystem root
+while still refusing a working-directory shadow package. Toolchain: Python 3.15
+is the default, CI tests 3.11 through 3.15 plus a free-threaded probe, and
+actions and Node are current. Interface: one theme role table on the 16 ANSI
+colors with an ASCII fallback, a source ladder on stderr, narrow-terminal
+layout that never breaks identifiers, the same qualifiers on every surface, one
+doctor vocabulary with JSON output, and theme-following Omarchy status colors.
+
+Open follow-ups from v2.21: move the typecheck and release jobs to Node 26 on or
+after its 2026-10-28 LTS date; capture the animated source ladder in a real
+terminal (flicker and idle CPU); verify the Omarchy panel colors on a running
+light and dark desktop; and drop PyYAML source builds once a cp315 wheel ships.
 
 `main` is the single integration and release branch. Short-lived implementation
 and release-preparation branches merge through required checks and are deleted
@@ -151,7 +167,9 @@ silent-failure, and contract-preserving fixes.
 | v2.16 | Shipped | One shared briefing across panel, plain, Markdown, and MCP text, plus renderer parity gates |
 | v2.17 | Shipped | Additive downstream connection map while preserving briefing cuts |
 | v2.18 | Shipped | NamespaceReviewBundle v1 plus contract-preserving fixes and maintenance |
-| v2.19 | Shipped; maintenance continues | Catalog and operator assurance, reproducible builds, and reviewed release preparation |
+| v2.19 | Shipped | Catalog and operator assurance, reproducible builds, and reviewed release preparation |
+| v2.20 | Shipped | Installation and update recovery, accessible prose, and the native Omarchy panel |
+| v2.21 | Shipped; maintenance continues | Collection truth, the Python 3.15 toolchain, and the interface rules from the October issue sweep |
 | v3.0, conditional | Not scheduled | Exists only if a genuine claim or observation contract change cannot remain additive; otherwise v2 remains current |
 
 The fusion omitted-choice change is claim-neutral compatibility debt. The
