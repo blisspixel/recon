@@ -653,5 +653,8 @@ to `--json` + pipe to the right tool.
 - Keep PRs focused: one feature or fix per PR.
 - Fingerprint-only PRs are welcome and easy to review.
 - Include a brief description of what you changed and why.
-- Reference the issue number if there is one.
+- Reference the issue number if there is one. Use `Closes #N` only when every
+  acceptance criterion is met, and use `Supports #N` for partial work. Post the
+  issue closeout comment described in
+  [AGENTS.md](AGENTS.md#working-in-this-repository) before merging.
 - Be patient: this is a small project with a single maintainer.
