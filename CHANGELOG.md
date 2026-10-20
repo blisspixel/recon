@@ -26,6 +26,11 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.21.3] - 2026-10-20
+
+Refresh the default CA bundle after an upstream security advisory and complete
+the source-verifiable repository assurance evidence.
+
 ### Security
 
 - Require `certifi>=2026.10.19` in runtime package metadata and refresh the
