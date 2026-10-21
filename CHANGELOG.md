@@ -26,12 +26,20 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.21.4] - 2026-10-20
+
+Correct CT maintenance summaries on fresh XDG installations.
+
 ### Fixed
 
 - Read CT limiter snapshots in maintenance summaries from the runtime's shared
   state-directory resolver, including fresh XDG installations. Preserve legacy
   and explicit override precedence and clarify that persisted counters can
   include earlier runs. This changes validation tooling, not packaged lookups.
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
 
 ## [2.21.3] - 2026-10-20
 
