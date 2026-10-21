@@ -438,6 +438,62 @@ class TestRootOptionPlacement:
         finally:
             set_color_override(None)
 
+    @pytest.mark.parametrize("command", [[], ["lookup"]])
+    @pytest.mark.parametrize("value", ["--ascii", "--color", "--no-color", "--debug", "--version", "-V"])
+    def test_lookup_keeps_flag_shaped_snapshot_path(
+        self, monkeypatch: pytest.MonkeyPatch, command: list[str], value: str, color_calls: list[bool | None]
+    ) -> None:
+        snapshots: list[str | None] = []
+
+        async def fake_lookup(_domain, options) -> None:
+            snapshots.append(options.compare_file)
+
+        monkeypatch.setattr("recon_tool.cli._lookup", fake_lookup)
+        result = runner.invoke(app, [*command, "example.com", "--compare", value])
+
+        assert result.exit_code == 0, result.output
+        assert snapshots == [value]
+        assert color_calls == []
+
+    def test_root_flag_after_separator_spelling_used_as_value(
+        self, looked_up: list[str], color_calls: list[bool | None]
+    ) -> None:
+        result = runner.invoke(app, ["example.com", "--compare", "--", "--no-color"])
+        assert result.exit_code == 0, result.output
+        assert looked_up == ["example.com"]
+        assert color_calls == [False]
+
+    @pytest.mark.parametrize(
+        "args",
+        [
+            ["fingerprints", "new", "-p", "--debug", "--help"],
+            ["mcp", "install", "-s", "--debug", "--help"],
+            ["lookup", "example.com", "-st", "--debug", "--help"],
+        ],
+    )
+    def test_nested_aliases_and_short_clusters_keep_their_values(self, args: list[str]) -> None:
+        result = runner.invoke(app, args)
+        assert result.exit_code == 0, result.output
+        assert "Usage:" in result.output
+
+    @pytest.mark.parametrize("args", [["example.com", "-p", "--no-color"], ["example.com", "-s", "--no-color"]])
+    def test_lookup_boolean_alias_does_not_consume_root_flag(
+        self, args: list[str], looked_up: list[str], color_calls: list[bool | None]
+    ) -> None:
+        result = runner.invoke(app, args)
+        assert result.exit_code == 0, result.output
+        assert looked_up == ["example.com"]
+        assert color_calls == [False]
+
+    @pytest.mark.parametrize("option", ["--compare=baseline.json", "-t30", "-st30"])
+    def test_attached_option_value_does_not_consume_following_root_flag(
+        self, option: str, looked_up: list[str], color_calls: list[bool | None]
+    ) -> None:
+        result = runner.invoke(app, ["example.com", option, "--no-color"])
+        assert result.exit_code == 0, result.output
+        assert looked_up == ["example.com"]
+        assert color_calls == [False]
+
     def test_tokens_after_double_dash_are_not_hoisted(
         self, color_calls: list[bool | None], looked_up: list[str]
     ) -> None:

@@ -124,11 +124,14 @@ class _DomainGroup(typer.core.TyperGroup):  # pyright: ignore[reportUntypedBaseC
     """
 
     def parse_args(self, ctx: click.Context, args: list[str]) -> list[str]:
+        protected_indices = cli_routing.option_value_indices(args, self)
         if not ctx.resilient_parsing:
-            misplaced = cli_routing.misplaced_root_option(args)
+            misplaced = cli_routing.misplaced_root_option(args, protected_indices=protected_indices)
             if misplaced is not None:
                 ctx.fail(cli_routing.misplaced_root_option_message(misplaced))
-        return super().parse_args(ctx, cli_routing.hoist_trailing_color_flags(args))
+        return super().parse_args(
+            ctx, cli_routing.hoist_trailing_color_flags(args, protected_indices=protected_indices)
+        )
 
     def resolve_command(
         self,

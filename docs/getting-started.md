@@ -439,6 +439,10 @@ options must come first: use `recon --debug example.com`, and run
 `recon --version` on its own. A misplaced one is rejected with exit code 2 and
 a message that shows the working form.
 
+An option's value remains data even when it spells a global flag. For example,
+`--compare --ascii` selects the snapshot file named `--ascii`; it does not turn
+on ASCII output.
+
 ## Exit Codes
 
 Every command follows one exit-code contract, so a script can branch on the
