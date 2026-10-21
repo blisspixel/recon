@@ -78,7 +78,7 @@ It does not call the network by default and it is not part of the user-facing
 The release workflow independently validates that the tag, package version,
 dated nonempty changelog section, tagged commit, and current `main` ancestry
 agree. It then reruns the exact MCP SDK matrix for the v1.28.1 rollback,
-v2.0.0 production floor, and v2.2.0 current stable pins, plus the complete canonical gate on the tagged tree,
+v2.0.0 production floor, and v2.3.0 current stable pins, plus the complete canonical gate on the tagged tree,
 before a build can be sealed or published. A manually pushed tag cannot bypass
 the controls on `main`.
 

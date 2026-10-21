@@ -76,7 +76,7 @@ healthy when it runs on its cadence and produces its artifact, not when it
 | Dependency and supply-chain audit | A PR or push, an advisory, a Dependabot bump | Weekly, plus on event | Green CodeQL, Scorecard, secrets scan, dependency audit; re-authored bot bumps | Floors green; the SAST ratchet advances only on Scorecard evidence, never by backfill |
 | Upstream provider-endpoint drift | The passive integration cron | Weekly | A live passive smoke of the identity and CT endpoints | Endpoints still behave; a break is an upstream change to characterize |
 | Inference CPT drift gate | An edit to `bayesian_network.yaml` | Per commit | The committed inference baseline plus an explicit `--update` acknowledgement in the diff | No node moves beyond its band without an acknowledged baseline update |
-| MCP dual-SDK matrix | An SDK release or a spec change | On event, plus per CI | A dated compatibility matrix, all three pins green | The v1.28.1 rollback, v2.0.0 production floor, and v2.2.0 locked baseline rows stay green |
+| MCP dual-SDK matrix | An SDK release or a spec change | On event, plus per CI | A dated compatibility matrix, all three pins green | The v1.28.1 rollback, v2.0.0 production floor, and v2.3.0 locked baseline rows stay green |
 | Mutation gate | A push or PR to a gated module, plus a weekly sweep | Per change, plus weekly | The mutation score over tested mutants | Genuine survivors killed with per-field pins; the floor is a fraction over tested mutants and is not bumped to pass |
 | Doc-versus-runtime consistency | Each release | Per release | Reconciled roadmap, schema, stability, and CHANGELOG; the parity matrix | The drift gates stay green; no document claims behavior the code lacks |
 | Release readiness and provenance | Each release | Per release | Local and remote readiness, SBOM, provenance, channel parity | The tag, PyPI artifact, and GitHub Release identify one commit; the SBOM and attestations are present |
@@ -280,7 +280,7 @@ priority 1. Version milestones through v3.0:
 | Track | Why it sits here | State today | What closes it |
 |---|---|---|---|
 | [1. Evidence-semantic integrity](#1-restore-evidence-semantic-integrity) | Truthfulness outranks features, and this defect class required a complete sweep rather than one-case fixes. | Complete through the 2026-08-30 ReviewBundle review. The fail-closed default-claim audit owns all discovered primary surfaces through 29 families. 29 are complete; 0 material runtime families carry incomplete lineage. Static agent and MCP contracts now pin process scope, collection boundaries, output forms, cache behavior, and abstention semantics. Runtime explanations, insights, panels, service labels, posture observations, hardening prompts, cohort summaries, ReviewBundles, and every exposure-index component carry their reviewed evidence or static contract basis. | Keep the fail-closed audit green; any uncovered or semantically stronger surface reopens this track. |
-| [2. MCP protocol characterization](#2-keep-final-mcp-v2-compatibility-green-after-adoption) | The 2026-07-28 specification is a breaking release and the SDK moves regardless of recon, so compatibility must stay explicit. | Production adopted `mcp>=2.0.0,<3` on 2026-07-31. Exact `1.28.1`, `2.0.0`, and `2.2.0` rows remain blocking. | Keep deterministic ordering, conforming schemas, live stdio behavior, and all three exact pins green. |
+| [2. MCP protocol characterization](#2-keep-final-mcp-v2-compatibility-green-after-adoption) | The 2026-07-28 specification is a breaking release and the SDK moves regardless of recon, so compatibility must stay explicit. | Production adopted `mcp>=2.0.0,<3` on 2026-07-31. Exact `1.28.1`, `2.0.0`, and `2.3.0` rows remain blocking. | Keep deterministic ordering, conforming schemas, live stdio behavior, and all three exact pins green. |
 | [3. Product-quality baseline](#3-establish-a-reproducible-product-quality-baseline) | Depends on a stable claim taxonomy from priority 1. Measuring still-incomplete claim families would measure a definition that is changing. | v2.11 stopped a structurally non-identifying design before target contact. v2.12 classifies fusion as an advanced diagnostic and starts the explicit-flag transition while preserving the stable v2 default. | Keep the identifiability gate and ADR-0013 transition contract blocking. Any future fusion study needs a new identifiable candidate and preregistration. |
 | [4. Catalog quality loop](#turn-catalog-quality-into-the-detection-improvement-loop) | The shipped claim, compatibility, quality-decision, and capsule contracts make independent catalog measurement interpretable. | Shipped in v2.14. Convenience, unseen-vertical, rank, regional, vendor-seed, and prior-sample drift rounds are complete with aggregate results and explicit dispositions. Drift records no threshold breach, no unavailable or unmeasured row, one disclosed measurement-surface change, and no catalog promotion. | Keep the frozen round contracts and regression gates reproducible; backfill review dates only in independently reviewed families. |
 | [4. Optional cloud access and scale-out](#4-optional-operator-hosted-access-and-scale-out) | Useful accessibility and scale polish for some operators, but lower priority than the core evidence, compatibility, and catalog-quality tracks. | Draft stateless remote adapter, container, and Cloud Run Terraform pass local artifact checks but are not yet provider-validated. Local remains the default. | One operator proof plus bounded load, cost, rotation, retention, and rollback evidence. Each additional provider needs named demand and its own validation context. |
@@ -472,11 +472,11 @@ claim lacks adequate evidence.
 
 ### 2. Keep final MCP v2 compatibility green after adoption
 
-Status: production adoption complete on 2026-07-31. The 2026-09-13 currency
-check adds SDK 2.2.0; exact v1.28.1 rollback, v2.0.0 production-floor, and
-v2.2.0 locked-baseline rows remain blocking. See the
-[October review](maintenance-review-2026-10-08.md) for newer SDK observations;
-the dated compatibility pin is not a claim about the latest upstream release.
+Status: production adoption complete on 2026-07-31. The 2026-10-20 currency
+check refreshes the lock and current-SDK row to 2.3.0; exact v1.28.1 rollback,
+v2.0.0 production-floor, and v2.3.0 locked-baseline rows remain blocking.
+See the [dated compatibility results](mcp-2026-07-28-readiness.md#dated-compatibility-results)
+for the upstream behavior review and local probe evidence.
 
 The matrix pin lives in `.github/workflows/ci.yml` and the probe is
 `scripts/check_mcp_compatibility.py`. It exercises both stable SDK generations

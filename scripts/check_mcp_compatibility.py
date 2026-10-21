@@ -31,7 +31,7 @@ from typing import Any, Literal, TextIO, cast
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 AGENT_ROOT = REPO_ROOT / ".agent"
-DEFAULT_SDK_VERSIONS = ("1.28.1", "2.0.0", "2.2.0")
+DEFAULT_SDK_VERSIONS = ("1.28.1", "2.0.0", "2.3.0")
 
 MODERN_PROTOCOL_VERSION = "2026-07-28"
 LEGACY_PROTOCOL_VERSION = "2025-11-25"
