@@ -28,7 +28,7 @@ operator, corporate group, ownership, or control.
 
 ## [2.21.4] - 2026-10-20
 
-Correct CT maintenance summaries on fresh XDG installations.
+Refresh the tested MCP SDK baseline and correct CT maintenance summaries.
 
 ### Fixed
 
@@ -36,6 +36,13 @@ Correct CT maintenance summaries on fresh XDG installations.
   state-directory resolver, including fresh XDG installations. Preserve legacy
   and explicit override precedence and clarify that persisted counters can
   include earlier runs. This changes validation tooling, not packaged lookups.
+
+### Changed
+
+- Refresh the production lock and blocking current-SDK compatibility row to
+  MCP 2.3.0 and its matching types. Keep the 1.28.1 rollback and 2.0.0 floor
+  rows, the existing supported dependency range, and the passive collection
+  boundary. The SDK update includes stdio event-loop and legacy framing fixes.
 
 ### Tool Surface Changes
 

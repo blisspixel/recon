@@ -372,12 +372,14 @@ class TestExceptionPath:
         locked: list[bool] = []
 
         class _LockedTemporaryDirectory:
-            """Delete normally, then report the directory as still held."""
+            """Attempt real cleanup, then report the directory as still held."""
 
             def __init__(self, **kwargs: Any) -> None:
                 self._ignore_errors = bool(kwargs.pop("ignore_cleanup_errors", False))
                 self._is_isolation_cwd = str(kwargs.get("prefix", "")).startswith("recon-mcp-doctor-cwd-")
-                self._inner = real_tempdir(**kwargs)
+                # The inner directory can itself remain locked on Windows.
+                # Preserve the requested policy before simulating that lock.
+                self._inner = real_tempdir(ignore_cleanup_errors=self._ignore_errors, **kwargs)
 
             def __enter__(self) -> str:
                 return self._inner.__enter__()

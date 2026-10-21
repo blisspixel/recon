@@ -37,7 +37,7 @@ files remain directly searchable.
 The package-index-dependent MCP SDK matrix is intentionally separate:
 `scripts/check_mcp_compatibility.py` creates isolated exact-pin environments,
 and the `mcp-compatibility` CI job blocks regressions on the stable v1.28.1
-rollback pin, v2.0.0 production floor, and v2.2.0 current stable pin without
+rollback pin, v2.0.0 production floor, and v2.3.0 current stable pin without
 making the ordinary local gate depend on network access.
 Before pushing a local stack, `uv run python scripts/release_readiness.py` also
 checks every `origin/main..HEAD` commit message for attribution markers, em

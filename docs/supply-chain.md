@@ -412,7 +412,7 @@ two commands before immediately sealing `dist/`.
 This fixes uv-version and backend-resolver drift in the tested build path. It
 does not prove byte identity across different Python versions, operating
 systems, runner images, archive implementations, or other host environment
-details. The release and CI paths use Python 3.11 on Ubuntu; a consumer seeking
+details. The release and CI paths use Python 3.15 on Ubuntu; a consumer seeking
 an exact hash match should reproduce those inputs as closely as practical.
 
 To verify a published release yourself:
@@ -426,7 +426,7 @@ git checkout "v${VERSION}"
 
 # 2. Confirm the tag-selected build executable and match release Python.
 uv --version  # must report uv 0.11.17; the release workflow pins this exact uv
-export UV_PYTHON=3.11
+export UV_PYTHON=3.15
 export SOURCE_DATE_EPOCH="$(git log -1 --pretty=%ct)"
 
 # 3. Build the sdist, then reconstruct the wheel from that exact sdist.

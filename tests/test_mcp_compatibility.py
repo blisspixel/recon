@@ -136,7 +136,7 @@ def test_local_ci_and_release_mcp_matrix_cover_rollback_floor_and_current_releas
     workflow = workflow_dir / "ci.yml"
     jobs = yaml.safe_load(workflow.read_text(encoding="utf-8"))["jobs"]
     matrix = jobs["mcp-compatibility"]["strategy"]["matrix"]["mcp-version"]
-    assert tuple(matrix) == check_mcp_compatibility.DEFAULT_SDK_VERSIONS == ("1.28.1", "2.0.0", "2.2.0")
+    assert tuple(matrix) == check_mcp_compatibility.DEFAULT_SDK_VERSIONS == ("1.28.1", "2.0.0", "2.3.0")
     release = yaml.safe_load((workflow_dir / "release.yml").read_text(encoding="utf-8"))
     commands = [step.get("run", "") for step in release["jobs"]["test"]["steps"]]
     (command,) = [command for command in commands if "scripts/check_mcp_compatibility.py" in command]

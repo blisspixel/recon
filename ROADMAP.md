@@ -25,7 +25,7 @@ collector and does not expand the inference model.
 The evidence-semantic audit is complete: 29 families are complete. 0 material
 runtime families carry incomplete lineage. Fail-closed inventory spans 91 score
 or quantitative fields. Production MCP stays on `mcp>=2.0.0,<3`, with exact
-1.28.1 rollback, 2.0.0 production-floor, and 2.2.0 locked-baseline rows blocking
+1.28.1 rollback, 2.0.0 production-floor, and 2.3.0 locked-baseline rows blocking
 in CI.
 
 Release verification binds each published artifact to its exact tag, workflow,
@@ -190,7 +190,7 @@ release by itself.
 | Catalog drift | Quarterly or by declared window | Frozen thresholds hold; comparisons across unequal catalog digests are withheld; no promotion comes from the drift frame |
 | Black-box renderer review | Per human-surface release | Compact surfaces keep their intended cuts and agree on claim meaning |
 | Claim audit | Every material claim change | All discovered claim families remain fail closed with exact or explicitly bounded lineage |
-| MCP compatibility | CI and SDK events | Exact 1.28.1, 2.0.0, and 2.2.0 rows remain green |
+| MCP compatibility | CI and SDK events | Exact 1.28.1, 2.0.0, and 2.3.0 rows remain green |
 | Dependency and supply chain | Weekly, on advisory, and per release | CI, CodeQL, Scorecard, secrets scan, dependency audit, SBOM, provenance, and artifact parity remain green |
 | Release readiness | Every release | Main, tag, GitHub Release, and PyPI identify one commit and one artifact set |
 
