@@ -44,6 +44,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from recon_tool.rate_limit import rate_limit_state_dir  # noqa: E402
 from validation.prepare_catalog_round import RoundExecutionOptions  # noqa: E402
 from validation.prepare_catalog_round import load_round_contract as _load_round_contract  # noqa: E402
 
@@ -246,8 +247,9 @@ def _write_ct_budget_summary(results_path: Path, run_dir: Path) -> None:
       1. Per-domain ``ct_attempt_outcome`` values from the just-completed
          batch (counts each enum value).
       2. The persisted adaptive-limiter state under
-         ``~/.recon/rate-limit-state`` (post-run interval, breaker
-         status, success / rate_limit / failure tallies).
+         the runtime's resolved state directory (post-run interval,
+         breaker status, success / rate_limit / failure tallies).
+         Persisted tallies can include earlier runs; they are not run deltas.
 
     The result is an operator-facing tally that answers "what did the
     CT pipeline actually do this run?" without needing to scan the
@@ -266,11 +268,8 @@ def _write_ct_budget_summary(results_path: Path, run_dir: Path) -> None:
         _tally(rec)
 
     # Pick up the persisted rate-limiter snapshots written by the
-    # batch subprocess. The state files live in the operator's recon
-    # config dir; if RECON_CONFIG_DIR is set we read from there.
-    rl_dir_env = os.environ.get("RECON_CONFIG_DIR")
-    rl_root = Path(rl_dir_env) if rl_dir_env else Path.home() / ".recon"
-    rl_dir = rl_root / "rate-limit-state"
+    # batch subprocess, using the same override / legacy / XDG resolution.
+    rl_dir = rate_limit_state_dir()
     limiter_snapshots: dict[str, dict[str, Any]] = {}
     if rl_dir.exists():
         for state_file in sorted(rl_dir.glob("*.json")):
