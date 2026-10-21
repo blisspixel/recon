@@ -26,6 +26,13 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Fixed
+
+- Read CT limiter snapshots in maintenance summaries from the runtime's shared
+  state-directory resolver, including fresh XDG installations. Preserve legacy
+  and explicit override precedence and clarify that persisted counters can
+  include earlier runs. This changes validation tooling, not packaged lookups.
+
 ## [2.21.3] - 2026-10-20
 
 Refresh the default CA bundle after an upstream security advisory and complete

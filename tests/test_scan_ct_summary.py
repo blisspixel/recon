@@ -15,6 +15,7 @@ from pathlib import Path
 
 import pytest
 
+from recon_tool.rate_limit import AdaptiveRateLimiter
 from validation.prepare_catalog_round import (
     SCHEMA_VERSION,
     RoundExecutionOptions,
@@ -71,6 +72,72 @@ def test_ndjson_mode_still_works(scan, tmp_path: Path) -> None:
     (tmp_path / "results.ndjson").write_text("\n".join(lines) + "\n", encoding="utf-8")
     scan._write_ct_budget_summary(tmp_path / "results.ndjson", tmp_path)
     assert _counts(tmp_path) == {"cache_hit": 2, "rate_limited": 1}
+
+
+@pytest.mark.parametrize("layout", ["default", "xdg", "relative-xdg", "legacy", "override"])
+def test_ct_summary_reads_runtime_persisted_state(
+    scan, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, layout: str
+) -> None:
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.setattr(Path, "home", lambda: home)
+    monkeypatch.delenv("RECON_CONFIG_DIR", raising=False)
+    monkeypatch.delenv("XDG_STATE_HOME", raising=False)
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
+    monkeypatch.chdir(tmp_path)
+    expected = home / ".local" / "state" / "recon"
+    if layout in {"xdg", "legacy", "override"}:
+        monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
+        expected = tmp_path / "state" / "recon"
+    elif layout == "relative-xdg":
+        monkeypatch.setenv("XDG_STATE_HOME", "relative-state")
+    if layout in {"legacy", "override"}:
+        expected = home / ".recon"
+        expected.mkdir()
+    if layout == "override":
+        expected = tmp_path / "override"
+        monkeypatch.setenv("RECON_CONFIG_DIR", str(expected))
+    for base in (tmp_path / "config" / "recon", tmp_path / "cache" / "recon", tmp_path / "relative-state" / "recon"):
+        decoy = base / "rate-limit-state" / "decoy.json"
+        decoy.parent.mkdir(parents=True)
+        decoy.write_text('{"name":"decoy"}', encoding="utf-8")
+
+    limiter = AdaptiveRateLimiter("crt.sh", min_interval_s=1.0, max_interval_s=60.0, failure_threshold=1)
+    limiter.on_success()
+    limiter.on_rate_limited(retry_after_s=30.0)
+    limiter._persist_state(force=True)
+    state_file = expected / "rate-limit-state" / "crt.sh.json"
+    persisted = json.loads(state_file.read_text(encoding="utf-8"))
+    assert persisted["success_count"] == persisted["rate_limit_count"] == 1
+    assert persisted["breaker_open"] is True
+    results = tmp_path / "results.ndjson"
+    results.write_text('{"ct_attempt_outcome":"live_rate_limited"}\n', encoding="utf-8")
+
+    scan._write_ct_budget_summary(results, tmp_path)
+
+    summary = json.loads((tmp_path / "ct_budget_summary.json").read_text(encoding="utf-8"))
+    assert summary["limiter_snapshots"] == {"crt.sh": persisted}
+    assert summary["outcome_counts"] == {"live_rate_limited": 1}
+    assert summary["records_total"] == 1
+
+
+def test_ct_summary_missing_state_does_not_create_directories(
+    scan, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    monkeypatch.delenv("RECON_CONFIG_DIR", raising=False)
+    state_home = tmp_path / "state"
+    monkeypatch.setenv("XDG_STATE_HOME", str(state_home))
+    results = tmp_path / "results.json"
+    results.write_text("[]", encoding="utf-8")
+
+    scan._write_ct_budget_summary(results, tmp_path)
+
+    summary = json.loads((tmp_path / "ct_budget_summary.json").read_text(encoding="utf-8"))
+    assert summary["limiter_snapshots"] == {}
+    assert not state_home.exists()
+    assert not (tmp_path / ".recon").exists()
 
 
 def test_count_result_records_skips_malformed_partial_tail(scan, tmp_path: Path) -> None:
