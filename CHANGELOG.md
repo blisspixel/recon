@@ -26,6 +26,22 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.21.5] - 2026-10-21
+
+Preserve CLI option values that happen to spell global flags.
+
+### Fixed
+
+- Keep flag-shaped filenames and labels as option values instead of moving
+  them into global options or rejecting them as misplaced flags. Follow the
+  registered command's option arity, including nested aliases, short-option
+  combinations and attached values. A later `--help` stays a help request and
+  does not accidentally become a value that allows collection to start.
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
 ## [2.21.4] - 2026-10-20
 
 Refresh the tested MCP SDK baseline and correct CT maintenance summaries.

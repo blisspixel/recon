@@ -117,6 +117,37 @@ def test_capture_human_receipt_is_informative(tmp_path: Path) -> None:
     assert "sha256:" in result.stdout
 
 
+@pytest.mark.parametrize("value", ["--ascii", "--color", "--no-color", "--debug", "--version", "-V", "--"])
+def test_capture_preserves_root_flag_spellings_as_option_values(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, value: str
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    resolve = AsyncMock(return_value=_fixture())
+    with patch("recon_tool.resolver.resolve_tenant", new=resolve):
+        result = runner.invoke(
+            app, ["capsule", "capture", "example.com", "-o", value, "--vantage", value, "--no-ct", "--json"]
+        )
+
+    assert result.exit_code == 0, result.output
+    receipt = json.loads(result.stdout)
+    output = tmp_path / value
+    assert receipt["path"] == str(output)
+    assert json.loads(output.read_text(encoding="utf-8"))["collection"]["vantage"] == value
+    resolve.assert_awaited_once_with("example.com", timeout=120.0, skip_ct=True, active_probes=False)
+
+
+@pytest.mark.parametrize("value", ["--ascii", "--no-color", "--debug", "--version", "--"])
+def test_capture_help_after_flag_shaped_value_does_not_collect(monkeypatch: pytest.MonkeyPatch, value: str) -> None:
+    resolve = AsyncMock(side_effect=AssertionError("Help must not collect"))
+    monkeypatch.setattr("recon_tool.resolver.resolve_tenant", resolve)
+
+    result = runner.invoke(app, ["capsule", "capture", "example.com", "--vantage", value, "--help"])
+
+    assert result.exit_code == 0, result.output
+    assert "Collection" in result.output or "collection" in result.output
+    resolve.assert_not_awaited()
+
+
 def test_capture_refuses_existing_file_without_force(tmp_path: Path) -> None:
     output = tmp_path / "example-capsule.json"
     _written_capsule(output)
