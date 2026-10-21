@@ -62,8 +62,36 @@ def test_disjoint_literals_and_ordinary_repetition_remain_accepted(pattern: str)
     assert validate_regex(pattern, "ephemeral:test")
 
 
+@pytest.mark.parametrize("source", ["catalog:test", "ephemeral:test", "specificity gate"])
+@pytest.mark.parametrize(
+    "pattern",
+    [
+        r"(?=.){1000000000}",
+        r"(?:^){1000000000}",
+        r"(){1000000000}",
+        r"a{1000000000,}",
+        r"a{,1000000000}",
+        r"a{1,1000000000}?",
+        r"a{00001000000000}+",
+        "(?x)(?=.) # ignored\n {1000000000}",
+    ],
+)
+def test_large_numeric_repetitions_are_refused(pattern: str, source: str) -> None:
+    assert not validate_regex(pattern, source)
+
+
+@pytest.mark.parametrize(
+    "pattern",
+    [r"a{15}", r"a{12,15}", r"a{,15}", r"a{15,}", r"\{1000000000\}", r"[{1000000000}]", r"\x7b1000000000\x7d"],
+)
+def test_small_repetitions_and_literal_braces_remain_accepted(pattern: str) -> None:
+    assert validate_regex(pattern, "ephemeral:test")
+
+
 @pytest.mark.asyncio
-@pytest.mark.parametrize("pattern", [r"^((.|..))+!$", r"(?# [)^((.)+)+NEVERMATCH$", "(?x)# [\n^((.)+)+z$"])
+@pytest.mark.parametrize(
+    "pattern", [r"^((.|..))+!$", r"(?# [)^((.)+)+NEVERMATCH$", "(?x)# [\n^((.)+)+z$", r"(?=.){1000000000}"]
+)
 async def test_ephemeral_injection_rejects_before_specificity_matching(
     monkeypatch: pytest.MonkeyPatch, pattern: str
 ) -> None:

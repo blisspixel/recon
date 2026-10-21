@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-from recon_tool.json_limits import exceeds_json_nesting_limit, read_bounded_regular_file
+from recon_tool.json_limits import DirectoryFile, exceeds_json_nesting_limit, read_bounded_regular_file
 
 MAX_CLIENT_CONFIG_BYTES = 1024 * 1024
 
@@ -59,19 +59,21 @@ def _check_path_preconditions(path: Path, allow_symlinks: bool) -> tuple[JsonObj
     return None
 
 
-def read_json_object(path: Path, *, allow_symlinks: bool = True) -> JsonObjectRead:
+def read_json_object(path: Path, *, allow_symlinks: bool = True, directory_fd: int | None = None) -> JsonObjectRead:
     """Read a bounded, BOM-tolerant JSON object without leaking parser errors."""
-    precondition = _check_path_preconditions(path, allow_symlinks)
+    precondition = _check_path_preconditions(path, allow_symlinks) if directory_fd is None else None
     if precondition is not None:
         return JsonObjectRead(precondition[0], None, precondition[1])
 
     try:
         raw_bytes, _, _ = read_bounded_regular_file(
-            path,
+            DirectoryFile(path, directory_fd) if directory_fd is not None else path,
             maximum_bytes=MAX_CLIENT_CONFIG_BYTES,
             allow_symlinks=allow_symlinks,
             future_mtime_tolerance_seconds=None,
         )
+    except FileNotFoundError:
+        return JsonObjectRead("missing", None, "not found")
     except OSError as exc:
         return JsonObjectRead("invalid", None, f"cannot read: {exc}")
     except ValueError as exc:

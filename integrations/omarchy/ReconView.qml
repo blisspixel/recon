@@ -217,7 +217,7 @@ Rectangle {
             Layout.fillWidth: true
             spacing: 12
 
-            Text { font.family: root.fontFamily;
+            Text { textFormat: Text.PlainText; font.family: root.fontFamily;
                 text: "RECON"
                 font.bold: true
                 font.pixelSize: 18
@@ -231,7 +231,7 @@ Rectangle {
                 Layout.preferredHeight: 22
                 Layout.preferredWidth: hedgedText.implicitWidth + 14
 
-                Text { font.family: root.fontFamily;
+                Text { textFormat: Text.PlainText; font.family: root.fontFamily;
                     id: hedgedText
                     anchors.centerIn: parent
                     text: "Public Metadata Observation"
@@ -243,7 +243,7 @@ Rectangle {
 
             Item { Layout.fillWidth: true }
 
-            Text { font.family: root.fontFamily;
+            Text { textFormat: Text.PlainText; font.family: root.fontFamily;
                 text: "Esc: Close | Ctrl+D: Delta | Ctrl+L: Clear"
                 font.pixelSize: 11
                 color: root.colors.muted
@@ -265,7 +265,7 @@ Rectangle {
                 anchors.rightMargin: 8
                 spacing: 8
 
-                Text { font.family: root.fontFamily;
+                Text { textFormat: Text.PlainText; font.family: root.fontFamily;
                     text: ">"
                     color: root.colors.accent
                     font.bold: true
@@ -300,7 +300,7 @@ Rectangle {
                     border.color: root.deltaMode ? root.colors.accent : root.colors.border
                     border.width: 1
 
-                    Text { font.family: root.fontFamily;
+                    Text { textFormat: Text.PlainText; font.family: root.fontFamily;
                         id: deltaLabel
                         anchors.centerIn: parent
                         text: "Baseline Delta"
@@ -325,7 +325,7 @@ Rectangle {
                     radius: 6
                     color: root.isRunning ? root.colors.error : root.colors.accent
 
-                    Text { font.family: root.fontFamily;
+                    Text { textFormat: Text.PlainText; font.family: root.fontFamily;
                         anchors.centerIn: parent
                         text: root.isRunning ? "Cancel" : "Inspect"
                         font.pixelSize: 12
@@ -358,7 +358,7 @@ Rectangle {
             border.color: root.colors.error
             border.width: 1
 
-            Text { font.family: root.fontFamily;
+            Text { textFormat: Text.PlainText; font.family: root.fontFamily;
                 id: errorText
                 anchors.fill: parent
                 anchors.margins: 8
@@ -389,7 +389,7 @@ Rectangle {
                     visible: root.isRunning
                 }
 
-                Text { font.family: root.fontFamily;
+                Text { textFormat: Text.PlainText; font.family: root.fontFamily;
                     Layout.fillWidth: true
                     text: root.statusMessage
                     color: root.isRunning ? root.colors.accent : root.colors.secondary
@@ -423,7 +423,7 @@ Rectangle {
                         anchors.centerIn: parent
                         spacing: 10
 
-                        Text { font.family: root.fontFamily;
+                        Text { textFormat: Text.PlainText; font.family: root.fontFamily;
                             text: "Ready for Domain Inspection"
                             font.bold: true
                             font.pixelSize: 15
@@ -431,7 +431,7 @@ Rectangle {
                             Layout.alignment: Qt.AlignHCenter
                         }
 
-                        Text { font.family: root.fontFamily;
+                        Text { textFormat: Text.PlainText; font.family: root.fontFamily;
                             text: "Type an apex domain above and press Enter to query public metadata.\nRecon reads public DNS, certificate transparency, and unauthenticated endpoints.\nDefault checks make zero active port scans or application crawls."
                             font.pixelSize: 12
                             color: root.colors.secondary
@@ -447,7 +447,7 @@ Rectangle {
                             Layout.preferredWidth: 320
                             Layout.preferredHeight: 30
 
-                            Text { font.family: root.fontFamily;
+                            Text { textFormat: Text.PlainText; font.family: root.fontFamily;
                                 anchors.centerIn: parent
                                 text: "Observation only: results are not a security verdict."
                                 font.pixelSize: 11
@@ -475,7 +475,7 @@ Rectangle {
                             Layout.fillWidth: true
                             spacing: 10
 
-                            Text { font.family: root.fontFamily;
+                            Text { textFormat: Text.PlainText; font.family: root.fontFamily;
                                 objectName: "queriedDomain"
                                 text: root.lookupResult ? (root.lookupResult.queried_domain || "") : ""
                                 font.bold: true
@@ -483,7 +483,7 @@ Rectangle {
                                 color: root.colors.foreground
                             }
 
-                            Text { font.family: root.fontFamily;
+                            Text { textFormat: Text.PlainText; font.family: root.fontFamily;
                                 objectName: "displayName"
                                 text: root.lookupResult && root.lookupResult.display_name && root.lookupResult.display_name !== root.lookupResult.queried_domain ? "(" + root.lookupResult.display_name + ")" : ""
                                 font.pixelSize: 13
@@ -508,7 +508,7 @@ Rectangle {
                                 }
                                 border.width: 1
 
-                                Text { font.family: root.fontFamily;
+                                Text { textFormat: Text.PlainText; font.family: root.fontFamily;
                                     id: confText
                                     anchors.centerIn: parent
                                     text: {
@@ -533,8 +533,8 @@ Rectangle {
 
                             ColumnLayout {
                                 spacing: 2
-                                Text { font.family: root.fontFamily; text: "PROVIDER"; font.pixelSize: 10; font.bold: true; color: root.colors.muted }
-                                Text { font.family: root.fontFamily;
+                                Text { textFormat: Text.PlainText; font.family: root.fontFamily; text: "PROVIDER"; font.pixelSize: 10; font.bold: true; color: root.colors.muted }
+                                Text { textFormat: Text.PlainText; font.family: root.fontFamily;
                                     text: root.lookupResult ? (root.lookupResult.provider || "None observed") : ""
                                     font.pixelSize: 13
                                     font.weight: Font.DemiBold
@@ -545,8 +545,8 @@ Rectangle {
                             ColumnLayout {
                                 spacing: 2
                                 visible: root.lookupResult && root.lookupResult.tenant_id
-                                Text { font.family: root.fontFamily; text: "TENANT ID"; font.pixelSize: 10; font.bold: true; color: root.colors.muted }
-                                Text {
+                                Text { textFormat: Text.PlainText; font.family: root.fontFamily; text: "TENANT ID"; font.pixelSize: 10; font.bold: true; color: root.colors.muted }
+                                Text { textFormat: Text.PlainText;
                                     text: root.lookupResult && root.lookupResult.tenant_id ? root.lookupResult.tenant_id : ""
                                     font.pixelSize: 12
                                     font.family: "monospace"
@@ -556,8 +556,8 @@ Rectangle {
 
                             ColumnLayout {
                                 spacing: 2
-                                Text { font.family: root.fontFamily; text: "EMAIL SECURITY"; font.pixelSize: 10; font.bold: true; color: root.colors.muted }
-                                Text { font.family: root.fontFamily;
+                                Text { textFormat: Text.PlainText; font.family: root.fontFamily; text: "EMAIL SECURITY"; font.pixelSize: 10; font.bold: true; color: root.colors.muted }
+                                Text { textFormat: Text.PlainText; font.family: root.fontFamily;
                                     text: {
                                         if (!root.lookupResult) return "0/5";
                                         var score = root.lookupResult.email_security_score;
@@ -571,8 +571,8 @@ Rectangle {
 
                             ColumnLayout {
                                 spacing: 2
-                                Text { font.family: root.fontFamily; text: "CT SUBDOMAINS"; font.pixelSize: 10; font.bold: true; color: root.colors.muted }
-                                Text { font.family: root.fontFamily;
+                                Text { textFormat: Text.PlainText; font.family: root.fontFamily; text: "CT SUBDOMAINS"; font.pixelSize: 10; font.bold: true; color: root.colors.muted }
+                                Text { textFormat: Text.PlainText; font.family: root.fontFamily;
                                     text: root.lookupResult ? (root.lookupResult.ct_subdomain_count || 0).toString() : "0"
                                     font.pixelSize: 13
                                     color: root.colors.foreground
@@ -596,13 +596,13 @@ Rectangle {
                                 anchors.margins: 6
                                 spacing: 2
 
-                                Text { font.family: root.fontFamily;
+                                Text { textFormat: Text.PlainText; font.family: root.fontFamily;
                                     text: "Degraded sources: " + (root.lookupResult && root.lookupResult.degraded_sources ? root.lookupResult.degraded_sources.join(", ") : "")
                                     font.pixelSize: 11
                                     font.weight: Font.DemiBold
                                     color: root.colors.warning
                                 }
-                                Text { font.family: root.fontFamily;
+                                Text { textFormat: Text.PlainText; font.family: root.fontFamily;
                                     text: "Observations reflect available public records; unreached sources are surfaced explicitly rather than assumed absent."
                                     font.pixelSize: 10
                                     color: root.colors.secondary
@@ -626,7 +626,7 @@ Rectangle {
                         anchors.margins: 14
                         spacing: 8
 
-                        Text { font.family: root.fontFamily;
+                        Text { textFormat: Text.PlainText; font.family: root.fontFamily;
                             text: "OBSERVED SERVICES (" + (root.lookupResult && root.lookupResult.services ? root.lookupResult.services.length : 0) + ")"
                             font.pixelSize: 11
                             font.bold: true
@@ -647,7 +647,7 @@ Rectangle {
                                     border.color: root.colors.border
                                     border.width: 1
 
-                                    Text { font.family: root.fontFamily;
+                                    Text { textFormat: Text.PlainText; font.family: root.fontFamily;
                                         id: serviceText
                                         anchors.centerIn: parent
                                         text: modelData
@@ -674,7 +674,7 @@ Rectangle {
                         anchors.margins: 14
                         spacing: 8
 
-                        Text { font.family: root.fontFamily;
+                        Text { textFormat: Text.PlainText; font.family: root.fontFamily;
                             text: "HEDGED OBSERVATIONS"
                             font.pixelSize: 11
                             font.bold: true
@@ -687,14 +687,14 @@ Rectangle {
                                 Layout.fillWidth: true
                                 spacing: 8
 
-                                Text { font.family: root.fontFamily;
+                                Text { textFormat: Text.PlainText; font.family: root.fontFamily;
                                     text: "•"
                                     color: root.colors.accent
                                     font.pixelSize: 13
                                     Layout.alignment: Qt.AlignTop
                                 }
 
-                                Text { font.family: root.fontFamily;
+                                Text { textFormat: Text.PlainText; font.family: root.fontFamily;
                                     Layout.fillWidth: true
                                     text: modelData
                                     color: root.colors.secondary
@@ -724,7 +724,7 @@ Rectangle {
                             Layout.fillWidth: true
                             spacing: 8
 
-                            Text { font.family: root.fontFamily;
+                            Text { textFormat: Text.PlainText; font.family: root.fontFamily;
                                 text: "BASELINE DRIFT ANALYSIS"
                                 font.pixelSize: 11
                                 font.bold: true
@@ -739,7 +739,7 @@ Rectangle {
                                 radius: 4
                                 color: root.deltaComparisonIncomplete ? root.colors.warningFill : (root.deltaResult && root.deltaResult.has_changes ? root.colors.errorFill : root.colors.successFill)
 
-                                Text { font.family: root.fontFamily;
+                                Text { textFormat: Text.PlainText; font.family: root.fontFamily;
                                     id: deltaStatusText
                                     anchors.centerIn: parent
                                     text: root.deltaComparisonIncomplete ? "Partial comparison" : (root.deltaResult && root.deltaResult.has_changes ? "Changes Observed" : "No Changes")
@@ -750,7 +750,7 @@ Rectangle {
                             }
                         }
 
-                        Text { font.family: root.fontFamily;
+                        Text { textFormat: Text.PlainText; font.family: root.fontFamily;
                             Layout.fillWidth: true
                             visible: root.deltaComparisonIncomplete && !!root.incompleteDelta.degraded_sources && root.incompleteDelta.degraded_sources.length > 0
                             text: "Degraded sources: " + (root.incompleteDelta && root.incompleteDelta.degraded_sources ? root.incompleteDelta.degraded_sources.join(", ") : "")
@@ -759,7 +759,7 @@ Rectangle {
                             color: root.colors.warning
                         }
 
-                        Text { font.family: root.fontFamily;
+                        Text { textFormat: Text.PlainText; font.family: root.fontFamily;
                             Layout.fillWidth: true
                             visible: root.deltaComparisonIncomplete && !!root.incompleteDelta.suppressed_fields && root.incompleteDelta.suppressed_fields.length > 0
                             text: "Not compared: " + (root.incompleteDelta && root.incompleteDelta.suppressed_fields ? root.incompleteDelta.suppressed_fields.join(", ") : "")
@@ -774,7 +774,7 @@ Rectangle {
                             spacing: 4
                             visible: !!root.deltaResult && (root.deltaFieldSuppressed("added_services") || !!root.deltaResult.added_services && root.deltaResult.added_services.length > 0)
 
-                            Text { font.family: root.fontFamily;
+                            Text { textFormat: Text.PlainText; font.family: root.fontFamily;
                                 text: root.deltaFieldSuppressed("added_services") ? "Added Services: not compared" : "Added Services:"
                                 font.pixelSize: 11
                                 color: root.deltaFieldSuppressed("added_services") ? root.colors.warning : root.colors.success
@@ -791,7 +791,7 @@ Rectangle {
                                         width: addedText.implicitWidth + 12
                                         radius: 4
                                         color: root.colors.successFill
-                                        Text { font.family: root.fontFamily; id: addedText; anchors.centerIn: parent; text: "+ " + modelData; font.pixelSize: 11; color: root.colors.success }
+                                        Text { textFormat: Text.PlainText; font.family: root.fontFamily; id: addedText; anchors.centerIn: parent; text: "+ " + modelData; font.pixelSize: 11; color: root.colors.success }
                                     }
                                 }
                             }
@@ -803,7 +803,7 @@ Rectangle {
                             spacing: 4
                             visible: !!root.deltaResult && (root.deltaFieldSuppressed("removed_services") || !!root.deltaResult.removed_services && root.deltaResult.removed_services.length > 0)
 
-                            Text { font.family: root.fontFamily;
+                            Text { textFormat: Text.PlainText; font.family: root.fontFamily;
                                 text: root.deltaFieldSuppressed("removed_services") ? "Removed Services: not compared" : "Removed Services:"
                                 font.pixelSize: 11
                                 color: root.deltaFieldSuppressed("removed_services") ? root.colors.warning : root.colors.error
@@ -820,7 +820,7 @@ Rectangle {
                                         width: removedText.implicitWidth + 12
                                         radius: 4
                                         color: root.colors.errorFill
-                                        Text { font.family: root.fontFamily; id: removedText; anchors.centerIn: parent; text: "- " + modelData; font.pixelSize: 11; color: root.colors.error }
+                                        Text { textFormat: Text.PlainText; font.family: root.fontFamily; id: removedText; anchors.centerIn: parent; text: "- " + modelData; font.pixelSize: 11; color: root.colors.error }
                                     }
                                 }
                             }

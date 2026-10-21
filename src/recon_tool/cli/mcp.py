@@ -174,7 +174,7 @@ def mcp_install_command(
     console.print()
 
     if dry_run:
-        console.print("  [dim]--dry-run: no files written.[/dim]")
+        console.print("  [dim]--dry-run: no client configuration written.[/dim]")
         return
 
     try:

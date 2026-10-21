@@ -44,13 +44,13 @@ ColumnLayout {
     }
 
     spacing: 12
-    Label { text: "Recon settings"; font.bold: true; font.pixelSize: 20 }
-    Label {
+    Label { textFormat: Text.PlainText; text: "Recon settings"; font.bold: true; font.pixelSize: 20 }
+    Label { textFormat: Text.PlainText;
         text: "Stored in this plugin's inline Omarchy entry. Saving settings does not run a lookup."
         wrapMode: Text.WordWrap
         Layout.fillWidth: true
     }
-    Label { text: "Absolute Recon launcher" }
+    Label { textFormat: Text.PlainText; text: "Absolute Recon launcher" }
     TextField {
         id: commandField
         objectName: "reconCommand"
@@ -58,7 +58,7 @@ ColumnLayout {
         placeholderText: "/home/you/.local/bin/recon"
         enabled: !root.busy
     }
-    Label { text: "Timeout in seconds (10 to 120)" }
+    Label { textFormat: Text.PlainText; text: "Timeout in seconds (10 to 120)" }
     TextField {
         id: timeoutField
         objectName: "timeoutSec"
@@ -66,14 +66,14 @@ ColumnLayout {
         enabled: !root.busy
         inputMethodHints: Qt.ImhDigitsOnly
     }
-    Label { text: "Default mode" }
+    Label { textFormat: Text.PlainText; text: "Default mode" }
     ComboBox {
         id: modeField
         objectName: "defaultMode"
         model: ["Lookup", "Delta"]
         enabled: !root.busy
     }
-    Label {
+    Label { textFormat: Text.PlainText;
         text: root.errorMessage
         visible: text.length > 0
         wrapMode: Text.WordWrap

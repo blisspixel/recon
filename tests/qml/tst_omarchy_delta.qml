@@ -14,7 +14,27 @@ Item {
 
         function init() {
             view.deltaResult = null;
+            view.lookupResult = null;
+            view.errorMessage = "";
+            view.statusMessage = "";
             view.lightTheme = false;
+        }
+
+        function test_observations_and_diagnostics_are_literal_text() {
+            var markup = '<img src="file:///recon-synthetic-missing-image.invalid"><b>literal</b>';
+            view.lookupResult = {queried_domain: "synthetic.invalid", display_name: markup,
+                provider: markup, tenant_id: markup, services: [markup], insights: [markup]};
+            view.errorMessage = markup;
+            view.statusMessage = markup;
+            tryVerify(function() { return findText(view, markup) !== null; });
+            function verifyLiteral(item) {
+                if (item.text !== undefined && typeof item.text === "string" && item.text.indexOf(markup) !== -1)
+                    compare(item.textFormat, Text.PlainText, "Observed markup must stay literal");
+                for (var i = 0; i < item.children.length; i++)
+                    verifyLiteral(item.children[i]);
+            }
+            verifyLiteral(view);
+            compare(findText(view, "(" + markup + ")").textFormat, Text.PlainText);
         }
 
         function test_domain_validation_data() {
