@@ -16,6 +16,7 @@ from recon_tool.capsule import (
     compare_capsules,
     load_capsule,
     parse_utc_time,
+    project_source_observations,
     replay_capsule,
     validate_capsule,
     write_capsule,
@@ -118,6 +119,41 @@ def test_capsule_retains_raw_observations_and_opportunity_windows() -> None:
         "started_at": _START.isoformat(),
         "ended_at": _END.isoformat(),
     }
+
+
+def test_unattempted_source_has_no_observation_opportunity() -> None:
+    skipped = SourceResult(source_name="google_workspace", not_attempted=True)
+    capsule = _capsule(results=(_dns_result(), skipped))
+    assert [row["source_role"] for row in capsule["source_opportunities"]] == ["dns_records"]
+    assert all(fact["source_role"] != "google_workspace" for fact in capsule["observations"])
+
+
+@pytest.mark.parametrize(
+    "attempted",
+    [
+        SourceResult(source_name="optional_source"),
+        SourceResult(source_name="optional_source", default_domain="example.com"),
+        SourceResult(source_name="optional_source", error="no match"),
+        SourceResult(source_name="optional_source", error="timeout", source_unavailable=True),
+        SourceResult(source_name="optional_source", degraded_sources=("optional:identity",)),
+    ],
+)
+def test_unattempted_instances_do_not_change_attempted_opportunity(attempted: SourceResult) -> None:
+    skipped = SourceResult(source_name=attempted.source_name, not_attempted=True)
+    window = {"started_at": _START.isoformat(), "ended_at": _END.isoformat()}
+    assert project_source_observations([attempted, skipped], **window) == project_source_observations(
+        [attempted], **window
+    )
+
+
+def test_comparison_with_disabled_probe_withholds_observation_change() -> None:
+    attempted = SourceResult(source_name="optional_source", default_domain="example.com")
+    before = _capsule(results=(_dns_result(), attempted))
+    after = _capsule(results=(_dns_result(), replace(attempted, not_attempted=True)))
+    result = compare_capsules(before, after)
+    assert result["observation"]["changed"] is False
+    assert result["observation"]["suppressed_source_roles"] == ["optional_source"]
+    assert result["collection_regime"]["changed"] is True
 
 
 def test_capsule_rejects_opportunity_window_outside_collection() -> None:

@@ -109,6 +109,11 @@ barriers. If the earlier role was unavailable, recon withholds additions. If
 the later role was unavailable, recon withholds removals. The JSON report lists
 every withheld role in `observation.suppressed_source_roles`.
 
+An opt-in source that made no request has no recorded opportunity. Disabled
+probes do not become `observed_empty` results or contribute to a role's
+instance count. If a role was attempted in only one capsule, comparison
+withholds its observation changes and records the collection-regime change.
+
 The current role boundary follows the resolver's source results. It can be
 coarser than an individual DNS channel, so suppression may withhold a valid
 change rather than overstate one. A future channel-level capsule revision must

@@ -268,8 +268,11 @@ def project_source_observations(
     started_at: str,
     ended_at: str,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Retain only attempted collection instances as observation opportunities."""
     by_role: dict[str, list[SourceResult]] = {}
     for result in results:
+        if result.not_attempted:
+            continue
         by_role.setdefault(result.source_name, []).append(result)
 
     all_facts: dict[str, dict[str, Any]] = {}

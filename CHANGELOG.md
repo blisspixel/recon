@@ -32,6 +32,9 @@ Correct offline artifact collection and timestamp boundaries.
 
 ### Fixed
 
+- Exclude unattempted sources from capsule and review-bundle observation
+  opportunities. A disabled opt-in probe no longer claims an empty observation
+  or changes the state or instance count of an attempted source role.
 - Reject artifact timestamps whose conversion to UTC exceeds the supported
   datetime range as validation errors instead of raising an uncaught overflow.
 
