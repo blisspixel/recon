@@ -83,7 +83,15 @@ class CollectionPolicy:
 
 # Read once, before any client request. Reloading catalogs and changing tool
 # arguments or the process environment cannot change collection authority.
-HOST_RESOLVER = dns.asyncresolver.Resolver()
+def _load_host_resolver() -> dns.asyncresolver.Resolver:
+    """Keep offline startup available when host DNS configuration is absent."""
+    try:
+        return dns.asyncresolver.Resolver()
+    except (dns.resolver.NoResolverConfiguration, OSError):
+        return dns.asyncresolver.Resolver(configure=False)
+
+
+HOST_RESOLVER = _load_host_resolver()
 MCP_COLLECTION_POLICY = CollectionPolicy.from_environment(
     os.environ, tuple(server for server in HOST_RESOLVER.nameservers if isinstance(server, str))
 )

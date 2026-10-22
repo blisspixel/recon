@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import socket
+import subprocess
+import sys
 from dataclasses import FrozenInstanceError, replace
 from pathlib import Path
 from typing import Any
@@ -19,6 +22,56 @@ from recon_tool.network_policy import CollectionPolicy, collection_scope
 from recon_tool.server import app, runtime
 
 _SAFE = CollectionPolicy("caller-safe", ("1.1.1.1",), "cloudflare-dns.com")
+
+
+@pytest.mark.parametrize("failure", ["missing", "unreadable"])
+def test_offline_server_starts_without_readable_host_dns_configuration(failure: str, tmp_path: Path) -> None:
+    script = """
+import asyncio
+import sys
+from unittest.mock import patch
+import dns.asyncresolver
+import dns.resolver
+
+original = dns.asyncresolver.Resolver
+calls = []
+def unavailable_host(*args, **kwargs):
+    calls.append(kwargs.get("configure", True))
+    if kwargs.get("configure", True):
+        if sys.argv[1] == "missing":
+            raise dns.resolver.NoResolverConfiguration()
+        raise PermissionError("synthetic unreadable host DNS configuration")
+    return original(*args, **kwargs)
+
+with patch.object(dns.asyncresolver, "Resolver", unavailable_host):
+    from recon_tool import network_policy
+    from recon_tool.server import get_fingerprints, lookup_tenant
+    from recon_tool.mcp_client.sdk_compat import ToolError
+    assert network_policy.HOST_RESOLVER.nameservers == []
+    assert not network_policy.MCP_COLLECTION_POLICY.available
+    async def check():
+        assert await get_fingerprints(limit=1)
+        try:
+            await lookup_tenant("example.com")
+        except ToolError as exc:
+            assert "DNS-dependent lookup unavailable" in str(exc)
+        else:
+            raise AssertionError("unapproved DNS collection was admitted")
+    asyncio.run(check())
+assert calls == [True, False]
+"""
+    environment = {key: value for key, value in os.environ.items() if not key.startswith("RECON_DNS_")}
+    environment["RECON_CONFIG_DIR"] = str(tmp_path)
+    result = subprocess.run(  # noqa: S603 - fixed offline probe with a bounded test parameter
+        [sys.executable, "-I", "-c", script, failure],
+        cwd=tmp_path,
+        env=environment,
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
 
 
 def test_saved_policy_restarts_with_identical_authority_and_no_provider_substitution() -> None:
