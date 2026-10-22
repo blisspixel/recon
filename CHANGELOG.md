@@ -26,6 +26,35 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.21.6] - 2026-10-22
+
+Correct offline artifact boundaries and refresh the security and Python baseline.
+
+### Fixed
+
+- Exclude unattempted sources from capsule and review-bundle observation
+  opportunities. A disabled opt-in probe no longer claims an empty observation
+  or changes the state or instance count of an attempted source role.
+- Reject artifact timestamps whose conversion to UTC exceeds the supported
+  datetime range as validation errors instead of raising an uncaught overflow.
+
+### Security
+
+- Require OpenTelemetry API 1.45.1 or later for the MCP trace-metadata parser
+  (CVE-2026-114603). Carry the floor into installed distribution metadata.
+- Refresh the development and mutation toolchain to virtualenv 21.14.12,
+  GitPython 3.2.1 and pip 26.2.2, including their security and bundled CA fixes.
+
+### Changed
+
+- Use Python 3.15.1 as the exact local patch baseline. Keep uv aligned with
+  setup-python's selected interpreter throughout CI, including future patch
+  updates and the existing supported-version matrix.
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
 ## [2.21.5] - 2026-10-21
 
 Preserve CLI option values that happen to spell global flags.

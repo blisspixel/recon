@@ -192,6 +192,17 @@ def test_degraded_collection_is_partial_and_suppresses_dmarc_candidate_support()
     )
 
 
+def test_unattempted_probe_does_not_claim_an_empty_observation() -> None:
+    bundle = _bundle(results=(_dns_result(), SourceResult(source_name="google_workspace", not_attempted=True)))
+    assert [row["source_role"] for row in bundle["source_opportunities"]] == ["dns_records"]
+
+
+def test_only_unattempted_sources_have_no_recorded_opportunities() -> None:
+    bundle = _bundle(results=(SourceResult(source_name="google_workspace", not_attempted=True),))
+    assert bundle["source_opportunities"] == []
+    assert bundle["workflow"]["collection_validity"] == "not_observed"
+
+
 def test_degraded_cname_keeps_ct_hosts_in_explained_baseline() -> None:
     ct_names = ("auth.example.com", "test.example.com")
     all_related = (*ct_names, "portal.example.com")

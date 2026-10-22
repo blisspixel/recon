@@ -290,9 +290,10 @@ def test_replay_rejects_missing_or_malformed_capsule(tmp_path: Path) -> None:
     assert "Could not load capsule" in malformed.output
 
 
-def test_replay_rejects_invalid_as_of(tmp_path: Path) -> None:
+@pytest.mark.parametrize("as_of", ["tomorrow", "0001-01-01T00:00:00+01:00", "9999-12-31T23:59:59-01:00"])
+def test_replay_rejects_invalid_as_of(tmp_path: Path, as_of: str) -> None:
     path = tmp_path / "capsule.json"
     _written_capsule(path)
-    result = runner.invoke(app, ["capsule", "replay", str(path), "--as-of", "tomorrow"])
+    result = runner.invoke(app, ["capsule", "replay", str(path), "--as-of", as_of])
     assert result.exit_code == EXIT_VALIDATION
     assert "as_of" in result.output

@@ -82,6 +82,9 @@ dependencies = [
     # PYSEC-2026-4320: exclude the compromised emSign trust root from HTTPX's
     # default CA bundle, including when pip reuses an existing environment.
     "certifi>=2026.10.19",
+    # MCP extracts untrusted JSON-RPC trace metadata through this parser.
+    # Exclude quadratic tracestate parsing (CVE-2026-114603).
+    "opentelemetry-api>=1.45.1",
 ]
 
 [project.scripts]
@@ -147,12 +150,13 @@ dev = [
     "pyright>=1.1",
     "pre-commit>=3.0",
     # pre-commit creates hook environments with virtualenv. Keep its activation,
-    # configuration and seed-wheel fixes current (PYSEC-2026-4011 through 4014).
-    "virtualenv>=21.14.1",
+    # configuration, launcher and seed-wheel fixes current, including the
+    # embedded pip CA-bundle refresh in 21.14.12.
+    "virtualenv>=21.14.12",
     # Security floor on development tooling: pip-api pulls in pip, and pip
     # before 26.2 has PYSEC-2026-3721 / CVE-2026-13346. pip is excluded from
-    # the published runtime graph.
-    "pip>=26.2",
+    # the published runtime graph. 26.2.2 also refreshes its bundled certifi.
+    "pip>=26.2.2",
     "pip-audit>=2.7",
     # pip-audit uses Requests. Keep its transport above the proxy-TLS and
     # chunk-size fixes (CVE-2026-97687 and CVE-2026-97689), outside runtime.
@@ -163,8 +167,8 @@ dev = [
 # mutation job and by a maintainer running the sweep locally.
 mutation = [
     "cosmic-ray>=8.4",
-    # Security floor for cosmic-ray's repository tooling (PYSEC-2026-3982/3/4).
-    "gitpython>=3.1.62",
+    # Security floor for cosmic-ray's repository tooling (CVE-2026-114145).
+    "gitpython>=3.2.1",
     # cosmic-ray pulls aiohttp. Exclude the multidict C-extension reference
     # leak (CVE-2026-104874) without adding aio-libs to runtime dependencies.
     "multidict>=6.9.1",

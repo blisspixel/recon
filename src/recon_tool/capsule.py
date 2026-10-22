@@ -179,7 +179,10 @@ def parse_utc_time(value: object, field: str) -> datetime:
         raise ValueError(f"{field} must be an ISO 8601 datetime") from exc
     if parsed.tzinfo is None or parsed.utcoffset() is None:
         raise ValueError(f"{field} must include a timezone")
-    return parsed.astimezone(UTC)
+    try:
+        return parsed.astimezone(UTC)
+    except OverflowError as exc:
+        raise ValueError(f"{field} must be within the supported UTC datetime range") from exc
 
 
 _utc_text = utc_text
@@ -265,8 +268,11 @@ def project_source_observations(
     started_at: str,
     ended_at: str,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Retain only attempted collection instances as observation opportunities."""
     by_role: dict[str, list[SourceResult]] = {}
     for result in results:
+        if result.not_attempted:
+            continue
         by_role.setdefault(result.source_name, []).append(result)
 
     all_facts: dict[str, dict[str, Any]] = {}

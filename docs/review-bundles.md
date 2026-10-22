@@ -75,6 +75,10 @@ The complete state is deliberately bounded. It does not claim that every
 public or private control was observable. A failed workflow has no explained
 baseline, evidence ledger, or candidate report.
 
+Unattempted sources have no recorded opportunity. In particular, the disabled
+direct probe is omitted rather than described as an `observed_empty` result.
+Only attempted instances contribute to each source role's state and count.
+
 A candidate stage that did not run is explicit. It is never serialized or
 rendered as an empty successful candidate list. Conversely, a successful stage
 with no candidates has an empty list and remains distinguishable from failure.

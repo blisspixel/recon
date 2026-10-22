@@ -60,8 +60,9 @@ Primary sources:
 ### Upstream pip transport, issue 187
 
 [Issue 187](https://github.com/blisspixel/recon/issues/187) remains blocked.
-[PyPI](https://pypi.org/project/pip/) still lists pip 26.2.1 as the stable
-release. Its vendored urllib3 is 2.7.0; installing urllib3 2.8.0 separately does
+[PyPI](https://pypi.org/project/pip/) lists pip 26.2.2 as the stable release
+as of 2026-10-22. Its bundled certifi is refreshed to 2026.10.19, but its
+vendored urllib3 remains 2.7.0; installing urllib3 2.8.0 separately does
 not replace that copy. The upstream
 [proxy TLS](https://github.com/urllib3/urllib3/security/advisories/GHSA-8988-9cw3-xx77)
 and [chunk-size](https://github.com/urllib3/urllib3/security/advisories/GHSA-vxq7-64xx-v4gw)

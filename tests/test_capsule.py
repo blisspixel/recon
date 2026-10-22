@@ -15,6 +15,8 @@ from recon_tool.capsule import (
     build_capsule,
     compare_capsules,
     load_capsule,
+    parse_utc_time,
+    project_source_observations,
     replay_capsule,
     validate_capsule,
     write_capsule,
@@ -117,6 +119,41 @@ def test_capsule_retains_raw_observations_and_opportunity_windows() -> None:
         "started_at": _START.isoformat(),
         "ended_at": _END.isoformat(),
     }
+
+
+def test_unattempted_source_has_no_observation_opportunity() -> None:
+    skipped = SourceResult(source_name="google_workspace", not_attempted=True)
+    capsule = _capsule(results=(_dns_result(), skipped))
+    assert [row["source_role"] for row in capsule["source_opportunities"]] == ["dns_records"]
+    assert all(fact["source_role"] != "google_workspace" for fact in capsule["observations"])
+
+
+@pytest.mark.parametrize(
+    "attempted",
+    [
+        SourceResult(source_name="optional_source"),
+        SourceResult(source_name="optional_source", default_domain="example.com"),
+        SourceResult(source_name="optional_source", error="no match"),
+        SourceResult(source_name="optional_source", error="timeout", source_unavailable=True),
+        SourceResult(source_name="optional_source", degraded_sources=("optional:identity",)),
+    ],
+)
+def test_unattempted_instances_do_not_change_attempted_opportunity(attempted: SourceResult) -> None:
+    skipped = SourceResult(source_name=attempted.source_name, not_attempted=True)
+    window = {"started_at": _START.isoformat(), "ended_at": _END.isoformat()}
+    assert project_source_observations([attempted, skipped], **window) == project_source_observations(
+        [attempted], **window
+    )
+
+
+def test_comparison_with_disabled_probe_withholds_observation_change() -> None:
+    attempted = SourceResult(source_name="optional_source", default_domain="example.com")
+    before = _capsule(results=(_dns_result(), attempted))
+    after = _capsule(results=(_dns_result(), replace(attempted, not_attempted=True)))
+    result = compare_capsules(before, after)
+    assert result["observation"]["changed"] is False
+    assert result["observation"]["suppressed_source_roles"] == ["optional_source"]
+    assert result["collection_regime"]["changed"] is True
 
 
 def test_capsule_rejects_opportunity_window_outside_collection() -> None:
@@ -270,6 +307,17 @@ def test_compare_rejects_different_domains() -> None:
 def test_replay_rejects_invalid_or_naive_as_of(as_of: str) -> None:
     with pytest.raises(ValueError, match="as_of"):
         replay_capsule(_capsule(), as_of=as_of)
+
+
+@pytest.mark.parametrize("as_of", ["0001-01-01T00:00:00+01:00", "9999-12-31T23:59:59-01:00"])
+def test_timestamp_utc_overflow_is_a_validation_error(as_of: str) -> None:
+    with pytest.raises(ValueError, match="as_of"):
+        parse_utc_time(as_of, "as_of")
+
+
+@pytest.mark.parametrize("as_of", ["0001-01-01T01:00:00+01:00", "9999-12-31T22:59:59-01:00"])
+def test_timestamp_near_utc_boundary_remains_valid(as_of: str) -> None:
+    assert parse_utc_time(as_of, "as_of").tzinfo is UTC
 
 
 def test_validate_rejects_content_tampering() -> None:

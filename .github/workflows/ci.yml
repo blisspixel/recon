@@ -9,6 +9,11 @@ on:
 permissions:
   contents: read
 
+# Match setup-python's maintained patch release instead of the exact local pin.
+# Matrix jobs override this with their selected interpreter.
+env:
+  UV_PYTHON: "3.15"
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
