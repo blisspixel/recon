@@ -26,6 +26,19 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.21.6] - 2026-10-22
+
+Correct offline artifact collection and timestamp boundaries.
+
+### Fixed
+
+- Reject artifact timestamps whose conversion to UTC exceeds the supported
+  datetime range as validation errors instead of raising an uncaught overflow.
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
 ## [2.21.5] - 2026-10-21
 
 Preserve CLI option values that happen to spell global flags.

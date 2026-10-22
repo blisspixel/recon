@@ -15,6 +15,7 @@ from recon_tool.capsule import (
     build_capsule,
     compare_capsules,
     load_capsule,
+    parse_utc_time,
     replay_capsule,
     validate_capsule,
     write_capsule,
@@ -270,6 +271,17 @@ def test_compare_rejects_different_domains() -> None:
 def test_replay_rejects_invalid_or_naive_as_of(as_of: str) -> None:
     with pytest.raises(ValueError, match="as_of"):
         replay_capsule(_capsule(), as_of=as_of)
+
+
+@pytest.mark.parametrize("as_of", ["0001-01-01T00:00:00+01:00", "9999-12-31T23:59:59-01:00"])
+def test_timestamp_utc_overflow_is_a_validation_error(as_of: str) -> None:
+    with pytest.raises(ValueError, match="as_of"):
+        parse_utc_time(as_of, "as_of")
+
+
+@pytest.mark.parametrize("as_of", ["0001-01-01T01:00:00+01:00", "9999-12-31T22:59:59-01:00"])
+def test_timestamp_near_utc_boundary_remains_valid(as_of: str) -> None:
+    assert parse_utc_time(as_of, "as_of").tzinfo is UTC
 
 
 def test_validate_rejects_content_tampering() -> None:

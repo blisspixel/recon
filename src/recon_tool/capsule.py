@@ -179,7 +179,10 @@ def parse_utc_time(value: object, field: str) -> datetime:
         raise ValueError(f"{field} must be an ISO 8601 datetime") from exc
     if parsed.tzinfo is None or parsed.utcoffset() is None:
         raise ValueError(f"{field} must include a timezone")
-    return parsed.astimezone(UTC)
+    try:
+        return parsed.astimezone(UTC)
+    except OverflowError as exc:
+        raise ValueError(f"{field} must be within the supported UTC datetime range") from exc
 
 
 _utc_text = utc_text
