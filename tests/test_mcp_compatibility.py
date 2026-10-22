@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import re
 import shlex
 import tomllib
 from pathlib import Path
+from typing import Any
 
 import pytest
 import yaml
@@ -12,6 +14,30 @@ import yaml
 from recon_tool.mcp_client.doctor import DoctorCheck, _append_cache_metadata_check
 from recon_tool.mcp_client.sdk_compat import SDK_FAMILY, mcp_application_options, model_wire_dict
 from scripts import check_mcp_compatibility
+
+
+@pytest.mark.parametrize("whitespace", [" ", "\t"])
+def test_mcp_trace_context_bounds_untrusted_tracestate(monkeypatch: pytest.MonkeyPatch, whitespace: str) -> None:
+    from mcp.shared._otel import extract_trace_context
+    from opentelemetry.trace import get_current_span
+
+    original_split = re.split
+
+    def bounded_split(pattern: Any, value: str, *args: Any, **kwargs: Any) -> list[str]:
+        assert len(value) <= 8192, "oversized tracestate reached regex parsing"
+        return original_split(pattern, value, *args, **kwargs)
+
+    monkeypatch.setattr(re, "split", bounded_split)
+    traceparent = f"00-{'1' * 32}-{'2' * 16}-01"
+    context = extract_trace_context({"traceparent": traceparent, "tracestate": whitespace * 8193 + "x=y"})
+    assert context is not None
+    span_context = get_current_span(context).get_span_context()
+    assert span_context.is_valid
+    assert not span_context.trace_state
+
+    ordinary = extract_trace_context({"traceparent": traceparent, "tracestate": "vendor=value,next=ok"})
+    assert ordinary is not None
+    assert dict(get_current_span(ordinary).get_span_context().trace_state) == {"vendor": "value", "next": "ok"}
 
 
 class _Model:

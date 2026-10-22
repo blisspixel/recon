@@ -28,7 +28,7 @@ operator, corporate group, ownership, or control.
 
 ## [2.21.6] - 2026-10-22
 
-Correct offline artifact collection and timestamp boundaries.
+Correct offline artifact boundaries and refresh the security and Python baseline.
 
 ### Fixed
 
@@ -37,6 +37,13 @@ Correct offline artifact collection and timestamp boundaries.
   or changes the state or instance count of an attempted source role.
 - Reject artifact timestamps whose conversion to UTC exceeds the supported
   datetime range as validation errors instead of raising an uncaught overflow.
+
+### Security
+
+- Require OpenTelemetry API 1.45.1 or later for the MCP trace-metadata parser
+  (CVE-2026-114603). Carry the floor into installed distribution metadata.
+- Refresh the development and mutation toolchain to virtualenv 21.14.12,
+  GitPython 3.2.1 and pip 26.2.2, including their security and bundled CA fixes.
 
 ### Tool Surface Changes
 

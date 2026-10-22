@@ -78,6 +78,7 @@ _EXPECTED_RUNTIME_DEPENDENCIES = {
     "jsonschema",
     "mcp",
     "networkx",
+    "opentelemetry-api",  # Patched parser for trace context supplied to MCP.
     "publicsuffixlist",
     "pyjwt",  # Patched floor for the existing MCP JWT dependency.
     "python-multipart",
@@ -261,3 +262,4 @@ def test_wheel_runtime_dependencies_stay_lean(tmp_path: Path) -> None:
     # alone would let pip retain an affected version in an existing install.
     assert "pyjwt>=2.14.0" in (Parser().parsestr(metadata_text).get_all("Requires-Dist") or [])
     assert "certifi>=2026.10.19" in (Parser().parsestr(metadata_text).get_all("Requires-Dist") or [])
+    assert "opentelemetry-api>=1.45.1" in (Parser().parsestr(metadata_text).get_all("Requires-Dist") or [])
