@@ -75,11 +75,11 @@ def _results() -> list[SourceResult]:
 @pytest.fixture
 def fresh_server_cache() -> Iterator[None]:
     """Wipe the server's in-memory cache between tests."""
-    from recon_tool.server import _cache
+    from recon_tool.server import _cache_clear
 
-    _cache.clear()
+    _cache_clear()
     yield
-    _cache.clear()
+    _cache_clear()
 
 
 @pytest.fixture
@@ -351,10 +351,9 @@ class TestEphemeralFingerprints:
 
     @pytest.mark.asyncio
     async def test_inject_then_list_then_clear(self) -> None:
-        import time
-
         from recon_tool.server import (
             _cache,
+            _cache_set,
             clear_ephemeral_fingerprints,
             inject_ephemeral_fingerprint,
             list_ephemeral_fingerprints,
@@ -376,7 +375,7 @@ class TestEphemeralFingerprints:
         listed = await list_ephemeral_fingerprints()
         assert any(fp["slug"] == "test-platform" for fp in listed)
 
-        _cache["alpha.invalid"] = (time.monotonic(), _info(display_name="Before Clear"), tuple(_results()))
+        _cache_set("alpha.invalid", _info(display_name="Before Clear"), _results())
 
         # Clear removes it
         refreshed_info = _info(display_name="After Clear")
@@ -440,13 +439,11 @@ class TestReevaluateDomain:
     @pytest.mark.asyncio
     async def test_cached_domain_reevaluates(self, fresh_server_cache: None) -> None:
         """Pre-seed the server cache, then re-evaluate."""
-        import time
-
-        from recon_tool.server import _cache, reevaluate_domain
+        from recon_tool.server import _cache_set, reevaluate_domain
 
         info = _info()
         results = _results()
-        _cache["alpha.invalid"] = (time.monotonic(), info, tuple(results))
+        _cache_set("alpha.invalid", info, results)
 
         result = await reevaluate_domain("alpha.invalid")
         # A tenant-info dict (raises ToolError on failure, never an error payload)
@@ -457,14 +454,12 @@ class TestReevaluateDomain:
 
     @pytest.mark.asyncio
     async def test_reevaluate_updates_cached_info(self, fresh_server_cache: None) -> None:
-        import time
-
-        from recon_tool.server import _cache, _cache_get, reevaluate_domain
+        from recon_tool.server import _cache_get, _cache_set, reevaluate_domain
 
         original = _info(display_name="Original")
         refreshed = _info(display_name="Refreshed")
         results = _results()
-        _cache["alpha.invalid"] = (time.monotonic(), original, tuple(results))
+        _cache_set("alpha.invalid", original, results)
 
         with patch("recon_tool.merger.merge_results", return_value=refreshed):
             result = await reevaluate_domain("alpha.invalid")
@@ -478,15 +473,15 @@ class TestReevaluateDomain:
 class TestReloadData:
     @pytest.mark.asyncio
     async def test_reload_clears_cache_but_preserves_rate_limiter(self, fresh_server_cache: None) -> None:
+        import time
+
         # reload_data clears the result cache (definitions changed) but must
         # NOT clear the per-domain rate limiter: resetting it would let a
         # caller bypass the limiter by calling reload_data between lookups
         # (v1.9.19 hardening).
-        import time
+        from recon_tool.server import _cache, _cache_set, _rate_limit, reload_data
 
-        from recon_tool.server import _cache, _rate_limit, reload_data
-
-        _cache["alpha.invalid"] = (time.monotonic(), _info(), tuple(_results()))
+        _cache_set("alpha.invalid", _info(), _results())
         _rate_limit["alpha.invalid"] = time.monotonic()
 
         result = await reload_data()

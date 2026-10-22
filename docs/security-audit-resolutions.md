@@ -1,13 +1,16 @@
 # Security audit resolutions
 
-External audits, scanners, and security-review tools sometimes report
-findings that are already closed by subsequent commits - most scanners
-flag the commit that *introduced* an issue and don't automatically
-trace forward through fix commits. This file is the project's
-disposition record. If a finding listed here is also reported as open,
-compare the scanned revision and attack path with the fix and its regression
-tests. A historical closure does not override a reproducible bypass or a
-regression in a later revision.
+This file records dispositions by revision and concrete attack path. Compare
+reports with the fix and its regression tests; a historical closure does not
+override a reproducible bypass or regression.
+
+- For the original introducing revision and the same already-fixed attack
+  path, verify and link the closure receipt. Record the repeat without
+  reopening that historical path solely because a scanner repeated it.
+- For a newer revision, alternate attack path, or reproducible bypass,
+  evaluate the report and reopen or create a linked finding as appropriate.
+- If the revision or reproduction evidence is insufficient, request
+  clarification. Do not assume the report is stale.
 
 Findings are indexed by *topic* rather than vendor-specific ID so the
 record stays portable across audit tools.
@@ -222,7 +225,9 @@ resolution failed, allowing the underlying transport to resolve again without a
 validated result. Missing hosts, resolution errors, empty answers, and invalid
 addresses now refuse the request before transport. Public addresses remain
 allowed. That release retained a separate address-pinning TOCTOU residual;
-the unreleased connection-backend fix above addresses it.
+the connection-backend fix shipped in
+[v2.19.0](https://github.com/blisspixel/recon/releases/tag/v2.19.0) addresses it.
+The earlier v2.6.4 release did not yet include that later repair.
 
 Importing the MCP server previously installed a process-wide handler on the
 shared `recon` logger. That made later embedded CLI output order-dependent and
@@ -519,13 +524,14 @@ tag.
 
 ---
 
-## Mitigated: CNAME chain walking can query and leak internal DNS names
+## Closed in v2.22.0: CNAME chain walking can query and leak internal DNS names
 
 | Field | Value |
 |---|---|
 | **Severity (as audited)** | Medium |
 | **Introduced** | **v1.5.0** (`332534d`, 2026-05-01) - first CNAME surface-attribution commit, no defenses |
 | **Mitigated** | **v1.9.3.5** (`07c2bb4`), **v1.9.4** (`e3c5965`), **v1.9.13** (entry-point validation + redirect_domain filter), **v1.9.14** (terminus-only A/AAAA check reverted after type-dependent-answer attack path demonstrated) |
+| **Caller/operator boundary repaired** | **v2.22.0**, immutable caller-safe MCP DNS/HTTP policy and policy-bound caches |
 | **Current receipt** | `src/recon_tool/sources/dns_tables.py::is_public_dns_name`, `src/recon_tool/sources/dns.py::_resolve_cname_chain`, and `src/recon_tool/sources/dns_infra.py::detect_m365_cnames` (redirect-domain filter) |
 | **Pinned by** | `tests/test_cname_chain_validation.py` (including `test_walker_does_not_resolve_a_aaaa_during_walk`, `TestEntryPointValidation`, `TestNoAAAAQueriesFromWalker`, `TestM365RedirectDomainFilter`) |
 | **Re-flagged** | 2026-05-17 - scanner pinned to introducing commit `332534d`. Re-flag prompted the v1.9.13 hardening pass even though the audit pointed at the v1.5.0 pre-defense commit. A subsequent scanner pass against v1.9.13 itself flagged the new terminus-only A/AAAA check on the type-dependent-answer path, prompting the v1.9.14 reversion documented above. |
@@ -607,123 +613,76 @@ ambient bounds:
    on iteration 1 instead of iteration 2. Not a security gap on
    its own but tightens the walker's invariants.
 
-**Residual surface (real, by design).** The audit text the
-scanner re-prints describes the v1.5.0 state. The residual that
-remains under the v1.9.14 defenses is narrower:
+**Baseline disposition, reviewed 2026-10-22.** The reviewed baseline is
+`061fa5f3673e3abaee1f162ccc5d3cc56ef0ce2c` (v2.21.6). Its explicit
+private-suffix and forced A/AAAA-chase paths are mitigated by the released
+v1.9.3.5, v1.9.4, v1.9.13 and v1.9.14 defenses above. Those receipts do not
+close the distinct public-looking split-horizon path. The boundary repair
+below is included in v2.22.0 and closes the lower-trust caller/operator
+DNS-view crossing. It is absent from v2.21.6. Release and local installation
+evidence are tracked in [issue 257](https://github.com/blisspixel/recon/issues/257);
+a release number does not establish deployment on other machines.
 
-- An attacker who controls the queried apex (e.g. operator runs
-  recon during diligence on `attacker.example`) can return a
-  CNAME chain whose every hop is a public-suffix name of their
-  choosing. Those hops are walked, and their names appear in
-  `EvidenceRecord.raw_value` when the chain terminus matches a
-  built-in `cname_target` fingerprint. The information disclosed
-  is text the attacker already chose to put in their own DNS
-  records, not internal-DNS topology of any third party.
-- Split-horizon termini are not dropped by the walker. The
-  v1.9.13 terminus-only A/AAAA check was the planned defense for
-  this case but was reverted in v1.9.14 after the
-  type-dependent-answer attack path was demonstrated against the
-  check itself. Closing this residual requires either redaction
-  by default (option (a) below) or a dedicated public-DNS
-  resolver path (option (b) below); neither is currently shipped.
-- If the operator runs a split-horizon resolver where one of
-  those public-suffix names happens to resolve in a private zone,
-  the walker's CNAME query for that name does reach internal DNS
-  (one CNAME query per hop, no recursive A chase). The query is
-  observable in internal DNS logs. Per-call bounds (5 hops, 100
-  hosts) limit the guess rate per recon invocation.
+**Residual behavior and observers.** An attacker can supply a public-looking
+cross-apex CNAME target. A legitimate operator resolver can answer it from a
+private view with an additional alias the attacker did not choose. The walker
+can retain and query that alias if its suffix passes admission. Resolver
+compromise is not required. Split DNS is defined in
+[RFC 9499, section 6](https://www.rfc-editor.org/rfc/rfc9499.html#section-6).
 
-**Why this residual is not closed further.** Distinguishing
-"attacker-influenced public name" from "legitimate public name"
-passively is not feasible: every CDN and SaaS chain crosses
-apexes routinely, and the walker cannot tell them apart without
-an off-channel signal. The v1.9.3.5 attempt to add a
-resolved-address check on each intermediate hop
-(`_hop_resolves_publicly` called inside the walk loop)
-re-introduced the leak it was added to prevent by causing the
-recursive resolver to chase deeper CNAMEs while answering A/AAAA.
-v1.9.4 removed that helper from the walk loop. v1.9.13 brought
-it back in a position the docstring described as "provably safe":
-on the terminus only, after the walker had established the
-terminus had no further CNAME. The 2026-05-17 scanner pass
-showed that argument was wrong because authoritative DNS can
-answer the CNAME and A/AAAA queries differently for the same
-name. v1.9.14 reverted the terminus check; A/AAAA is now banned
-on every hop in the walker.
+- Classified chains enter ordinary structured `evidence[].raw_value`, including
+  MCP JSON; they are not restricted to `--explain`.
+- Motifs emit the matched subset of hops in ordinary `chain_motifs[].chain`.
+  An alias is disclosed there only if it matches a motif marker.
+- Unclassified chains are retained for discovery, but lookup JSON emits them
+  only with `include_unclassified`. Discovery tools can also return retained
+  candidates. An unclassified chain alone is not default lookup disclosure.
+- Internal DNS logs can observe queries. A remote domain owner does not learn
+  an unknown alias merely because a query occurred: the confidentiality impact
+  requires access to returned output or another observation channel.
 
-A further reduction would either (a) emit only the terminal hop
-in `EvidenceRecord.raw_value` by default and gate full-chain
-emission behind `--explain` - would remove attacker-chosen
-intermediate names from default output at the cost of
-`--json` consumers losing the chain trace, or (b) route the
-chain walker's queries through a dedicated public-DNS resolver
-(1.1.1.1 / 8.8.8.8) - would eliminate the split-horizon
-landing entirely at the cost of an external dependency operators
-behind air-gapped or corporate-restricted networks could not
-satisfy. Neither is currently shipped.
+**Impact and severity.** For a supported lower-trust MCP caller able to request
+lookups on a host with privileged split DNS, this is a **conditional Medium**
+confidentiality issue: it can reveal resolver-only aliases, record values and
+associated service observations across the caller/operator boundary. This
+assessment follows the reproduced dataflow and the supported untrusted-agent
+assumption, not the historical Medium label. It does not establish private
+HTTP access, credentials, execution, observed exploitation or a universal
+severity for every deployment. If output stays with a trusted operator, or
+both parties have the same public DNS view, that confidentiality crossing is
+not established. Five hops per chain, 100 related hosts, 30 concurrent queries
+and five-second query lifetimes bound one classification pass; they are not
+proof that repeated requests or derived observations are harmless.
 
-**Engineering rationale for not shipping (a) or (b) right now.**
+**Boundary repair (v2.22.0).** The maintainer selected protection for
+lower-trust callers using split-horizon networks. One immutable startup policy
+now binds MCP DNS collection, related enrichment, recursive chain lookups and
+HTTP hostname admission. Saved caller-safe configuration is reused without
+per-launch questions. A recognized public resolver already selected in host
+configuration can be reused through its authenticated endpoint; an enterprise
+or stub resolver is not presumed caller-safe and does not silently select a
+new provider. Missing or invalid approval reports an unavailable capability
+with concise one-time server setup guidance. Transport failure never falls
+back to host DNS. Trusted bare CLI use retains its existing resolver behavior.
 
-The residual appears structural rather than fixable in code. The
-chain walker performs DNS lookups on names the queried apex
-returns, those lookups go through the operator's resolver, and
-when the queried apex is adversarial, the adversary chooses the
-names. Two questions help decide whether more hardening is worth
-the cost: what does the adversary plausibly gain, and what does
-the legitimate operator give up to close it?
+The same policy identity/version partitions process cache authority and binds
+persistent cache admission. Retained results cannot acquire a new view merely
+by reloading catalogs or re-evaluating fingerprints. Resolver-vantage labels
+and opaque policy identities identify collection authority without returning
+operator resolver endpoints. Public-address admission, numeric HTTP socket
+pinning, TLS identity checks, suffix rejection and CNAME-only walking remain
+independent defenses. Advanced operator-view MCP is explicit trusted startup
+configuration, never a tool argument or an analytical profile.
 
-*What the adversary plausibly gains.* The strings the adversary
-emits into recon output are strings they wrote in their own DNS
-records. They learn little new about the operator from those
-strings themselves. The new signal is whether a guessed
-public-suffix name in someone else's namespace resolves to a
-CNAME the operator's resolver can see. If the operator uses a
-typical public resolver (1.1.1.1, ISP, etc.), that signal is the
-same one anyone in the world gets by typing the same `dig`
-command. If the operator runs split-horizon DNS, the signal can
-be slightly richer (whether internally-routed names exist). But
-the adversary also needs to be able to observe the resulting
-output. For a local CLI invocation, that means being in a
-privileged position relative to the operator already. The
-per-call bounds (5 hops, 100 hosts, 30 concurrent, 5s timeout)
-cap how much guessing the adversary can drive per recon
-invocation.
-
-*What the legitimate operator gives up to close it.*
-
-* Option (a), redaction by default, costs chain-trace
-  visibility for every `--json` consumer. The chain shape is a
-  useful signal for incident-response work (spotting lookalike
-  infrastructure, finding shared CDN edges, attribution to a
-  known reseller). Hiding it by default means most operators
-  running recon defensively would pay a real cost to close a
-  residual that mostly matters when output is shared with
-  someone untrusted.
-* Option (b), dedicated public-DNS resolver in the walker,
-  would break recon in environments that block outbound DNS to
-  anything except the local corporate resolver. Those
-  environments are common in regulated and high-security
-  workplaces, which tend to overlap with the operators most
-  likely to face adversarial-domain investigations. The defense
-  would break for the users it was meant to protect, with a
-  silent failure mode (chains empty, everything else still
-  works).
-
-*Framing.* Recon's contract is "given a domain you chose to look
-up, return public observables." The contract assumes the
-operator picked the input. Making recon defensive against its
-own input would change that contract. The position we land on is
-that data from the internet is data from the internet, and the
-same OpSec that applies to running `curl` or `dig` against an
-adversary-controlled hostname applies to running recon against
-one. The v1.9.13 hardening pass closed the specific harm class
-the audit identified (internal-DNS topology leak via the chain
-walker); v1.9.14 reverted the terminus-only A/AAAA layer after a
-follow-up scanner pass showed it had reopened the v1.9.4 leak
-through a type-dependent-answer path. The remaining residual is
-a property of doing DNS lookups at all and is bounded by the
-per-call caps. We document it here rather than hide it in the
-implementation.
+**Regression receipts.** `tests/test_cname_split_horizon.py` specifies the
+public/private-view alias, exact CNAME queries and classified, motif and opt-in
+unclassified output separately. `tests/test_mcp_dns_view.py` covers resolver
+selection, real DNS response decoding through stubbed transports, cache/replay,
+all network tool entry points, cancellation and concurrent trusted calls.
+HTTP and cache policy tests cover their shared admission boundaries. These are
+offline synthetic cases, not claims about any real internal namespace or live
+deployment. Source owners are `network_policy.py`, `sources/dns_base.py`,
+`server/app.py`, `server/graph.py`, `http.py` and the cache admission paths.
 
 **Receipt (current code state).**
 
@@ -1347,14 +1306,15 @@ values unchanged).
 
 ## Process notes
 
-* **Closure precedence.** If a scanner flags a finding listed here
-  as open, the closure status documented above is authoritative. The
-  scanner is reporting against the commit it last scanned, not the
-  current `main`. Feed the closure commit SHA back into the scanner
-  if it supports per-finding closure pointers. When a scanner repeats
-  a previously-closed finding against the original introducing commit,
-  add a **Re-flagged** row to the relevant entry above with the date
-  and the cited commit; do not re-open the finding.
+* **Revision and attack-path triage.** Compare the scanned revision and concrete
+  attack path with the fix and its regression tests. A historical closure does
+  not override a reproducible bypass or regression. For the original
+  introducing revision and the same already-fixed attack path, verify and link
+  the closure receipt, and record a **Re-flagged** row with the date and cited
+  revision. For a newer revision, alternate attack path, or reproducible bypass,
+  evaluate the report and reopen or create a linked finding as appropriate.
+  If the revision or reproduction evidence is insufficient, request
+  clarification; do not assume the report is stale.
 * **Mitigated vs Closed.** *Closed* means the attack class no longer
   works against the current code. *Mitigated* means a documented
   residual remains, with explicit reasoning for why it is left in

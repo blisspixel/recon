@@ -319,8 +319,11 @@ def _entry_to_dict(
     provider_used: str,
     infrastructure_clusters: InfrastructureClusterReport | None,
 ) -> dict[str, Any]:
+    from recon_tool.network_policy import current_policy
+
     d: dict[str, Any] = {
         "_cache_version": _CT_CACHE_VERSION,
+        "_resolution_policy_id": current_policy().identity,
         "cached_at": datetime.now(UTC).isoformat(),
         "domain": domain,
         "provider_used": provider_used,
@@ -332,6 +335,10 @@ def _entry_to_dict(
 
 
 def _entry_from_dict(data: dict[str, Any], age_seconds: float, expected_domain: str) -> CTCacheEntry:
+    from recon_tool.network_policy import OPERATOR_POLICY, current_policy
+
+    if data.get("_resolution_policy_id", OPERATOR_POLICY.identity) != current_policy().identity:
+        raise ValueError("CT cache belongs to a different collection policy")
     if data.get("_cache_version") != _CT_CACHE_VERSION or data.get("domain") != expected_domain:
         raise ValueError("CT cache payload domain or version does not match its cache key")
     provider_used = data.get("provider_used", "unknown")

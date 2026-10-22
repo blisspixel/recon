@@ -48,6 +48,8 @@ CONDITIONAL_TOP_LEVEL_FIELDS: tuple[str, ...] = (
     "explanations",
     "explanation_dag",
     "reserved_name",
+    "resolution_vantage",
+    "resolution_policy_id",
     "shared_display_name",
     "shared_tenant",
     "shared_verification_tokens",
@@ -93,7 +95,21 @@ def _ordered_required(template: Mapping[str, Any]) -> list[str]:
 
 def build_schema(template: Mapping[str, Any]) -> dict[str, Any]:
     """Build the generated schema from a template schema's detailed fragments."""
-    template_properties = _properties(template)
+    template_properties = dict(_properties(template))
+    template_properties.update(
+        {
+            "resolution_vantage": {
+                "type": ["string", "null"],
+                "enum": ["operator", "caller-safe", "unavailable", None],
+                "description": "DNS disclosure authority selected at collection; null for older records.",
+            },
+            "resolution_policy_id": {
+                "type": ["string", "null"],
+                "pattern": "^[0-9a-f]{64}$",
+                "description": "Opaque identity of the collection policy and version; no resolver endpoints.",
+            },
+        }
+    )
     generated_fields = generated_top_level_fields()
     generated_set = frozenset(generated_fields)
     template_set = frozenset(str(key) for key in template_properties)

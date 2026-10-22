@@ -2243,6 +2243,8 @@
       "region",
       "related_domains",
       "reserved_name",
+      "resolution_policy_id",
+      "resolution_vantage",
       "schema_version",
       "services",
       "shared_display_name",

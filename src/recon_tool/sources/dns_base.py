@@ -34,6 +34,7 @@ from recon_tool.models import (
     UnclassifiedCnameChain,
     UnclassifiedDnsObservation,
 )
+from recon_tool.network_policy import HOST_RESOLVER, selected_resolver
 from recon_tool.sources.dns_tables import (
     is_public_dns_name,
     is_public_ptr_canonical_name,
@@ -57,7 +58,7 @@ _MAX_CATALOG_VALUE_LENGTH = 4096
 
 def get_resolver() -> dns.asyncresolver.Resolver:
     """Return the async resolver instance. Overridable for testing."""
-    return _default_resolver
+    return selected_resolver(_default_resolver)
 
 
 # Default async resolver instance - reused across queries within a lookup
@@ -68,8 +69,7 @@ def get_resolver() -> dns.asyncresolver.Resolver:
 # index, whose races are benign (they only affect which configured
 # nameserver a query picks). A per-lookup resolver would add construction
 # cost on the hot path without a correctness benefit.
-_default_resolver = dns.asyncresolver.Resolver()
-
+_default_resolver = HOST_RESOLVER
 
 # Response class of one DNS query as the resolver adapter observed it.
 # ``answer`` and ``no_answer`` are NOERROR responses (with and without records
@@ -179,7 +179,7 @@ async def safe_resolve(
     Uses dns.asyncresolver for non-blocking DNS queries, allowing multiple
     queries to run concurrently via asyncio.gather.
 
-    **Internal-DNS leak guard.** For every query type other than CNAME
+    **Canonical-suffix guard.** For every query type other than CNAME
     and PTR, the answer is discarded when the recursive resolver chased
     a CNAME to a non-public canonical name (a ``.corp`` / ``.internal``
     / ``.local`` / IP-literal / other private-suffix target). recon
@@ -187,14 +187,12 @@ async def safe_resolve(
     controls (DKIM selectors, SRV records, IdP and Exchange probe
     prefixes), and any non-CNAME query on such a name makes the
     operator's resolver chase a CNAME server-side before recon sees
-    anything. Discarding private-canonical answers means an internal
-    name is never returned in records (no disclosure) and a query that
-    chased to a private name yields the same empty result as a name
-    that does not resolve (no observable oracle). This generalizes the
-    CNAME walker's per-hop suffix denylist to every other query path.
-    The residual is a single blind query in the type-dependent-answer
-    case, which returns nothing observable. See
-    docs/security-audit-resolutions.md.
+    anything. The guard discards those known private-suffix canonical
+    answers, but cannot identify a public-looking name's split-horizon
+    content or prevent a server-side query. Lower-trust MCP collection
+    therefore also binds a caller-safe resolver view through get_resolver.
+    Trusted operator collection keeps its existing resolver semantics.
+    See docs/security-audit-resolutions.md.
 
     Inside ``dns_query_ledger()`` every call also records its response class
     (answer, NoAnswer, NXDOMAIN, or unavailable), so callers can separate an

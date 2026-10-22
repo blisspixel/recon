@@ -567,5 +567,13 @@ async def resolve_tenant(
     # Stamp the fresh-resolution timestamp so downstream consumers (CLI,
     # MCP, cache serializer) can distinguish a live-resolved result from
     # a cache hit. cached_at is set only by the cache read path.
-    info = replace(info, resolved_at=datetime.now(UTC).isoformat())
+    from recon_tool.network_policy import current_policy
+
+    policy = current_policy()
+    info = replace(
+        info,
+        resolved_at=datetime.now(UTC).isoformat(),
+        resolution_vantage=policy.mode,
+        resolution_policy_id=policy.identity,
+    )
     return info, all_results

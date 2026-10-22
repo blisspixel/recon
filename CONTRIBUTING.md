@@ -62,23 +62,28 @@ This doc answers:
 
 ## Quick Start
 
-Use uv 0.11.17 for repository tasks: CI, the release workflow, and artifact
+Use uv 0.13.5 for repository tasks: CI, the release workflow, and artifact
 builds all pin that exact release, so it is the version that reproduces lock,
 constraint, test, and release-shaped build behavior. `pyproject.toml` requires
-uv `>=0.11.8,<0.13`, a floor wide enough for Dependabot to run `uv lock` while
-still fixing the reproducible build path to 0.11.17 in every workflow.
+uv `>=0.13.4,<0.14`, excluding the affected bundled CA store. Dependabot and
+other lock-update tooling must meet the same security floor. If a hosted
+updater still bundles older uv, its update must fail closed until that tool is
+upgraded; do not lower the floor to restore compatibility. The hosted
+Dependabot executable is not verified by the local gate.
 
-`.python-version` pins the local toolchain to the exact final CPython 3.15.1.
-uv 0.11.17 predates that release and can only download a 3.15 pre-release, so
-the exact pin makes uv use an installed 3.15.1 rather than silently selecting a
-beta. If none is installed, install CPython 3.15.1 from python.org or your
-package manager first. CI installs each matrix interpreter with setup-python.
+`.python-version` pins the local toolchain to final CPython 3.15.1. uv 0.13.5
+can download that final release with refreshed pip and ensurepip bundles.
+Existing managed interpreters and virtual environments are not updated just
+by changing this manifest. See the
+[toolchain remediation procedure](docs/supply-chain.md#toolchain-ca-remediation)
+for environment updates and verification. CI installs each matrix interpreter
+with setup-python.
 
 ```bash
 git clone https://github.com/blisspixel/recon.git
 cd recon
-uv self update 0.11.17      # select the repository's reproducible uv release
-uv --version                # must report uv 0.11.17
+uv self update 0.13.5      # select the repository's reproducible uv release
+uv --version                # must report uv 0.13.5
 uv sync                    # installs the dev group (pip: pip install -e . --group dev, pip 25.1+)
 uv run pre-commit install              # activate pre-commit hooks
 uv run pre-commit install --hook-type commit-msg

@@ -17,7 +17,7 @@ PACKAGE="recon-tool"
 VERSION="2.21.6"
 SPEC="${PACKAGE}==${VERSION}"
 CLI="recon"
-UV_VERSION="0.11.17"
+UV_VERSION="0.13.5"
 
 have() { command -v "$1" >/dev/null 2>&1; }
 

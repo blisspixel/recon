@@ -143,6 +143,26 @@ def test_security_and_maintainer_docs_name_current_runtime_surfaces() -> None:
     assert "| **Fully closed** | **Unreleased** |" not in resolutions
 
 
+def test_security_triage_rules_preserve_revision_and_bypass_distinctions() -> None:
+    ledger = _read("docs/security-audit-resolutions.md")
+    sections = (_read("SECURITY.md"), ledger.split("## ", 1)[0], ledger.split("## Process notes", 1)[1])
+    for section in sections:
+        text = " ".join(section.split())
+        for required in (
+            "closure does not override a reproducible bypass or regression",
+            "same already-fixed attack path",
+            "verify and link the closure receipt",
+            "newer revision, alternate attack path, or reproducible bypass",
+            "reopen or create a linked finding",
+            "revision or reproduction evidence is insufficient",
+            "do not assume the report is stale",
+        ):
+            assert required in text.lower()
+    residual = ledger.split("## Closed in v2.6.4:", 1)[1].split("\n## ", 1)[0]
+    assert "https://github.com/blisspixel/recon/releases/tag/v2.19.0" in residual
+    assert "unreleased" not in residual.lower()
+
+
 def test_traceability_records_current_mutation_gate() -> None:
     traceability = _read("docs/traceability-matrix.md")
 

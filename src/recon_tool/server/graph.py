@@ -20,6 +20,7 @@ from typing_extensions import TypedDict
 
 from recon_tool.mcp_client.sdk_compat import ToolError, tool_annotations
 from recon_tool.models import ChainReport, InfrastructureEdge, ReconLookupError
+from recon_tool.network_policy import MCP_COLLECTION_POLICY, collection_scope
 from recon_tool.server import app as server_app
 from recon_tool.server.app import mcp
 from recon_tool.server.runtime import (
@@ -220,7 +221,11 @@ async def chain_lookup(domain: str, depth: int = 1, result_limit: int = 0) -> st
         from recon_tool.chain import chain_resolve
         from recon_tool.formatter import format_chain_json
 
-        report = await chain_resolve(validated, depth=depth)
+        server_app.require_collection_policy(validated)
+        # chain_resolve calls the core resolver for every queued domain rather
+        # than the MCP wrapper. Keep its entire traversal in the same boundary.
+        with collection_scope(MCP_COLLECTION_POLICY):
+            report = await chain_resolve(validated, depth=depth)
     except asyncio.CancelledError:
         raise
     except ReconLookupError as exc:

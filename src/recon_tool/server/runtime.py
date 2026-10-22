@@ -13,9 +13,10 @@ from __future__ import annotations
 import json as json_mod
 import logging
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from recon_tool.models import SourceResult, TenantInfo
+from recon_tool.network_policy import MCP_COLLECTION_POLICY
 
 logger = logging.getLogger("recon")
 
@@ -32,6 +33,7 @@ _CacheEntry = tuple[float, TenantInfo, tuple[SourceResult, ...]]
 @dataclass(slots=True)
 class _ServerRuntimeState:
     cache: dict[str, _CacheEntry] = field(default_factory=dict)
+    cache_policies: dict[str, str] = field(default_factory=dict)
     rate_limit: dict[str, float] = field(default_factory=dict)
 
     def cache_evict_expired(self) -> None:
@@ -39,27 +41,38 @@ class _ServerRuntimeState:
         expired = [k for k, (ts, _, _) in self.cache.items() if now - ts > CACHE_TTL]
         for key in expired:
             del self.cache[key]
+            self.cache_policies.pop(key, None)
 
     def cache_get(self, domain: str) -> tuple[TenantInfo, tuple[SourceResult, ...]] | None:
         entry = self.cache.get(domain)
         if entry is None:
             return None
+        if self.cache_policies.get(domain) != MCP_COLLECTION_POLICY.identity:
+            del self.cache[domain]
+            self.cache_policies.pop(domain, None)
+            return None
         ts, info, results = entry
         if time.monotonic() - ts > CACHE_TTL:
             del self.cache[domain]
+            self.cache_policies.pop(domain, None)
             return None
         return info, results
 
     def cache_set(self, domain: str, info: TenantInfo, results: list[SourceResult]) -> None:
+        if info.resolution_policy_id is not None and info.resolution_policy_id != MCP_COLLECTION_POLICY.identity:
+            raise ValueError("Lookup result belongs to another collection policy")
         if len(self.cache) >= CACHE_MAX_SIZE:
             self.cache_evict_expired()
         if len(self.cache) >= CACHE_MAX_SIZE:
             oldest_key = min(self.cache.items(), key=lambda item: item[1][0])[0]
             del self.cache[oldest_key]
+            self.cache_policies.pop(oldest_key, None)
         self.cache[domain] = (time.monotonic(), info, tuple(results))
+        self.cache_policies[domain] = MCP_COLLECTION_POLICY.identity
 
     def cache_clear(self) -> None:
         self.cache.clear()
+        self.cache_policies.clear()
 
     def cache_refresh_info(
         self,
@@ -67,19 +80,36 @@ class _ServerRuntimeState:
         info: TenantInfo,
         results: tuple[SourceResult, ...],
     ) -> None:
+        if info.resolution_policy_id is not None and info.resolution_policy_id != MCP_COLLECTION_POLICY.identity:
+            raise ValueError("Lookup result belongs to another collection policy")
         # Preserve the original fetch timestamp: a re-merge does no network
         # I/O (the raw results are unchanged), so the TTL must keep bounding
         # data freshness rather than resetting it to now.
         existing = self.cache.get(domain)
+        if existing is not None and self.cache_policies.get(domain) != MCP_COLLECTION_POLICY.identity:
+            raise ValueError("Cached source results belong to another collection policy")
+        if existing is not None and existing[1].resolution_policy_id is not None:
+            info = replace(
+                info,
+                resolution_vantage=existing[1].resolution_vantage,
+                resolution_policy_id=existing[1].resolution_policy_id,
+            )
         ts = existing[0] if existing is not None else time.monotonic()
         self.cache[domain] = (ts, info, results)
+        self.cache_policies[domain] = MCP_COLLECTION_POLICY.identity
 
     def remerge_cached_infos(self) -> None:
         from recon_tool.merger import merge_results
 
         for domain, (_ts, _info, results) in list(self.cache.items()):
+            if self.cache_get(domain) is None:
+                continue
             try:
-                refreshed = merge_results(list(results), domain)
+                refreshed = replace(
+                    merge_results(list(results), domain),
+                    resolution_vantage=_info.resolution_vantage,
+                    resolution_policy_id=_info.resolution_policy_id,
+                )
             except Exception:
                 logger.exception("Failed to refresh cached TenantInfo for %s", domain)
                 self.cache.pop(domain, None)

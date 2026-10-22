@@ -172,12 +172,21 @@ async def _destination_refusal_async(host: str) -> DestinationRefusal | None:
 
     Two-layer defense against SSRF and DNS rebinding:
     1. If the host is a literal IP address, check it directly.
-    2. If the host is a hostname, resolve it via getaddrinfo in a thread pool
-       (non-blocking) and check all returned addresses.
+    2. Resolve hostnames in the bound caller-safe DNS view, or via non-blocking
+       OS resolution for trusted operator collection, and check every address.
 
     A host that is non-public, or that cannot be resolved and therefore cannot
     be validated safely, is refused. Hostname refusals are logged once.
     """
+    from recon_tool.network_policy import selected_addresses
+
+    selected = await selected_addresses(host)
+    if selected is not None:
+        refusal = _refusal_for_answers(host, [(0, 0, 0, "", (address, 0)) for address in selected])
+        if refusal is not None:
+            _log_refusal(refusal)
+        return refusal
+
     # Layer 1: literal IP check (fast path, no I/O)
     addr = _parse_ip_address(host)
     if addr is not None:
@@ -211,6 +220,15 @@ async def _is_private_ip_async(host: str) -> bool:  # pyright: ignore[reportUnus
 
 async def _public_addresses_async(host: str) -> tuple[str, ...]:
     """Resolve once and admit the complete answer before any socket is opened."""
+    from recon_tool.network_policy import selected_addresses
+
+    selected = await selected_addresses(host)
+    if selected is not None:
+        return (
+            ()
+            if any(_parse_ip_address(address) is None or _is_blocked_ip(address) for address in selected)
+            else selected
+        )
     address = _parse_ip_address(host)
     if address is not None:
         return () if _addr_is_blocked(address) else (str(address),)

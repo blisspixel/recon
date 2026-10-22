@@ -1194,6 +1194,8 @@
       "region": "runtime.identity-and-tenant.v1",
       "related_domains": "runtime.related-namespace.v1",
       "reserved_name": "runtime.namespace-coordinate.v1",
+      "resolution_policy_id": "runtime.collection-status.v1",
+      "resolution_vantage": "runtime.collection-status.v1",
       "schema_version": "runtime.structured-transport.v1",
       "services": "runtime.catalog-indicator.v1",
       "shared_display_name": "runtime.cross-domain-overlap.v1",
@@ -1421,7 +1423,7 @@
     ],
     "surface_digest_algorithm": "sha256(sorted UTF-8 surface IDs joined by LF)",
     "surface_digests": {
-      "json_fields": "f4a7621c002881993418c0701a34c3d29cd59b8e599cab9e63d58b2a47ff226a",
+      "json_fields": "3f0dd28dfda744057a919dd795e6646b7ed15a3422053a852e9f77196cb7cc98",
       "mcp_tools": "c5606814d74e8f27a9885d094f0f80d4bb76df0fa467733eb42b496a0f241d1c"
     }
   },

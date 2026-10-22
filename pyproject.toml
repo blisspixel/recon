@@ -31,7 +31,9 @@ dependencies = [
     # Public connection-backend API pins validated IPs without changing TLS
     # hostname verification or depending on HTTPX's private pool attributes.
     "httpcore[asyncio]>=1.0.9,<2",
-    "dnspython>=2.6",
+    # Authenticated public DNS for lower-trust MCP callers. The DoH extra
+    # supplies the library's HTTP/2 transport without a second DNS client.
+    "dnspython[doh]>=2.6",
     "pyyaml>=6.0",
     "defusedxml>=0.7",
     # v2 is the SDK line that speaks MCP 2026-07-28. Serving that revision is
@@ -175,13 +177,12 @@ mutation = [
 ]
 
 [tool.uv]
-# CI, the release workflow, and artifact builds pin the exact uv release
-# (0.11.17) through `astral-sh/setup-uv`, so reproducible builds do not depend
-# on this floor. The range stays wide enough for Dependabot's bundled uv to run
-# `uv lock`; without it, every Dependabot update fails closed and no Python
-# dependency or security update can land. The next uv minor remains excluded
-# until it is observed and reviewed. See CONTRIBUTING.md and docs/supply-chain.md.
-required-version = ">=0.11.8,<0.13"
+# CI, release, installers and the container select uv 0.13.5. The security
+# floor excludes uv's affected bundled CA store (GHSA-hq85-5cpj-mr62).
+# Lock-update tooling, including Dependabot, must also satisfy this floor;
+# an older bundled uv must fail closed rather than retain the old exception.
+# Allow reviewed 0.13 patches; review the next minor before admitting it.
+required-version = ">=0.13.4,<0.14"
 
 [tool.pytest.ini_options]
 asyncio_mode = "strict"

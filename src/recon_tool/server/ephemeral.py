@@ -419,6 +419,8 @@ async def clear_ephemeral_fingerprints() -> EphemeralClearResult:
     count = clear_ephemeral()
     if removed and cache:
         for domain, (_timestamp, _info, results) in list(cache.items()):
+            if cache_get(domain) is None:
+                continue
             stripped_results = tuple(remove_fingerprint_projection(result, removed) for result in results)
             try:
                 refreshed = merge_results(list(stripped_results), domain)
@@ -494,7 +496,13 @@ async def reevaluate_domain(domain: str) -> LookupResult:
 
     try:
         replayed_results = [replay_cached_dns_fingerprints(result) for result in results]
-        new_info = merge_results(replayed_results, validated)
+        from dataclasses import replace
+
+        new_info = replace(
+            merge_results(replayed_results, validated),
+            resolution_vantage=_info.resolution_vantage,
+            resolution_policy_id=_info.resolution_policy_id,
+        )
     except Exception as exc:
         request_id = uuid.uuid4().hex[:12]
         logger.exception(

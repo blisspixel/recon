@@ -147,6 +147,12 @@ def cache_put(domain: str, info: TenantInfo) -> None:
             logger.debug("Cache write rejected invalid domain: %r", domain)
             return
         data = tenant_info_to_dict(info)
+        from recon_tool.network_policy import current_policy
+
+        policy_id = current_policy().identity
+        if info.resolution_policy_id is not None and info.resolution_policy_id != policy_id:
+            raise ValueError("Cache payload belongs to a different collection policy")
+        data["_resolution_policy_id"] = policy_id
         # Atomic write: a crash or a concurrent reader mid-write must not leave a
         # truncated JSON file. mkstemp creates the temp inside the validated cache
         # dir with O_CREAT|O_EXCL and mode 0600 (a random name that never follows a
@@ -287,6 +293,8 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
     d: dict[str, Any] = {
         "_cached_at": now_iso,
         "_cache_version": _CACHE_VERSION,
+        "resolution_vantage": info.resolution_vantage,
+        "resolution_policy_id": info.resolution_policy_id,
         # resolved_at is the original resolution timestamp. Preserve it
         # across cache round-trips so agents can tell when the data was
         # first produced, not just when it was last written to disk.
@@ -958,6 +966,8 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
         chain_motifs=chain_motifs,
         infrastructure_clusters=infrastructure_clusters,
         resolved_at=_optional_cache_string(data.get("resolved_at"), "resolved_at"),
+        resolution_vantage=_optional_cache_string(data.get("resolution_vantage"), "resolution_vantage"),
+        resolution_policy_id=_optional_cache_string(data.get("resolution_policy_id"), "resolution_policy_id"),
         # cached_at is stamped by cache_get from _cached_at; not populated
         # from arbitrary dict input so round-tripping an uncached dict
         # does not spuriously mark the result as cache-served.

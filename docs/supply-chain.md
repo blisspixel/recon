@@ -21,7 +21,7 @@ produces and publishes:
 | **Trusted publishing** | PyPI publishes via GitHub OIDC, no long-lived API token (`pypa/gh-action-pypi-publish`) | The PyPI project page shows the publishing workflow as a trusted publisher |
 | **Build-provenance attestation** | GitHub-native, OIDC-signed (`actions/attest-build-provenance`), linking the wheel, sdist, and completed SBOM to the workflow run. The signed bundles are also exported to the GitHub Release as `recon-tool-<version>.intoto.jsonl` for offline and Scorecard-compatible inspection. The exact historical v2.6.3 release predates the SBOM subject expansion and binds only its wheel and sdist | Verify the subjects required by the exact release policy against the exported bundle, release workflow, source tag, commit digest, and hosted-runner boundary as shown below |
 | **PyPI attestations (PEP 740)** | sigstore-signed attestations generated at publish time (`attestations: true`) and stored on PyPI | Fetch the file's PyPI provenance and verify it with the pinned `pypi-attestations==0.0.29` command shown below |
-| **Constrained deterministic-build check** | `SOURCE_DATE_EPOCH`, uv 0.11.17, and the exact hash-locked backend graph are fixed; CI builds the sdist and reconstructs its wheel twice in one Ubuntu job, then compares both hashes | See the bounded recipe and limitations below |
+| **Constrained deterministic-build check** | `SOURCE_DATE_EPOCH`, uv 0.13.5, and the exact hash-locked backend graph are fixed; CI builds the sdist and reconstructs its wheel twice in one Ubuntu job, then compares both hashes | See the bounded recipe and limitations below |
 | **Sealed distribution gate** | A separate read-only release job requires exactly one tag-matching wheel and sdist, then executes both `recon --version` and `python -m recon_tool --version` from the wheel before either publication channel can run | Inspect the `package-smoke` job in the tagged release workflow run |
 | **Published-channel parity gate** | After PyPI publication, a separate read-only job requires the exact wheel and sdist and compares their SHA-256 digests with the sealed build pair. GitHub Release publication cannot create or replace assets until parity passes | Inspect the `verify-pypi-parity` job or run `scripts/check_release_channel_parity.py` from the exact source tag |
 | **CycloneDX SBOM** | Generated from a runtime-requirements export of `uv.lock` (`pip-audit --format=cyclonedx-json`), completed with the `recon-tool` root component and dependency edge, validated as nonempty JSON, and attached to the GitHub Release. Any finding, SBOM tool failure, malformed output, or validation failure in this later isolated job blocks both PyPI and GitHub publication | Download `recon-tool-<version>.cdx.json` from the release assets and inspect `metadata.component` and the root dependency entry |
@@ -388,10 +388,59 @@ The recipes never repair producer evidence. A permanent mismatch requires a
 new, correctly produced release rather than weakening a verifier or replacing
 an immutable published file.
 
+## Toolchain CA remediation
+
+The October 2026 emSign incident affects tools with their own bundled trust
+stores as well as application dependencies. Updating recon's runtime certifi
+does not update uv's compiled-in bundle or the publishing action's runtime.
+The maintained toolchain selects uv 0.13.5 and SHA-pins the reviewed PyPI
+publishing v1.14.3 release in the release workflow. That action's runtime locks
+sigstore 4.5.1 and certifi 2026.10.19. The container's uv 0.13.5 manifest digest
+was checked against the registry response and its SHA-256 bytes. See the
+[uv advisory](https://github.com/astral-sh/uv/security/advisories/GHSA-hq85-5cpj-mr62),
+[uv 0.13.5 notes](https://github.com/astral-sh/uv/releases/tag/0.13.5),
+[publishing security release](https://github.com/pypa/gh-action-pypi-publish/releases/tag/v1.14.3)
+and [Python guidance](https://discuss.python.org/t/information-for-python-users-regarding-emudhra-emsign-ca-certificate-security-incident/109576).
+
+Update the executable itself through its installation manager, or use a
+checksum-verified upstream binary. For a standalone uv installation:
+
+```bash
+uv self update 0.13.5
+uv --version  # must report 0.13.5
+uv python upgrade  # refresh uv-managed Python builds, if used
+```
+
+uv 0.13.5 can install final CPython 3.15.1 with patched pip and ensurepip
+bundles. Existing virtual environments pinned to an older interpreter do not
+switch automatically. Recreate maintained build environments with the reviewed
+interpreter, then restore their locked dependencies:
+
+```bash
+uv venv --clear --python 3.15.1 .venv
+uv sync --locked
+uv run python -c "import sys, certifi; print(sys.version); print(certifi.__version__)"
+uv run python -m pip --version  # development environment: >=26.2.2
+uv lock --check
+uv run python scripts/check.py
+```
+
+These commands describe environment verification; source-manifest compliance
+alone is not evidence they ran. The installers' bootstrap pin does not upgrade
+an existing user-owned uv or pipx environment. Upgrade pip in existing user
+virtual environments separately, following the Python guidance above. Rebuild
+container images with `--pull --no-cache` and inspect the resulting environment.
+Cached tool binaries, OS trust stores and custom `SSL_CERT_FILE`,
+`SSL_CERT_DIR` or other CA overrides need separate review by their operator.
+Keep certificate and hostname verification enabled. Hosted Dependabot must
+meet the same patched uv floor; an older bundled executable must fail closed.
+Local checks do not establish hosted updater execution, actual publishing,
+deployment or the state of uninspected user installations.
+
 ## Deterministic-build evidence
 
 The release workflow fixes `SOURCE_DATE_EPOCH` to the tagged commit's committer
-timestamp and selects uv 0.11.17. `pyproject.toml` declares exact Hatchling
+timestamp and selects uv 0.13.5. `pyproject.toml` declares exact Hatchling
 1.32.4 in both the build system and a non-default PEP 735 `build` group.
 [`build-constraints.txt`](../build-constraints.txt) is the frozen export of that
 group's `uv.lock` closure. Every backend package has an exact version and
@@ -425,7 +474,7 @@ cd recon
 git checkout "v${VERSION}"
 
 # 2. Confirm the tag-selected build executable and match release Python.
-uv --version  # must report uv 0.11.17; the release workflow pins this exact uv
+uv --version  # current source selects 0.13.5; inspect the exact tag's workflow
 export UV_PYTHON=3.15
 export SOURCE_DATE_EPOCH="$(git log -1 --pretty=%ct)"
 
@@ -448,6 +497,10 @@ PyPI attestations above to verify source and workflow identity. Build into a
 directory outside the checkout, as above, so build output is not swept into
 the sdist. The sdist itself includes `build-constraints.txt`, so its build-tool
 boundary remains inspectable after source distribution.
+
+Historical tags can select an affected uv release. Do not reinstall an affected
+tool to reproduce those builds; use patched tooling and signed provenance, and
+record that changing the build executable can change artifact hashes.
 
 Maintainers regenerate the constraint after an intentional build-group update
 with the following command. `tests/test_build_constraints.py` fails if the
