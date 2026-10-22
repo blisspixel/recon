@@ -85,7 +85,7 @@ exercises the source ladder and native panel on a running desktop. It identifies
 and corrects idle ladder redraws, palette singleton shadowing, and input
 selection that did not follow the accent; publication is tracked in the changelog.
 The v2.21.2 maintenance batch adopts Node 26 GA for typecheck and release jobs
-without waiting for its 2026-10-28 LTS designation. Python 3.15.0 is the latest
+without waiting for its 2026-10-28 LTS designation. Python 3.15.1 is the latest
 GA default; 3.11 through 3.15 remain the tested compatibility range. Drop PyYAML
 source builds once a cp315 wheel ships.
 

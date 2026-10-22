@@ -62,7 +62,7 @@ body:
     attributes:
       label: Python version
       description: Output of `python --version`.
-      placeholder: Python 3.15.0
+      placeholder: Python 3.15.1
     validations:
       required: true
 

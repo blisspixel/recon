@@ -45,6 +45,12 @@ Correct offline artifact boundaries and refresh the security and Python baseline
 - Refresh the development and mutation toolchain to virtualenv 21.14.12,
   GitPython 3.2.1 and pip 26.2.2, including their security and bundled CA fixes.
 
+### Changed
+
+- Use Python 3.15.1 as the exact local patch baseline. Keep uv aligned with
+  setup-python's selected interpreter throughout CI, including future patch
+  updates and the existing supported-version matrix.
+
 ### Tool Surface Changes
 
 Tool surface changes: no CLI command or flag changes.

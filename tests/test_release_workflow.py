@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+import pytest
 import yaml
 
 
@@ -101,3 +102,15 @@ def test_github_publication_waits_for_pypi_byte_parity() -> None:
 
     assert set(jobs["verify-pypi-parity"]["needs"]) == {"build", "publish-pypi"}
     assert "verify-pypi-parity" in jobs["github-release"]["needs"]
+
+
+@pytest.mark.parametrize("filename", ["ci.yml", "release.yml"])
+def test_uv_uses_the_interpreter_installed_by_each_job(filename: str) -> None:
+    path = Path(__file__).resolve().parents[1] / ".github" / "workflows" / filename
+    workflow = yaml.safe_load(path.read_text(encoding="utf-8"))
+    for name, job in workflow["jobs"].items():
+        for step in job.get("steps", []):
+            if not step.get("uses", "").startswith("actions/setup-python@"):
+                continue
+            env = {**workflow.get("env", {}), **job.get("env", {}), **step.get("env", {})}
+            assert env.get("UV_PYTHON") == step["with"]["python-version"], name
