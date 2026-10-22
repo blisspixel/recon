@@ -820,7 +820,8 @@ class TenantInfo:
     # decide whether to re-resolve.
     resolved_at: str | None = None
     cached_at: str | None = None
-
+    resolution_vantage: str | None = None
+    resolution_policy_id: str | None = None
     # --- Bayesian fusion (stable v2.0+) ---
     # Per-slug evidence-strength score in [0, 1] from the additive Beta-shaped
     # heuristic. Not an externally calibrated probability.

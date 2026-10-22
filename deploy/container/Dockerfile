@@ -2,7 +2,7 @@ ARG PYTHON_IMAGE=python:3.15.1-slim-trixie@sha256:08275f764e022331c6d3e3ca55d8cc
 
 FROM ${PYTHON_IMAGE} AS builder
 
-COPY --from=ghcr.io/astral-sh/uv:0.11.17@sha256:03bdc89bb9798628846e60c3a9ad19006c8c3c724ccd2985a33145c039a0577b /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.13.5@sha256:32a7bb39b496babbd997b0a39a4d66c126bdaf5661b302bf6f06abda8deca6ff /uv /uvx /bin/
 
 WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1 \

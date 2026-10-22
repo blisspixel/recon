@@ -23,6 +23,72 @@ remote materials are a draft framework intended to be directionally useful.
 They have local artifact checks but are not yet provider-validated or
 production-ready.
 
+## DNS view isolation
+
+Ordinary `recon <domain>` keeps its existing trusted-operator resolver behavior.
+There is no new prompt, wizard or required lookup flag. MCP instead binds one
+caller-safe DNS policy automatically at startup, because a connected agent can
+be less trusted than the host's private DNS view.
+
+Saved server configuration is reused on every restart. If the host already
+explicitly uses Cloudflare's or Google's published public resolver addresses,
+MCP reuses that service over certificate-verified DNS-over-HTTPS. It does not
+choose a different provider, add a fallback provider, or treat an enterprise
+resolver or a local forwarding stub as proof of public-only answers. Both the
+DNS collectors and HTTP hostname resolution use this bound view, including
+related enrichment, recursive chains and fresh review bundles. HTTP still
+refuses private/mixed destinations and pins accepted numeric socket addresses.
+
+If no approved view can be established, DNS-dependent tools report the
+unavailable capability and link this one-time setup. The server still starts
+and its offline catalogs remain available. It never falls back to corporate or
+VPN DNS, fabricates an empty successful lookup, or asks the same question at
+each launch. Transport failures follow the existing explicit source-failure
+contract rather than changing the view.
+
+For an enterprise or forwarding-stub environment, put the approved view once
+in the MCP server's saved environment configuration. For example, **only when
+the operator approves Cloudflare for these queries**, set:
+
+```json
+{
+  "RECON_DNS_VIEW": "caller-safe",
+  "RECON_DNS_SERVERS": "1.1.1.1,1.0.0.1",
+  "RECON_DNS_TLS_NAME": "cloudflare-dns.com"
+}
+```
+
+`RECON_DNS_SERVERS` accepts one to four numeric bootstrap addresses.
+`RECON_DNS_TLS_NAME` is the authenticated resolver hostname. Both are required
+for a custom view; a custom address never inherits a guessed provider name.
+DoH uses HTTPS port 443 and `/dns-query`. Advanced deployments can set
+`RECON_DNS_TRANSPORT=tls` for DNS-over-TLS on port 853 instead. An isolated
+enterprise service may be configured when its answers are approved for the
+caller; encryption alone does not establish that authorization. TLS uses the
+patched certifi bundle and validates the configured service name. Bootstrap
+uses the configured numeric address and never host DNS. Allow the selected
+transport through egress policy. Resolver operators see queried names; review
+their privacy policy before approving a new service.
+
+Advanced trusted internal automation may save `RECON_DNS_VIEW=operator` in a
+separate server process restricted to callers allowed to see host DNS. This
+does not permit private HTTP destinations. Authentication to a shared server
+does not itself authorize internal DNS. Tool arguments, posture profiles,
+catalog reloads and later environment mutations cannot change a running
+process's policy. Restart after changing trusted server configuration; use a
+separate cache directory for operator-view automation. Process cache entries,
+retained results and persistent lookup/CT-cache admission bind a policy identity/version
+so changing authority does not revive earlier privileged data.
+
+Structured lookup provenance includes `resolution_vantage` (`caller-safe` or
+`operator`) and opaque `resolution_policy_id`, without resolver endpoints.
+Older records can have null provenance. This isolates recon's collection; it
+does not confine an agent with independent unrestricted shell or network tools.
+
+See the [security disposition](security-audit-resolutions.md#closed-in-v2220-cname-chain-walking-can-query-and-leak-internal-dns-names),
+[Cloudflare DoH documentation](https://developers.cloudflare.com/1.1.1.1/encryption/dns-over-https/make-api-requests/)
+and [Google DoH documentation](https://developers.google.com/speed/public-dns/docs/doh).
+
 ## Setup
 
 1. Install recon:

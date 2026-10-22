@@ -498,11 +498,10 @@ async def _resolve_cname_chain(
     only. CNAME queries do not cause recursive resolvers to chase
     further records; they return the immediate CNAME or nothing.
 
-    The tradeoff is the same one v1.9.4 disclosed: dropping the
-    A/AAAA check trades zero internal-DNS leakage during the walk
-    against the loss of split-horizon detection on hops with
-    public-looking suffixes that resolve to private addresses. The
-    project errs on the side of zero leakage.
+    This prevents the recursive A/AAAA chase; it does not prove that
+    a public-looking CNAME answer came from public DNS. The MCP
+    collection policy separately isolates the resolver view. Trusted
+    operator lookups can retain split-horizon answers intentionally.
     """
     # Normalize the entry-point name before any further
     # use. Subsequent iterations work with lowercased targets

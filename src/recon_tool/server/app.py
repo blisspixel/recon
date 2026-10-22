@@ -13,10 +13,12 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
+from typing import Any
 
 from recon_tool.mcp_client.sdk_compat import MCPApplication, ToolError, mcp_application_options
 from recon_tool.models import ReconLookupError, SourceResult, TenantInfo
-from recon_tool.resolver import resolve_tenant
+from recon_tool.network_policy import MCP_COLLECTION_POLICY, collection_scope
+from recon_tool.resolver import resolve_tenant as _resolve_tenant
 from recon_tool.server.runtime import (
     cache_get,
     cache_set,
@@ -27,6 +29,23 @@ from recon_tool.server.runtime import (
 from recon_tool.validator import strip_control_chars, validate_domain
 
 logger = logging.getLogger("recon")
+
+
+async def resolve_tenant(domain: str, **kwargs: Any) -> tuple[TenantInfo, list[SourceResult]]:
+    """Bind MCP DNS authority while preserving the core resolver's options."""
+    require_collection_policy(domain)
+    with collection_scope(MCP_COLLECTION_POLICY):
+        return await _resolve_tenant(domain, **kwargs)
+
+
+def require_collection_policy(domain: str) -> None:
+    """Refuse unavailable startup authority before any collector is invoked."""
+    if not MCP_COLLECTION_POLICY.available:
+        raise ReconLookupError(
+            domain=domain,
+            message="Caller-safe DNS is unavailable; configure an approved DNS view once in the MCP server settings",
+            error_type="dns_view_unavailable",
+        )
 
 
 def invalid_domain_message(error: ValueError) -> str:
@@ -49,6 +68,11 @@ def lookup_failure_message(domain: str, error: ReconLookupError) -> str:
         return f"Lookup timed out for {domain}. Try again."
     if error.error_type == "all_sources_failed":
         return f"Lookup failed for {domain}: all passive sources returned errors. Try again."
+    if error.error_type == "dns_view_unavailable":
+        return (
+            "DNS-dependent lookup unavailable: approve a caller-safe DNS view once in the MCP server settings. "
+            "See https://github.com/blisspixel/recon/blob/main/docs/mcp.md#dns-view-isolation."
+        )
     return f"Lookup failed for {domain} ({error.error_type}). Try again."
 
 

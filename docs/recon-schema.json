@@ -600,6 +600,27 @@
           }
         }
       }
+    },
+    "resolution_vantage": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "operator",
+        "caller-safe",
+        "unavailable",
+        null
+      ],
+      "description": "DNS disclosure authority selected at collection; null for older records."
+    },
+    "resolution_policy_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Opaque identity of the collection policy and version; no resolver endpoints."
     }
   },
   "$defs": {

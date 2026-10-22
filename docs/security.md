@@ -20,7 +20,7 @@ credentials, local retention, and hosting controls are additional trust boundari
 
 | What recon trusts | Rationale |
 |---|---|
-| The user's configured DNS resolver | recon inherits the OS resolver. A compromised resolver is a compromise of the whole machine. |
+| Operator-selected DNS view | Trusted CLI uses host DNS. MCP binds a caller-safe view at startup; legitimate split DNS can otherwise disclose private answers without resolver compromise. See the CNAME boundary below. |
 | Public OIDC / UserRealm / Google identity / CT endpoints | These are Microsoft, Google, and Sectigo-operated services. recon validates response shapes but cannot out-verify the underlying TLS-authenticated origin. |
 | `src/recon_tool/data/fingerprints.generated.json` (built-in fingerprints) | Installed wheels load the checked-in generated JSON. Canonical split YAML is contributor source and ships in the source distribution, not as a second wheel runtime catalog. Both have the same trust level as Python source. |
 | `src/recon_tool/data/*.yaml` and `src/recon_tool/data/profiles/*.yaml` (signals, posture rules, profiles) | These ship with the package and are loaded via `yaml.safe_load`. Same trust level as Python source. |
@@ -123,7 +123,13 @@ detects modification but provides no signer identity or authenticity guarantee.
 
 ### Malicious CNAME chains (surface-attribution walker)
 
-**Surface:** The surface-attribution pipeline (`_classify_related_surface` in `sources/dns.py`) walks the CNAME chain for every related subdomain it discovers, up to five hops per chain and one hundred chains per lookup. Each hop is a separate CNAME query through the operator's resolver, and successful chains are emitted in `EvidenceRecord.raw_value` for `--explain` consumers. An attacker who controls the queried apex (operator runs recon during diligence on `attacker.example`) controls every CNAME response and can in principle aim the walker at names of their choosing.
+**Surface:** The surface-attribution pipeline walks related names using CNAME
+queries, up to five hops per chain and 100 related hosts. A public-looking
+name can receive a private-view alias the queried domain owner did not choose.
+Classified chains appear in ordinary JSON evidence, matching motif hops in
+ordinary motif output, and unclassified chains only in explicit diagnostics or
+discovery. A confidentiality crossing requires a lower-trust output consumer;
+a query observed in internal logs alone does not establish remote disclosure.
 
 **Mitigation (layers + ambient bounds):**
 - **Entry-point validation (v1.9.13).** The walker checks `_is_public_dns_name(host)` before issuing the first CNAME query. Catches the rare case where an unvalidated name made it into `ctx.related_domains` (e.g. from a populator that didn't suffix-check before adding); that name is rejected at the door without touching the resolver.
@@ -133,16 +139,26 @@ detects modification but provides no signer identity or authenticity guarantee.
 - **Source scoping for CT-derived related domains.** `filter_subdomains` (`sources/cert_providers.py:197`) drops every CT entry that does not end in `.<queried_domain>`. An attacker cannot put `internal.victim.example` in their own cert and have it picked up by recon: the filter requires the name to be under the queried apex.
 - **Per-call bounds.** Five-hop maximum, 100-host surface cap, 30-concurrent-query cap, five-second per-query timeout.
 
-**Residual surface (documented, by design):**
-- The walker still follows cross-apex CNAMEs the attacker returns at query time (`attacker.example → vault.victim.example → cdn.cloudflare.com`). Cross-apex following is intentional: legitimate CDN and SaaS chains cross apexes routinely. The intermediate hop names are attacker-controllable text and land in evidence output when the terminus matches a fingerprint. The data disclosed is text the attacker already put in their own DNS records, not internal-DNS topology of any third party.
-- Split-horizon termini are not dropped by the walker. The v1.9.13 terminus-only A/AAAA check was the planned defense for this case but was reverted in v1.9.14 after the type-dependent-answer attack path was demonstrated against the check itself. Closing this residual requires evidence redaction by default or a dedicated public-DNS resolver path (see "Further defenses not yet shipped" below); neither is currently shipped.
-- If the operator runs a split-horizon resolver where one of those attacker-named hops happens to resolve in a private zone, the walker's CNAME query for that name reaches internal DNS (one CNAME query per hop, no recursive A chase). The query is observable in internal DNS logs.
+**Resolver-view boundary:** MCP automatically binds an immutable caller-safe
+policy at process startup, reusing saved approval or a recognized public DNS
+service already selected in host configuration. It does not substitute a new
+provider for an unapproved enterprise/stub view. Missing approval produces an
+explicit unavailable capability with one-time setup guidance; failures do not
+fall back to host DNS. The same policy covers all collector record types,
+related enrichment, recursive chains and HTTP hostname resolution. Certificate
+verification, bootstrap-address selection and public HTTP socket admission
+remain separate checks. Process and persistent caches are bound to the policy
+identity/version; reloads and tool arguments cannot change authority.
 
-**Further defenses not yet shipped:**
-- Evidence redaction (emit only the terminal hop in the default panel, full chain only under `--explain`) - would remove intermediate attacker-chosen names from default output at the cost of `--json` consumers losing the chain trace.
-- Dedicated public-DNS resolver for the chain walker (1.1.1.1 / 8.8.8.8) - would eliminate split-horizon landing entirely at the cost of an external dependency operators behind air-gapped networks could not satisfy.
-
-Neither is currently shipped; see `docs/security-audit-resolutions.md` ("Mitigated: CNAME chain walking can query and leak internal DNS names") for the closure-precedence record and tradeoff discussion.
+Trusted `recon <domain>` keeps its existing host resolver and output semantics,
+with no new prompt or required flag. Split-horizon results remain sensitive
+operator-view data. Advanced operator-view MCP is available only as trusted
+startup configuration and must serve callers permitted to see that view.
+See [DNS view isolation](mcp.md#dns-view-isolation) for saved configuration and
+[the audit disposition](security-audit-resolutions.md#closed-in-v2220-cname-chain-walking-can-query-and-leak-internal-dns-names)
+for the conditional Medium baseline assessment and v2.22.0 boundary repair.
+The repair does not claim a deployed change or protection for an agent that
+can independently rewrite its launcher or run unrestricted shell/network tools.
 
 **Pinned by:** `tests/test_cname_chain_validation.py` (including `test_walker_does_not_resolve_a_aaaa_during_walk` and `TestNoAAAAQueriesFromWalker` for the v1.9.4 + v1.9.14 invariant on all three exit paths, `TestEntryPointValidation` for the v1.9.13 entry-point check, and `TestM365RedirectDomainFilter` for the v1.9.13 redirect_domain filter).
 

@@ -28,6 +28,18 @@ from recon_tool.models import (
 )
 
 
+@pytest.fixture(autouse=True)
+def approved_offline_policy(monkeypatch: pytest.MonkeyPatch) -> None:
+    from recon_tool.network_policy import CollectionPolicy
+    from recon_tool.server import app, graph
+
+    # Network collection is stubbed below; exercise the tool contracts under
+    # an explicitly approved policy, independent of the test host's DNS.
+    policy = CollectionPolicy("caller-safe", ("192.0.2.53",), "dns.example.org")
+    monkeypatch.setattr(app, "MCP_COLLECTION_POLICY", policy)
+    monkeypatch.setattr(graph, "MCP_COLLECTION_POLICY", policy)
+
+
 def _info_with_clusters() -> TenantInfo:
     report = InfrastructureClusterReport(
         clusters=(

@@ -108,6 +108,12 @@ def read_result_cache_entry(
         raise ValueError("Result cache payload must be a JSON object")
     if data.get("_cache_version") != RESULT_CACHE_VERSION:
         raise ValueError("Result cache version does not match the current format")
+    from recon_tool.network_policy import OPERATOR_POLICY, current_policy
+
+    # Legacy entries predate policy binding and are operator-view only.
+    policy_id = data.get("_resolution_policy_id", OPERATOR_POLICY.identity)
+    if policy_id != current_policy().identity:
+        raise ValueError("Result cache belongs to a different collection policy")
     info = tenant_info_from_dict(data)
     if info.queried_domain != expected_domain:
         raise ValueError("Result cache payload domain does not match its cache key")

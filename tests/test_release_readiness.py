@@ -151,7 +151,7 @@ def _happy_runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
         return _cp(cmd, stdout="## main...origin/main\n")
     uv_outputs = {
         ("uv", "lock", "--check"): "Resolved 1 package\n",
-        ("uv", "--version"): "uv 0.11.17 (synthetic build)\n",
+        ("uv", "--version"): "uv 0.13.5 (synthetic build)\n",
     }
     if tuple(cmd) in uv_outputs:
         return _cp(cmd, stdout=uv_outputs[tuple(cmd)])
@@ -189,8 +189,8 @@ def test_uv_toolchain_requires_the_reproducible_release_pin() -> None:
 
     assert check.status == "fail"
     assert "0.12.6" in check.detail
-    assert "0.11.17" in check.detail
-    assert check.action == "run uv self update 0.11.17, then confirm uv --version"
+    assert "0.13.5" in check.detail
+    assert check.action == "run uv self update 0.13.5, then confirm uv --version"
 
 
 def test_uv_toolchain_rejects_malformed_version_output() -> None:

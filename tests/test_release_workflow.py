@@ -114,3 +114,13 @@ def test_uv_uses_the_interpreter_installed_by_each_job(filename: str) -> None:
                 continue
             env = {**workflow.get("env", {}), **job.get("env", {}), **step.get("env", {})}
             assert env.get("UV_PYTHON") == step["with"]["python-version"], name
+
+
+def test_pypi_publisher_uses_the_reviewed_ca_remediation_release() -> None:
+    workflow = _load_release_workflow()
+    steps = workflow["jobs"]["publish-pypi"]["steps"]
+    publisher = next(step for step in steps if step.get("name") == "Publish to PyPI")
+    # v1.14.3's peeled tag commit, whose runtime locks sigstore 4.5.1 and
+    # certifi 2026.10.19. Verify a replacement release before updating this pin.
+    assert publisher["uses"] == "pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086"
+    assert publisher["with"]["attestations"] is True

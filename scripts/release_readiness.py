@@ -71,7 +71,7 @@ _EXPECTED_COVERAGE_TARGET = "--cov=src/recon_tool"
 _STALE_COVERAGE_TARGET = "--cov=recon_tool"
 _COVERAGE_FLOOR = "--cov-fail-under=90.2"
 _REQUIRED_REMOTE_WORKFLOWS = ("CI", "Secrets scan", "Scorecard supply-chain security")
-_PINNED_UV_VERSION = "0.11.17"
+_PINNED_UV_VERSION = "0.13.5"
 _UV_VERSION_RE = re.compile(r"^uv\s+(?P<version>[0-9]+\.[0-9]+\.[0-9]+)(?:\s|$)")
 _REQUIRED_BRANCH_CHECKS = frozenset({"ci-gate", "gitleaks", "CodeQL Python analysis"})
 _REQUIRED_BRANCH_RULE_TYPES = frozenset(

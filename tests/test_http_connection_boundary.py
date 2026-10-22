@@ -314,3 +314,37 @@ async def test_failed_tls_handshake_closes_unowned_socket(monkeypatch: pytest.Mo
             with pytest.raises(httpx.ConnectError, match="synthetic handshake failure"):
                 await task
         assert stream.closed
+
+
+@pytest.mark.asyncio
+async def test_caller_safe_policy_pins_public_socket_and_preserves_tls_identity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import dns.asyncresolver
+
+    from recon_tool.network_policy import CollectionPolicy, collection_scope
+
+    async def resolve(_self, _host, rdtype, **_kwargs):
+        return ["8.8.8.8"] if rdtype == "A" else []
+
+    def forbidden(*_args, **_kwargs):
+        raise AssertionError("caller-safe HTTP consulted system DNS")
+
+    destinations: list[str] = []
+    stream = _Stream()
+
+    async def dial(_self, host: str, _port: int, **_kwargs) -> httpcore.AsyncNetworkStream:
+        destinations.append(host)
+        return stream
+
+    monkeypatch.setattr(dns.asyncresolver.Resolver, "resolve", resolve)
+    monkeypatch.setattr(socket, "getaddrinfo", forbidden)
+    monkeypatch.setattr(httpcore.AnyIOBackend, "connect_tcp", dial)
+    policy = CollectionPolicy("caller-safe", ("1.1.1.1",), "cloudflare-dns.com")
+    with collection_scope(policy):
+        async with httpx.AsyncClient(transport=_SSRFSafeTransport()) as client:
+            assert (await client.get("https://service.example.com/")).text == "ok"
+    assert destinations == ["8.8.8.8"]
+    assert stream.tls_hosts == ["service.example.com"]
+    assert b"Host: service.example.com\r\n" in b"".join(stream.writes)
+    assert stream.closed

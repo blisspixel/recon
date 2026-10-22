@@ -117,6 +117,8 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
         "display_name_verified": False,
         "default_domain": info.default_domain,
         "queried_domain": info.queried_domain,
+        "resolution_vantage": info.resolution_vantage,
+        "resolution_policy_id": info.resolution_policy_id,
         "provider": provider,
         "confidence": info.confidence.value,
         "evidence_confidence": info.evidence_confidence.value,

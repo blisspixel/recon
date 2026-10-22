@@ -8,6 +8,7 @@ import subprocess
 import tomllib
 from pathlib import Path
 
+import pytest
 import yaml
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -17,10 +18,10 @@ _CONSTRAINTS = _REPO_ROOT / "build-constraints.txt"
 _WORKFLOW_DIR = _REPO_ROOT / ".github" / "workflows"
 # The exact uv release that reproduces the shipped build. CI, the release
 # workflow, and artifact builds pin this through `astral-sh/setup-uv`; the
-# `pyproject.toml` floor only has to admit it (and stay wide enough for
-# Dependabot's bundled uv to run `uv lock`).
-_REPRODUCIBLE_UV_VERSION = "0.11.17"
-_DEPENDENCY_UPDATE_UV_VERSION = "0.12.7"
+# `pyproject.toml` floor admits patched lock-update tooling, including
+# Dependabot once its bundled uv meets the security minimum.
+_REPRODUCIBLE_UV_VERSION = "0.13.5"
+_DEPENDENCY_UPDATE_UV_VERSION = "0.13.4"
 _EXPECTED_BUILD_PACKAGES = {
     "hatchling",
     "packaging",
@@ -81,12 +82,12 @@ def test_build_root_and_uv_are_exactly_selected() -> None:
     assert build_system["requires"] == ["hatchling==1.32.4"]
     assert dependency_groups["build"] == build_system["requires"]
     # The floor must admit the reproducible uv version while staying a range
-    # (not an exact pin) so Dependabot's bundled uv can still run `uv lock`.
+    # (not an exact pin) for patched lock-update tooling to run `uv lock`.
     required_version = uv_config["required-version"]
     assert not required_version.startswith("=="), required_version
     assert _version_satisfies(_REPRODUCIBLE_UV_VERSION, required_version)
     assert _version_satisfies(_DEPENDENCY_UPDATE_UV_VERSION, required_version)
-    assert not _version_satisfies("0.13.0", required_version)
+    assert not _version_satisfies("0.14.0", required_version)
 
 
 def test_development_audit_toolchain_excludes_affected_pip() -> None:
@@ -177,3 +178,17 @@ def test_maintainer_uv_pin_is_consistent_across_readiness_and_quick_starts() -> 
     for relative in ("CONTRIBUTING.md", "docs/release-process.md"):
         text = (_REPO_ROOT / relative).read_text(encoding="utf-8")
         assert f"uv self update {_REPRODUCIBLE_UV_VERSION}" in text, relative
+
+
+@pytest.mark.parametrize("version", ["0.11.8", "0.11.17", "0.12.7", "0.13.0", "0.13.3"])
+def test_uv_policy_excludes_affected_bundled_ca_versions(version: str) -> None:
+    required_version = _project_config()["tool"]["uv"]["required-version"]
+    assert not _version_satisfies(version, required_version)
+
+
+def test_container_uses_the_reviewed_uv_image() -> None:
+    dockerfile = (_REPO_ROOT / "deploy/container/Dockerfile").read_text(encoding="utf-8")
+    assert (
+        f"ghcr.io/astral-sh/uv:{_REPRODUCIBLE_UV_VERSION}"
+        "@sha256:32a7bb39b496babbd997b0a39a4d66c126bdaf5661b302bf6f06abda8deca6ff"
+    ) in dockerfile

@@ -379,8 +379,15 @@ class TestTotalFailureSurfaces:
 
 
 @pytest.fixture
-def _fresh_mcp_state() -> Iterator[None]:
+def _fresh_mcp_state(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    from recon_tool.network_policy import CollectionPolicy
     from recon_tool.server import _cache_clear, _rate_limit_clear
+    from recon_tool.server import app as server_app
+
+    # These cases supply an offline resolver at the shared adapter seam.
+    monkeypatch.setattr(
+        server_app, "MCP_COLLECTION_POLICY", CollectionPolicy("caller-safe", ("192.0.2.53",), "dns.example.org")
+    )
 
     _cache_clear()
     _rate_limit_clear()

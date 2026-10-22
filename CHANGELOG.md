@@ -26,6 +26,32 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.22.0] - 2026-10-22
+
+Protect lower-trust collection on split-horizon networks and finish the build-tool CA remediation.
+
+### Security
+
+- Isolate lower-trust MCP collection from the host's split-horizon DNS view.
+  Bind DNS and HTTP name resolution to one saved caller-safe startup policy,
+  preserve TLS and public-address socket admission, and bind caches to its
+  identity/version. Reuse an approved configured public resolver without a new
+  chooser; report unavailable capability with one-time server setup guidance
+  when approval is missing. Bare CLI lookups keep their existing UX and trusted
+  resolver view. Reconcile audit triage by revision and attack path, and correct
+  the HTTP pinning fix's release status to v2.19.0.
+- Complete the build and publishing toolchain's emSign CA remediation, separate
+  from the shipped runtime certifi fix. Select uv 0.13.5 in CI, releases,
+  installer bootstraps, local readiness and the digest-pinned container; require
+  uv >=0.13.4 for lock updates. Pin PyPI publishing to the verified v1.14.3
+  commit with patched sigstore and certifi, preserving trusted publishing and
+  artifact provenance gates. Existing tool installations, interpreters, virtual
+  environments and custom trust stores require their own update and review.
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
 ## [2.21.6] - 2026-10-22
 
 Correct offline artifact boundaries and refresh the security and Python baseline.

@@ -44,9 +44,17 @@ tracked with closure receipts in
 [`docs/security-audit-resolutions.md`](docs/security-audit-resolutions.md).
 The file is keyed by *topic* rather than vendor-specific ID so the record
 stays portable across audit tools, and it includes file:line receipts
-plus closure commit SHAs for verification. If a scanner reports a
-finding listed there as open, the closure status documented in that file
-is authoritative; the scanner is likely lagging the repository.
+plus closure commit SHAs for verification. Compare the scanned revision and
+concrete attack path with the fix and its regression tests. A historical
+closure does not override a reproducible bypass or regression.
+
+- For the original introducing revision and the same already-fixed attack
+  path, verify and link the closure receipt. Record a repeat without
+  reopening that historical path solely because a scanner repeated it.
+- For a newer revision, alternate attack path, or reproducible bypass,
+  evaluate the report and reopen or create a linked finding as appropriate.
+- If the revision or reproduction evidence is insufficient, request
+  clarification. Do not assume the report is stale.
 
 ## Scope
 
@@ -122,6 +130,13 @@ auto-approves tools should still treat all tool output as untrusted data.
 - Cache poisoning attempts remain possible if multiple untrusted agents share a
   config directory; prefer isolated `RECON_CONFIG_DIR` paths or disposable
   workspaces for agent runs.
+- A public-looking DNS name can have private split-horizon answers without a
+  compromised resolver. MCP binds a caller-safe DNS policy at startup and uses
+  it for DNS collection and HTTP destination resolution. An approved view is
+  reused automatically; absent or invalid approval is an explicit unavailable
+  capability with one-time server setup guidance. No tool or profile can switch
+  this process to operator DNS. Advanced operator-view servers must serve only
+  callers allowed to see that view, in a separate process and cache context.
 - High-volume external queries (DNS, CT, Microsoft/Google identity endpoints)
   are rate-limited but still consume local and upstream resources.
 - MCP clients can still request legitimate tool invocations you did not intend.

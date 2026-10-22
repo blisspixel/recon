@@ -119,6 +119,8 @@ async def build_review_bundle(
             active_probes=False,
         )
     except ReconLookupError as exc:
+        if exc.error_type == "dns_view_unavailable":
+            raise ToolError(server_app.lookup_failure_message(validated, exc)) from exc
         ended_at = datetime.now(UTC)
         try:
             bundle = build_review_error_bundle(

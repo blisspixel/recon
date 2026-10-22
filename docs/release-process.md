@@ -64,9 +64,9 @@ It does not call the network by default and it is not part of the user-facing
 2. Version consistency between `pyproject.toml` and the package fallback, plus
    current-version references in both roadmaps, `CITATION.cff`, and the
    supply-chain consumer-verification recipe.
-3. The exact maintainer uv toolchain (`0.11.17`), followed by `uv.lock`
+3. The exact maintainer uv toolchain (`0.13.5`), followed by `uv.lock`
    freshness with `uv lock --check`. A toolchain mismatch is reported
-   separately and must be corrected with `uv self update 0.11.17`; readiness
+   separately and must be corrected with `uv self update 0.13.5`; readiness
    never changes the maintainer's toolchain automatically.
 4. Coverage authority in `scripts/check.py` and main CI, with the release helper
    and release workflow required to delegate to that canonical gate.
@@ -282,7 +282,7 @@ Triggered by any tag matching `v*` pushed to the repo. The workflow:
    runner resolves the installed auditor under Python isolated mode and retries
    once only for recognized transport failures; findings, unknown failures, and
    a second transport failure remain fatal.
-3. **build**: after `test`, exact uv 0.11.17 uses the hash-locked build graph to
+3. **build**: after `test`, exact uv 0.13.5 uses the hash-locked build graph to
    produce one sdist, constructs one wheel from that exact sdist, and
    immediately seals both under `dist/`. Main CI runs the same sequence twice,
    requires matching hashes, and passes the same built wheel to blocking
