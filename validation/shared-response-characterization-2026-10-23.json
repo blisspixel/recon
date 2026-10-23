@@ -1024,5 +1024,6 @@
         }
       }
     }
-  }
+  },
+  "model_digest_convention": "SHA-256 of UTF-8 source text normalized to LF line endings; invariant to Windows checkout CRLF, sensitive to content changes."
 }

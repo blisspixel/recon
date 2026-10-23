@@ -32,7 +32,8 @@ not model shared observation noise across those factors.
 ## Reproducible differences
 
 All cases use explicit default priors (`priors_override={}`). The receipt
-includes the exact model SHA-256, fired bindings, effective display mass,
+includes the model SHA-256 over UTF-8 text normalized to LF line endings,
+fired bindings, effective display mass,
 sparse flags, local rankings, intervals and unit counterfactuals. Selected
 model-relative means are:
 
