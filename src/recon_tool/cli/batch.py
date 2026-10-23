@@ -353,84 +353,6 @@ def _batch_apply_fusion(
     )
 
 
-def _batch_attach_shared_tokens(json_results: list[dict[str, Any]], batch_infos: dict[str, Any]) -> None:
-    """Attach ``shared_verification_tokens`` peer lists in place.
-
-    Keyed by ``queried_domain`` (the canonical normalized form) when at least two
-    domains in the batch publish the same site-verification token.
-    """
-    from recon_tool.clustering import compute_shared_tokens
-
-    domain_tokens = {d: info.site_verification_tokens for d, info in batch_infos.items()}
-    clusters = compute_shared_tokens(domain_tokens)
-    if not clusters:
-        return
-    for entry in json_results:
-        key = entry.get("queried_domain")
-        if not isinstance(key, str):
-            continue
-        peers = clusters.get(key)
-        if peers:
-            entry["shared_verification_tokens"] = [{"token": e.token, "peer": e.peer} for e in peers]
-
-
-def _batch_attach_peers(json_results: list[dict[str, Any]], batch_infos: dict[str, Any]) -> None:
-    """Attach ``shared_tenant`` and ``shared_display_name`` peer lists in place.
-
-    A shared tenant ID is a provider-attested administrative co-tenancy
-    observation, not ownership or product-use proof. Identity follows an
-    explicit positive-only policy: ``SourceStatus`` currently defines no
-    identity channel, so a non-null tenant ID from a successful identity
-    response stays observable across DNS degradation, while a missing or
-    conflicted tenant ID is never treated as negative evidence or clustered.
-    Display-name overlap is
-    a weaker customer-supplied coincidence. Both surface as per-domain peer
-    lists so batch consumers can inspect the observations without re-resolving
-    them.
-    """
-    from recon_tool.clustering import compute_display_name_clusters, compute_tenant_clusters
-
-    domain_tenants = {
-        d: None if info.merge_conflicts is not None and info.merge_conflicts.tenant_id else info.tenant_id
-        for d, info in batch_infos.items()
-    }
-    domain_names = {d: info.display_name for d, info in batch_infos.items()}
-    tenant_clusters = compute_tenant_clusters(domain_tenants)
-    display_clusters = compute_display_name_clusters(domain_names)
-
-    # Build per-domain peer indexes for quick lookup.
-    tenant_peers: dict[str, list[dict[str, object]]] = {}
-    for tc in tenant_clusters:
-        for d in tc.domains:
-            tenant_peers.setdefault(d, []).append(
-                {
-                    "tenant_id": tc.tenant_id,
-                    "peers": [p for p in tc.domains if p != d],
-                }
-            )
-    display_peers: dict[str, list[dict[str, object]]] = {}
-    for dc in display_clusters:
-        for d, raw in zip(dc.domains, dc.raw_names, strict=True):
-            display_peers.setdefault(d, []).append(
-                {
-                    "display_name": raw,
-                    "normalized_name": dc.normalized_name,
-                    "peers": [p for p in dc.domains if p != d],
-                }
-            )
-
-    if not (tenant_peers or display_peers):
-        return
-    for entry in json_results:
-        key = entry.get("queried_domain")
-        if not isinstance(key, str):
-            continue
-        if key in tenant_peers:
-            entry["shared_tenant"] = tenant_peers[key]
-        if key in display_peers:
-            entry["shared_display_name"] = display_peers[key]
-
-
 def batch_emit_json(
     results: list[object],
     batch_infos: dict[str, Any],
@@ -455,8 +377,9 @@ def batch_emit_json(
     observable_infos = {domain: collection_observable_info(info) for domain, info in batch_infos.items()}
 
     if observable_infos:
-        _batch_attach_shared_tokens(json_results, observable_infos)
-        _batch_attach_peers(json_results, observable_infos)
+        from recon_tool.batch_correlation import attach_batch_correlations
+
+        attach_batch_correlations(json_results, observable_infos)
 
     # Ecosystem hypergraph. Off by default. When opted in via
     # --include-ecosystem, emit hyperedges over the batch's TenantInfo set as a
@@ -467,11 +390,9 @@ def batch_emit_json(
         # bare array on an all-failed batch, flipping the top-level type exactly
         # when a consumer's error path is already stressed. Errors ride under
         # domains; hyperedges are empty when there were no resolved infos.
-        hyperedges: list[Any] = []
-        if observable_infos:
-            from recon_tool.ecosystem import build_ecosystem_hyperedges
+        from recon_tool.ecosystem import build_ecosystem_report
 
-            hyperedges = list(build_ecosystem_hyperedges(observable_infos))
+        ecosystem = build_ecosystem_report(observable_infos, input_count=len(json_results))
         ecosystem_payload: dict[str, Any] = {
             "record_type": "batch_result",  # SH7 discriminator
             "ecosystem_hyperedges": [
@@ -480,9 +401,10 @@ def batch_emit_json(
                     "key": e.key,
                     "members": list(e.members),
                 }
-                for e in hyperedges
+                for e in ecosystem.hyperedges
             ],
             "domains": json_results,
+            "ecosystem_completeness": ecosystem.completeness,
         }
         if cohort_summary is not None:
             ecosystem_payload["cohort_summary"] = cohort_summary

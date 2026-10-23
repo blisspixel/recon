@@ -52,12 +52,13 @@ def test_generated_top_level_fields_are_code_owned() -> None:
         "reserved_name",
         "resolution_vantage",
         "resolution_policy_id",
+        "correlation_completeness",
         "shared_display_name",
         "shared_tenant",
         "shared_verification_tokens",
         "unclassified_cname_chains",
     )
-    assert len(fields) == 63
+    assert len(fields) == 64
     assert len(fields) == len(set(fields))
 
 

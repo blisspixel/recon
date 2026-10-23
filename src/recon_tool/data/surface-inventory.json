@@ -2113,6 +2113,7 @@
     "defs": [
       "BIMIIdentity",
       "BatchArray",
+      "BatchCorrelationCompleteness",
       "BatchErrorRecord",
       "BatchNdjsonRecord",
       "BatchResult",
@@ -2127,6 +2128,7 @@
       "ConnectionLane",
       "ConnectionMap",
       "DeltaReport",
+      "EcosystemCompleteness",
       "EcosystemHyperedge",
       "EvidenceConflict",
       "EvidenceRecord",
@@ -2203,6 +2205,7 @@
       "cloud_instance",
       "confidence",
       "connection_map",
+      "correlation_completeness",
       "ct_attempt_outcome",
       "ct_cache_age_days",
       "ct_provider_used",

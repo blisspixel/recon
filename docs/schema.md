@@ -507,16 +507,20 @@ in that mode; otherwise the batch JSON is just the per-domain array. The
 wrapper is still emitted when every domain fails, with an empty edge array and
 the errors under `domains`.
 
-The current implementation retains at most 200 hyperedges and at most 100
-members per hyperedge. The v2 shape does not yet report omitted counts, so an
-absent edge after either cap is not evidence that no such overlap existed. The
-roadmap requires explicit completeness and omission diagnostics before this
-surface can support exhaustive-correlation claims.
+The implementation retains at most 200 hyperedges and 100 members per edge.
+The wrapper's additive `ecosystem_completeness` reports source-unavailable and
+failed namespaces, cohort-local baseline filtering, actual indexed pair visits,
+candidate/member/output caps, and a known omitted-edge lower bound. When search
+stops, `unvisited_qualifying_edges_unknown` is true: the retained edge count is
+not the total, and unvisited qualifying edges are not invented as an exact
+omission count. `omitted_member_occurrences` counts clipping in candidate edges,
+not distinct omitted namespaces. Enumeration and filtering are separate:
+`pair_search_complete` can be true while heuristic filtering removed slugs.
 
 ### Batch-only cross-domain fields (`batch --json`)
 
 In `recon batch --json` output (the non-streaming path), a per-domain
-success object may carry up to three additional keys that the
+success object may carry typed overlap fields that the
 single-domain contract never emits. They are populated only when the
 batch surfaced a typed overlap between two or more domains, and never
 appear in single-domain `--json` or in `--ndjson` (which streams each
@@ -527,13 +531,63 @@ record before the batch-wide pass can run):
 | `shared_verification_tokens` | `list[{token, peer}]` | two or more batch domains shared a TXT verification token |
 | `shared_tenant` | `list[{tenant_id, peers}]` | two or more batch domains shared an M365 `tenant_id` |
 | `shared_display_name` | `list[{display_name, normalized_name, peers}]` | two or more batch domains normalized to the same display name (hedged: customer-supplied brand text, not cryptographic) |
+| `correlation_completeness` | object | every resolved non-streaming batch namespace, including those with no surfaced overlap |
 
-For resource bounds, a verification token observed on more than 200 batch
-domains is not expanded into its quadratic peer list. The current per-domain
-v2 field has no omission counter, so absence of `shared_verification_tokens` in
-a batch larger than that cap is not a completeness claim. A future additive
-batch diagnostic must report high-cardinality omissions before this surface can
-support exhaustive-correlation claims.
+Tenant and display-name peer lists retain the first ten other sorted members.
+Smaller groups preserve their complete peer lists. The canonical per-domain
+identity/name observations remain present across the batch and can supply the
+shared group representation without materializing every peer pair. Exact
+`omitted_tenant_peers` and `omitted_display_name_peers` counters identify clipped
+projections; they are distinct overlap types, not an ownership assertion.
+
+Tokens on more than 200 namespaces retain the existing high-cardinality filter.
+Its exact suppressed peer-entry count is `high_cardinality_token_peers` on
+each affected record. Other token groups are admitted in sorted-token order,
+whole and symmetric, before expanding peers. Admission is bounded by 50,000
+peer entries and an 8 MiB escaped-JSON peer-payload budget (including padding
+for indentation). `omitted_token_peers` and `token_output_limited` distinguish
+output limitations from the high-cardinality heuristic. Counts refer to peer
+entries, so multiple different reused tokens can link the same peer repeatedly.
+
+The diagnostic also names failed and source-unavailable comparison namespaces.
+`enumeration_complete: false` prevents an empty projection from being mistaken
+for fully observed absence. A true value covers the declared supplied-input
+projection only; it establishes neither independence nor organizational
+separation. Older records lacking the diagnostic make no completeness claim.
+
+#### Batch correlation work and memory budgets
+
+For the supported 10,000-namespace input bound, tenant/name projection inspects
+at most eleven candidates per namespace per family and emits at most ten peer
+references. That is at most 220,000 candidate inspections and 200,000 emitted
+identity/name references, replacing the quadratic peer copies. Token peer
+materialization is separately capped as above; known omitted counts come from
+group cardinalities without expanding omitted pairs.
+
+Shared-slug candidates use sorted inverted slug postings. Disjoint namespaces
+require no pair comparisons. Each posting-pair encounter, including repeated
+pairs, consumes the independent 100,000-visit budget. At most 100,000 unique
+pairs are retained for deduplication, at most 2,000 candidate edges per type
+are materialized, and final output retains 200 edges with 100 members each.
+Selection order is deterministic before truncation: sorted slug postings and
+member pairs, then existing edge-type precedence and edge-key/member order.
+This can change the retained large-batch sample relative to the old quadratic
+scan; uncapped small-batch overlaps keep their existing meaning.
+
+Auxiliary memory is bounded by the supplied observation indexes, those pair
+and candidate limits, and the emitted peer limits. In addition to the input
+indexes, the upper bounds are 100,000 pair keys, 6,000 candidate edge objects
+with at most 600,000 member references, 200,000 identity/name peer references
+and 50,000 token peer objects. Encoded correlation output is bounded by these
+reference limits, admitted escaped token bytes and the existing identifier
+validation limits. These are operation/object/output budgets, not a fixed
+process RSS promise or a cap on the full batch's original per-domain evidence.
+
+The bare JSON-array versus opt-in ecosystem-wrapper contract is unchanged.
+NDJSON streams before correlation and does not run or claim this enumeration.
+Human batch panels likewise report per-namespace observations without a
+cross-domain absence verdict; use the structured diagnostics for correlation
+limits. No extra collection, resolver option or interactive choice is added.
 
 These are additive: they leave the record a superset of the required
 single-domain fields, so the batch-record rule still classifies it as a

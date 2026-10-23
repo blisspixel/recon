@@ -16,6 +16,7 @@ checks both published copies.
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import sys
 from collections.abc import Mapping
@@ -50,6 +51,7 @@ CONDITIONAL_TOP_LEVEL_FIELDS: tuple[str, ...] = (
     "reserved_name",
     "resolution_vantage",
     "resolution_policy_id",
+    "correlation_completeness",
     "shared_display_name",
     "shared_tenant",
     "shared_verification_tokens",
@@ -108,6 +110,12 @@ def build_schema(template: Mapping[str, Any]) -> dict[str, Any]:
                 "pattern": "^[0-9a-f]{64}$",
                 "description": "Opaque identity of the collection policy and version; no resolver endpoints.",
             },
+            "correlation_completeness": {
+                "$ref": "#/$defs/BatchCorrelationCompleteness",
+                "description": (
+                    "Batch-only projection limits; omitted or unavailable comparisons are not observed absence."
+                ),
+            },
         }
     )
     generated_fields = generated_top_level_fields()
@@ -138,7 +146,69 @@ def build_schema(template: Mapping[str, Any]) -> dict[str, Any]:
     generated = dict(template)
     generated["required"] = _ordered_required(template)
     generated["properties"] = {str(key): template_properties[key] for key in template_properties}
+    definitions = copy.deepcopy(template.get("$defs", {}))
+    definitions.update(_batch_completeness_definitions())
+    definitions["BatchResult"]["properties"]["ecosystem_completeness"] = {
+        "$ref": "#/$defs/EcosystemCompleteness",
+        "description": (
+            "Enumeration, filtering, unavailable-input and omission diagnostics for retained ecosystem edges."
+        ),
+    }
+    generated["$defs"] = definitions
     return generated
+
+
+def _batch_completeness_definitions() -> dict[str, Any]:
+    """Keep additive batch diagnostics code-owned and validate every counter."""
+    fields = {
+        "BatchCorrelationCompleteness": (
+            (
+                "failed_namespaces",
+                "source_unavailable_namespaces",
+                "omitted_tenant_peers",
+                "omitted_display_name_peers",
+                "omitted_token_peers",
+                "high_cardinality_token_peers",
+                "peer_candidates_examined",
+                "peer_limit",
+                "token_entry_limit",
+                "token_encoded_byte_limit",
+            ),
+            ("enumeration_complete", "token_output_limited"),
+        ),
+        "EcosystemCompleteness": (
+            (
+                "baseline_slugs_filtered",
+                "pair_visits",
+                "pair_visits_possible",
+                "unique_pairs_examined",
+                "known_omitted_candidates",
+                "omitted_member_occurrences",
+                "input_namespaces",
+                "resolved_namespaces",
+                "failed_namespaces",
+                "source_unavailable_namespaces",
+                "pair_visit_limit",
+                "candidate_limit_per_type",
+                "edge_limit",
+                "member_limit_per_edge",
+                "known_omitted_edges_lower_bound",
+            ),
+            ("pair_search_complete", "candidate_limit_reached", "unvisited_qualifying_edges_unknown"),
+        ),
+    }
+    result: dict[str, Any] = {}
+    for name, (counts, flags) in fields.items():
+        result[name] = {
+            "type": "object",
+            "additionalProperties": False,
+            "required": [*counts, *flags],
+            "properties": {
+                **{key: {"type": "integer", "minimum": 0} for key in counts},
+                **{key: {"type": "boolean"} for key in flags},
+            },
+        }
+    return result
 
 
 def dumps_schema(schema: Mapping[str, Any]) -> str:
