@@ -19,8 +19,15 @@ PLUGIN_SCHEMA = "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
 MCP_SCHEMA = "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json"
 SOURCE_SKILLS = {
     "recon": ROOT / "agents" / "claude-code" / "skills" / "recon" / "SKILL.md",
-    "recon-fingerprint-triage": (ROOT / "agents" / "claude-code" / "skills" / "recon-fingerprint-triage" / "SKILL.md"),
+    "recon-fingerprint-triage": ROOT / "agents" / "maintainer" / "skills" / "recon-fingerprint-triage" / "SKILL.md",
 }
+NATIVE_TRIAGE = ROOT / "agents" / "claude-code" / "skills" / "recon-fingerprint-triage" / "SKILL.md"
+
+_TRIAGE_CANONICAL_BOUNDARY = """This is the canonical harness-neutral triage guidance. Client-native and
+portable candidate forms are generated from this source. Catalog edits and
+validation helpers require the selected recon source checkout; reading a skill
+does not install a package or authorize new collection."""
+_TRIAGE_CANONICAL_HARD_RULE = "- Skill text alone does not establish installed tooling or client compatibility."
 
 _TRIAGE_NATIVE_BOUNDARY = """This is a Claude Code-native skill. Its `argument-hint` field and surrounding
 plugin layout are client-specific. It does not claim portable Agent Skills or
@@ -173,13 +180,13 @@ def _portable_skill(skill_id: str, source: Path, version: str) -> bytes:
     elif skill_id == "recon-fingerprint-triage":
         body = _replace_once(
             body,
-            _TRIAGE_NATIVE_BOUNDARY,
+            _TRIAGE_CANONICAL_BOUNDARY,
             _TRIAGE_PORTABLE_BOUNDARY,
             label="triage packaging boundary",
         )
         body = _replace_once(
             body,
-            _TRIAGE_NATIVE_HARD_RULE,
+            _TRIAGE_CANONICAL_HARD_RULE,
             _TRIAGE_PORTABLE_HARD_RULE,
             label="triage hard boundary",
         )
@@ -215,6 +222,23 @@ def _portable_skill(skill_id: str, source: Path, version: str) -> bytes:
         width=4096,
     ).strip()
     return f"---\n{frontmatter}\n---\n\n{body.lstrip()}".encode()
+
+
+def _native_triage() -> bytes:
+    """Project canonical triage into the existing native client scaffold."""
+    metadata, body = _split_skill(SOURCE_SKILLS["recon-fingerprint-triage"])
+    body = _replace_once(body, _TRIAGE_CANONICAL_BOUNDARY, _TRIAGE_NATIVE_BOUNDARY, label="native triage boundary")
+    body = _replace_once(
+        body, _TRIAGE_CANONICAL_HARD_RULE, _TRIAGE_NATIVE_HARD_RULE, label="native triage hard boundary"
+    )
+    frontmatter = {
+        "name": metadata["name"],
+        "description": metadata["description"],
+        "argument-hint": "<domain | private discovery artifact>",
+        "allowed-tools": "Bash(recon:*), Read, Edit, Write",
+    }
+    encoded = yaml.safe_dump(frontmatter, allow_unicode=True, sort_keys=False, width=4096).strip()
+    return f"---\n{encoded}\n---\n\n{body.lstrip()}".encode()
 
 
 def _readme(version: str) -> bytes:
@@ -300,7 +324,7 @@ def _readme(version: str) -> bytes:
 
 
 def rendered_files() -> dict[Path, bytes]:
-    """Return every generated candidate file and its expected bytes."""
+    """Return generated candidate and native skill files and expected bytes."""
 
     version = _project_version()
     plugin = {
@@ -326,6 +350,7 @@ def rendered_files() -> dict[Path, bytes]:
         },
     }
     rendered = {
+        NATIVE_TRIAGE: _native_triage(),
         PLUGIN_ROOT / "plugin.json": (json.dumps(plugin, indent=2, ensure_ascii=False) + "\n").encode(),
         PLUGIN_ROOT / "mcp.json": (json.dumps(mcp, indent=2, ensure_ascii=False) + "\n").encode(),
         PLUGIN_ROOT / "README.md": _readme(version),
@@ -366,10 +391,10 @@ def main(argv: list[str] | None = None) -> int:
         if problems:
             print("FAIL: " + "; ".join(problems), file=sys.stderr)
             return 1
-        print(f"PASS: {len(rendered)} Agent Plugins candidate files are current.")
+        print(f"PASS: {len(rendered)} generated package and native skill files are current.")
         return 0
     _write(rendered)
-    print(f"Generated {len(rendered)} Agent Plugins candidate files under {PLUGIN_ROOT.relative_to(ROOT)}.")
+    print(f"Generated {len(rendered)} package and native skill files.")
     return 0
 
 

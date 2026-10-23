@@ -5,6 +5,11 @@ description: Run or evaluate a bounded recon catalog-maintenance round from a fr
 
 # Catalog round
 
+Start with the neutral `recon-catalog-maintenance` entry point and
+`docs/catalog-maintenance.md` for frozen budgets, explicit collection,
+interrupted-run receipts and one-use holdouts. Preserve the existing round
+contracts and measurement gates below.
+
 Requires a recon source checkout. Paths below refer to its root. This maintainer
 skill is separate from the frozen portable plugin candidate.
 Read `docs/catalog-maintenance.md` and `docs/data-handling-policy.md`, then the

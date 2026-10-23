@@ -209,6 +209,9 @@ async def safe_resolve(
         degraded_name: Stable observation-channel name recorded on a transient
             resolver failure. Ignored when ``degraded_sources`` is ``None``.
     """
+    from recon_tool.collection_limits import admit_dns_query
+
+    admit_dns_query()
     try:
         resolver = get_resolver()
         answers = await resolver.resolve(domain, rdtype, lifetime=timeout)

@@ -148,7 +148,28 @@ def test_maintainer_skill_sections_have_explicit_static_guidance_ownership() -> 
         f"{prefix}recon-catalog-round/SKILL.md#Admit the round",
         f"{prefix}recon-catalog-round/SKILL.md#Evaluate observations, then candidates",
         f"{prefix}recon-catalog-round/SKILL.md#Completion",
+        f"{prefix}recon-catalog-maintenance/SKILL.md#recon catalog maintenance",
     }
+    triage = f"{prefix}recon-fingerprint-triage/SKILL.md#"
+    expected.update(
+        triage + heading
+        for heading in (
+            "recon-fingerprint-triage",
+            "When to use this",
+            "Environment and source checkout",
+            "Inputs",
+            "A. Single-domain discovery",
+            "B. Multi-record catalog round",
+            "C. Historical CNAME candidate queue",
+            "Dispositions",
+            "Mandatory promotion gates",
+            "Record-specific review",
+            "YAML proposal shape",
+            "Output format",
+            "Verification",
+            "Hard boundaries",
+        )
+    )
     discovered = discover_surfaces()["agent_guidance_sections"]
 
     assert {section for section in discovered if section.startswith(prefix)} == expected

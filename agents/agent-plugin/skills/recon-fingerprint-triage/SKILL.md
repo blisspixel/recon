@@ -10,6 +10,12 @@ metadata:
 
 # recon-fingerprint-triage
 
+For the complete public maintenance loop, begin with
+`agents/maintainer/skills/recon-catalog-maintenance/SKILL.md` and
+`docs/catalog-maintenance.md`. The canonical triage source is
+`agents/maintainer/skills/recon-fingerprint-triage/SKILL.md`; native and portable
+packaging projections are generated from that path.
+
 This skill reviews the bounded public DNS observations that recon already
 collects and helps maintainers improve the fingerprint catalog. It supports the
 multi-record v2.14 quality loop rather than treating catalog growth as a count

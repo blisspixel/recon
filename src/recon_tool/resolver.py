@@ -549,6 +549,9 @@ async def resolve_tenant(
     Raises:
         ReconLookupError: If all sources fail, no sources are configured, or timeout.
     """
+    from recon_tool.collection_limits import admit_namespace
+
+    admit_namespace(domain)
     if pool is None:
         pool = default_pool()
 

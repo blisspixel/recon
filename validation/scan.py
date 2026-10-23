@@ -399,6 +399,12 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--max-dns-queries",
+        type=int,
+        default=None,
+        help="Hard cap on logical DNS-collector calls; preserve durable starts and streamed partial results.",
+    )
+    parser.add_argument(
         "--finalize-existing",
         type=Path,
         default=None,
@@ -465,6 +471,9 @@ def _validate_cli_options(args: argparse.Namespace) -> None:
         raise ValueError("--max-runtime must be greater than 0")
     if args.max_runtime is not None and args.json_array:
         raise ValueError("--max-runtime requires streaming NDJSON; remove --json-array")
+    query_budget = getattr(args, "max_dns_queries", None)
+    if query_budget is not None and (query_budget < 1 or args.json_array):
+        raise ValueError("--max-dns-queries must be positive and requires streaming NDJSON")
     round_kind = getattr(args, "round_kind", "baseline")
     round_manifest = getattr(args, "round_manifest", None)
     drift_prior_contract = getattr(args, "drift_prior_contract", None)
@@ -569,6 +578,29 @@ def _run_batch(
     if not args.ct:
         batch_cmd.append("--no-ct")
 
+    query_budget = getattr(args, "max_dns_queries", None)
+    if query_budget is not None:
+        batch_cmd = [
+            sys.executable,
+            "-m",
+            "validation.bounded_catalog_collection",
+            "--corpus",
+            str(corpus),
+            "--run-dir",
+            str(run_dir),
+            "--max-namespaces",
+            str(domain_count),
+            "--max-dns-queries",
+            str(query_budget),
+            "--concurrency",
+            str(args.concurrency),
+            "--timeout",
+            str(args.timeout),
+            "--allow-network",
+        ]
+        if args.ct:
+            batch_cmd.append("--ct")
+
     ct_str = "on" if args.ct else "off"
     fmt_str = "json-array" if args.json_array else "ndjson"
     print(
@@ -601,6 +633,9 @@ def _run_batch(
                 flush=True,
             )
             return BatchRunResult(results_path=results_path, completed=False, timed_out=True)
+    if query_budget is not None and proc.returncode == 75:
+        print("    partial: collection budget exhausted; finalizing streamed records", flush=True)
+        return BatchRunResult(results_path=results_path, completed=False, timed_out=False)
     if proc.returncode != 0:
         print(f"    FAILED: {stderr_text.strip()}", file=sys.stderr)
         raise SystemExit(2)
@@ -736,6 +771,11 @@ def _finalize_scan(ctx: FinalizeContext) -> None:
         "compared_to": str(compare_target) if compare_target else None,
         "diff_path": str(diff_path) if diff_path else None,
     }
+    from validation.catalog_receipts import collection_metadata
+
+    meta.update(
+        collection_metadata(ctx.run_dir, admitted=ctx.domain_count, records=_iter_result_records(ctx.results_path))
+    )
     (ctx.run_dir / "meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
 
     baseline_cmd = [

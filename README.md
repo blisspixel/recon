@@ -180,6 +180,8 @@ Catalog corrections and documented vendor patterns are especially useful.
 Start with [CONTRIBUTING.md](https://github.com/blisspixel/recon/blob/main/CONTRIBUTING.md)
 for setup, verification, and contribution requirements; coding agents should
 also read [AGENTS.md](https://github.com/blisspixel/recon/blob/main/AGENTS.md).
+For repeatable catalog work, start with the harness-neutral
+[maintenance skill and offline example](https://github.com/blisspixel/recon/blob/main/agents/maintainer/skills/recon-catalog-maintenance/SKILL.md).
 
 Use [issues](https://github.com/blisspixel/recon/issues) for bugs and feature
 requests. Keep public examples reserved and synthetic; never post evaluated

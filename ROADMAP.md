@@ -195,8 +195,10 @@ release by itself.
 | Release readiness | Every release | Main, tag, GitHub Release, and PyPI identify one commit and one artifact set |
 
 Catalog detail lives in [docs/catalog-strategy.md](docs/catalog-strategy.md).
-The executable [maintenance workflow](docs/catalog-maintenance.md) separates
-corpus planning, bounded collection, and rule triage. New rounds must bind their
+The executable [maintenance workflow](docs/catalog-maintenance.md) starts with
+a harness-neutral skill and fictional offline example, then separates private
+corpus planning, bounded collection, rule triage and monthly reference receipts.
+New rounds must bind their
 actual exclusions and preserve untouched holdouts; a classified-surface uplift
 is not independent precision or permission for automatic promotion.
 Quality and publication evidence lives in

@@ -242,6 +242,11 @@ def execution_digest_sha256() -> str:
         for name in (
             "archive_vendor_seed_sources.py",
             "catalog_baseline.py",
+            "catalog_maintenance.py",
+            "catalog_maintenance_round.py",
+            "catalog_receipts.py",
+            "catalog_freshness.py",
+            "bounded_catalog_collection.py",
             "diff_runs.py",
             "evaluate_catalog_promotions.py",
             "evaluate_catalog_drift_round.py",

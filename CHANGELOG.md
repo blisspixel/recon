@@ -28,6 +28,11 @@ operator, corporate group, ownership, or control.
 
 ### Added
 
+- Publish a harness-neutral catalog maintenance entry point with a runnable
+  fictional offline round, private frozen inputs and budgets, durable start
+  receipts, one-use holdout accounting and resumable monthly reference reviews.
+  Keep review dates genuine and proposal queues bounded; no recurring job,
+  customer collection or automatic promotion is activated.
 - Add documented Convex custom-domain routing, ImprovMX and Forward Email MX
   routing and SPF policy references, plus Forward Email's nonempty verification
   marker. Preserve record roles, related-host scope and existing suffix grammar;
