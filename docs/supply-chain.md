@@ -653,8 +653,10 @@ The remaining Scorecard limits are intentional or process-bound:
   controls. The project welcomes outside contributors and prospective reviewers.
 - Code-Review is low until normal work flows through reviewed pull requests.
   Creating fake review history would be worse than the score.
-- CII-Best-Practices is low until the OpenSSF Best Practices Badge questionnaire
-  is completed and linked. The questionnaire evidence worksheet lives in
+- The OpenSSF Best Practices Badge questionnaire now has a real Passing project
+  linked from README, checked 2026-10-23. Its Scorecard signal follows the
+  external sampling cadence and is not inferred from adding a link.
+  The questionnaire evidence worksheet lives in
   [openssf-badge-readiness.md](openssf-badge-readiness.md), and the current
   posture summary lives in [openssf-posture.md](openssf-posture.md).
 - Contributors is low until outside contributors from distinct organizations

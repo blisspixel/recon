@@ -5,6 +5,7 @@
 [![Python](https://img.shields.io/pypi/pyversions/recon-tool.svg?cacheSeconds=300)](https://pypi.org/project/recon-tool/)
 [![License](https://img.shields.io/pypi/l/recon-tool.svg?cacheSeconds=300)](https://github.com/blisspixel/recon/blob/main/LICENSE)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/blisspixel/recon/badge)](https://scorecard.dev/viewer/?uri=github.com/blisspixel/recon)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15800/badge)](https://www.bestpractices.dev/projects/15800)
 
 Point recon at a domain to see its **public technology and identity
 footprint**: email providers and controls, identity indicators, SaaS services,
