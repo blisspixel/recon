@@ -422,10 +422,13 @@ class TestInferenceCorrectness:
         cdn_baseline = next(p for p in baseline.posteriors if p.name == "cdn_fronting")
         m365 = infer(
             shipped_network,
-            observed_slugs=["microsoft365", "entra-id"],
-            observed_signals=[],
+            observed_slugs=[],
+            observed_signals=["m365_tenant_observed"],
             priors_override={},
         )
+        role = next(p for p in m365.posteriors if p.name == "m365_tenant")
+        assert role.evidence_used == ("signal:m365_tenant_observed",)
+        assert role.n_eff == 5.0
         cdn_after = next(p for p in m365.posteriors if p.name == "cdn_fronting")
         # CDN posterior should stay close to its prior since no path
         # connects M365 to CDN in the shipped network.
@@ -434,8 +437,15 @@ class TestInferenceCorrectness:
     def test_posterior_in_unit_interval(self, shipped_network: BayesianNetwork) -> None:
         result = infer(
             shipped_network,
-            observed_slugs=["microsoft365", "entra-id", "okta", "cloudflare", "aws-cloudfront"],
-            observed_signals=["federated_sso_hub", "dmarc_reject", "dkim_present"],
+            observed_slugs=[],
+            observed_signals=[
+                "m365_tenant_observed",
+                "okta_idp_observed",
+                "cdn_cname_observed",
+                "aws_endpoint_cname_observed",
+                "federated_sso_hub",
+                "dmarc_reject",
+            ],
             priors_override={},
         )
         for p in result.posteriors:
@@ -459,40 +469,35 @@ class TestCredibleIntervals:
     def test_intervals_widen_under_conflict(self, shipped_network: BayesianNetwork) -> None:
         no_conflict = infer(
             shipped_network,
-            observed_slugs=["microsoft365"],
-            observed_signals=[],
+            observed_slugs=[],
+            observed_signals=["m365_tenant_observed"],
             conflict_field_count=0,
             priors_override={},
         )
         with_conflict = infer(
             shipped_network,
-            observed_slugs=["microsoft365"],
-            observed_signals=[],
+            observed_slugs=[],
+            observed_signals=["m365_tenant_observed"],
             conflict_field_count=4,
             priors_override={},
         )
         m1 = next(p for p in no_conflict.posteriors if p.name == "m365_tenant")
         m2 = next(p for p in with_conflict.posteriors if p.name == "m365_tenant")
+        assert m1.evidence_used == ("signal:m365_tenant_observed",)
+        prior = shipped_network.get("m365_tenant").prior
+        assert prior is not None
+        assert m1.posterior > prior
+        assert not m1.sparse
+        assert m1.n_eff > m2.n_eff == 4.0
         # Same posterior but wider interval under conflict.
         assert abs(m1.posterior - m2.posterior) < 1e-3
-        assert (m2.interval_high - m2.interval_low) >= (m1.interval_high - m1.interval_low)
+        assert (m2.interval_high - m2.interval_low) > (m1.interval_high - m1.interval_low)
 
-    def test_intervals_tighten_with_more_evidence(self, shipped_network: BayesianNetwork) -> None:
-        one = infer(
-            shipped_network,
-            observed_slugs=["microsoft365"],
-            observed_signals=[],
-            priors_override={},
-        )
-        three = infer(
-            shipped_network,
-            observed_slugs=["microsoft365", "entra-id", "exchange-online"],
-            observed_signals=[],
-            priors_override={},
-        )
-        m1 = next(p for p in one.posteriors if p.name == "m365_tenant")
-        m3 = next(p for p in three.posteriors if p.name == "m365_tenant")
-        assert (m3.interval_high - m3.interval_low) <= (m1.interval_high - m1.interval_low)
+    def test_same_mean_band_tightens_with_effective_mass(self) -> None:
+        """Hold the mean fixed; arbitrary new evidence can also move the mean."""
+        bands = [_credible_interval(0.5, mass) for mass in (4.0, 5.0, 7.0)]
+        widths = [high - low for low, high in bands]
+        assert widths[2] < widths[1] < widths[0]
 
     def test_credible_interval_helper_handles_extremes(self) -> None:
         # Posterior at 0 → interval pinned to lower bound 0

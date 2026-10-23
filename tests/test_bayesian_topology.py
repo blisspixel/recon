@@ -23,7 +23,8 @@ from __future__ import annotations
 
 import pytest
 
-from recon_tool.bayesian import infer, load_network
+from recon_tool.bayesian import BayesianNetwork, infer, load_network
+from tests.bayesian_scenarios import assert_fired_signals
 
 
 @pytest.fixture(scope="module")
@@ -50,7 +51,7 @@ def test_modern_provider_has_three_parents_and_no_evidence(network):
     node = next(n for n in network.nodes if n.name == "email_security_modern_provider")
     assert set(node.parents) == {"m365_tenant", "google_workspace_tenant", "email_gateway_present"}
     assert len(node.evidence) == 0, (
-        "modern_provider must remain pure CPT propagation; provider presence is fully captured by parent slugs"
+        "modern_provider must remain pure CPT propagation; provider presence is captured by parent role observations"
     )
 
 
@@ -81,13 +82,13 @@ def test_federated_identity_has_both_provider_parents(network):
 
 def test_modern_provider_responds_to_provider_evidence(network):
     """The modern_provider posterior moves up when M365 / GWS / gateway
-    slugs fire, and stays flat when only policy signals fire."""
+    roles fire, and stays flat when only policy signals fire."""
     no_evidence = _posterior(network, [], [], "email_security_modern_provider")
     with_m365 = _posterior(network, [], ["m365_tenant_observed"], "email_security_modern_provider")
     with_gws = _posterior(network, [], ["google_workspace_tenant_observed"], "email_security_modern_provider")
     with_gateway = _posterior(network, [], ["email_gateway_mx_observed"], "email_security_modern_provider")
 
-    # Each parent slug should lift modern_provider materially.
+    # Each parent role observation should lift modern_provider materially.
     assert with_m365 > no_evidence + 0.10
     assert with_gws > no_evidence + 0.10
     assert with_gateway > no_evidence + 0.05
@@ -168,7 +169,10 @@ def test_federated_identity_old_m365_path_preserved(network):
 # ── helpers ──────────────────────────────────────────────────────────
 
 
-def _posterior(network, slugs, signals, node_name) -> float:
+def _posterior(network: BayesianNetwork, slugs: list[str], signals: list[str], node_name: str) -> float:
     result = infer(network, slugs, signals, priors_override={})
+    assert_fired_signals(result, (signal for signal in signals if signal != "dkim_present"))
+    if "dkim_present" in signals:
+        assert all("signal:dkim_present" not in posterior.evidence_used for posterior in result.posteriors)
     p = next(p for p in result.posteriors if p.name == node_name)
     return p.posterior

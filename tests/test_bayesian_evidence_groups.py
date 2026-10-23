@@ -7,12 +7,15 @@ the over-counted independent product. See correlation.md section 3.2.
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from recon_tool.bayesian import (  # pyright: ignore[reportPrivateUsage]
+    BayesianNetwork,
     _binding_llr,
     _contributing_evidence,
     _Evidence,
+    _Node,
     infer,
-    load_network,
 )
 
 
@@ -50,16 +53,23 @@ def test_mixed_groups_and_independents() -> None:
     assert "solo" in names
 
 
-def test_grouped_m365_is_less_confident_than_naive_product() -> None:
-    """On the real network, three co-firing M365 slugs land below the
-    over-counted product and reduce to the single strongest binding."""
-    network = load_network()
-    three = infer(network, ["microsoft365", "entra-id", "exchange-online"], [], priors_override={})
-    one = infer(network, ["entra-id"], [], priors_override={})
-    m365_three = next(p for p in three.posteriors if p.name == "m365_tenant")
-    m365_one = next(p for p in one.posteriors if p.name == "m365_tenant")
-    # The group collapses the three readings to the strongest, so the posterior
-    # matches the single-strongest-binding posterior rather than compounding.
-    assert abs(m365_three.posterior - m365_one.posterior) < 1e-9
-    # And it stays well below a degenerate near-1.0 over-count.
-    assert m365_three.posterior < 0.99
+def test_grouped_bindings_retain_one_effective_unit_in_a_synthetic_model() -> None:
+    """A purpose-built model tests grouping without resurrecting retired roles."""
+    bindings = (_ev("a", 0.9, 0.1, "shared"), _ev("b", 0.8, 0.1, "shared"), _ev("c", 0.7, 0.2, "shared"))
+    node = _Node("synthetic", "Synthetic grouped observation", (), 0.3, {}, bindings)
+    network = BayesianNetwork(1, (node,))
+    three = infer(network, ["a", "b", "c"], [], priors_override={}).posteriors[0]
+    one = infer(network, ["a"], [], priors_override={}).posteriors[0]
+    duplicated = infer(network, ["a"] * 3, [], priors_override={}).posteriors[0]
+    naive_node = replace(node, evidence=tuple(replace(binding, group=None) for binding in bindings))
+    naive = infer(replace(network, nodes=(naive_node,)), ["a", "b", "c"], [], priors_override={}).posteriors[0]
+    assert three.evidence_used == ("slug:a", "slug:b", "slug:c")
+    assert one.evidence_used == ("slug:a",)
+    assert duplicated == one
+    assert three.n_eff == one.n_eff == 5.0
+    assert naive.n_eff == 7.0
+    assert not three.sparse
+    assert three.posterior > 0.3
+    assert three.posterior == one.posterior
+    assert naive.posterior > three.posterior
+    assert three.posterior < 0.99

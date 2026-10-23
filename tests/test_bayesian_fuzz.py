@@ -336,23 +336,28 @@ class TestAdversarialInference:
         m365 = next(p for p in result.posteriors if p.name == "m365_tenant")
         assert m365.posterior > 0.5  # significantly above 0.30 prior
 
-    def test_duplicate_observed_slugs(self, shipped_net: BayesianNetwork) -> None:
+    def test_duplicate_observed_role_signals(self, shipped_net: BayesianNetwork) -> None:
         # Passing a duplicate should not double-count it (set semantics
         # internally).
-        single = infer(shipped_net, ["microsoft365"], [], priors_override={})
-        dup = infer(shipped_net, ["microsoft365", "microsoft365", "microsoft365"], [], priors_override={})
+        single = infer(shipped_net, [], ["m365_tenant_observed"], priors_override={})
+        dup = infer(shipped_net, [], ["m365_tenant_observed"] * 3, priors_override={})
         s_m365 = next(p for p in single.posteriors if p.name == "m365_tenant")
         d_m365 = next(p for p in dup.posteriors if p.name == "m365_tenant")
+        assert s_m365.evidence_used == d_m365.evidence_used == ("signal:m365_tenant_observed",)
+        assert s_m365.n_eff == d_m365.n_eff == 5.0
         assert abs(s_m365.posterior - d_m365.posterior) < 1e-6
 
-    def test_negative_conflict_count_treated_as_zero(self, shipped_net: BayesianNetwork) -> None:
+    def test_negative_conflict_count_preserves_finite_display_math(self, shipped_net: BayesianNetwork) -> None:
         # The conflict count is supplied externally. Negative values
         # should not produce wider intervals than zero conflicts.
-        zero = infer(shipped_net, ["microsoft365"], [], conflict_field_count=0, priors_override={})
+        zero = infer(shipped_net, [], ["m365_tenant_observed"], conflict_field_count=0, priors_override={})
         # Engine implementation: max(_MIN_N_EFF, ...) clamps. Negative
         # conflict count would inflate n_eff above the floor — verify
         # that doesn't break interval math.
-        neg = infer(shipped_net, ["microsoft365"], [], conflict_field_count=-5, priors_override={})
+        neg = infer(shipped_net, [], ["m365_tenant_observed"], conflict_field_count=-5, priors_override={})
+        before = next(p for p in zero.posteriors if p.name == "m365_tenant")
+        assert before.evidence_used == ("signal:m365_tenant_observed",)
+        assert before.n_eff == 5.0
 
         def width(r, name):
             p = next(p for p in r.posteriors if p.name == name)
@@ -364,7 +369,10 @@ class TestAdversarialInference:
         assert width(neg, "m365_tenant") <= width(zero, "m365_tenant") + 1e-6
 
     def test_huge_conflict_count_does_not_crash(self, shipped_net: BayesianNetwork) -> None:
-        result = infer(shipped_net, ["microsoft365"], [], conflict_field_count=10**9, priors_override={})
+        result = infer(shipped_net, [], ["m365_tenant_observed"], conflict_field_count=10**9, priors_override={})
+        assert next(p for p in result.posteriors if p.name == "m365_tenant").evidence_used == (
+            "signal:m365_tenant_observed",
+        )
         for p in result.posteriors:
             assert not math.isnan(p.posterior)
             assert not math.isnan(p.interval_low)

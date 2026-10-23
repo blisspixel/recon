@@ -28,6 +28,11 @@ operator, corporate group, ownership, or control.
 
 ### Fixed
 
+- Require current role-observation bindings and effective evidence before
+  Bayesian assurance assertions. Repair vacuous grouping, sensitivity and
+  conflict-band scenarios, retain generic-vendor negatives, and record a
+  reproducible finite sensitivity receipt without changing model parameters.
+
 - Bound batch tenant/name peer projection, token expansion and indexed
   ecosystem pair work independently of qualifying results. Preserve small
   groups and existing JSON array/wrapper shapes, and add explicit diagnostics

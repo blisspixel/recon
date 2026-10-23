@@ -570,23 +570,53 @@ perturbs every CPT entry and every root prior by $\pm 0.10$ across a fixed set
 of canonical evidence scenarios, and records the largest posterior shift each
 perturbation produces anywhere in the network.
 
-On the shipped topology:
+The finite measurements are:
 
-| Statistic | v1.9.0 | Current model (2026-09-20) |
-|---|---|---|
-| Median posterior shift | 0.019 | 0.020 |
-| 95th percentile | 0.109 | 0.100 |
-| Maximum observed | 0.139 | 0.134 |
+| Statistic | Historical v1.9.0 | Historical 2026-09-20 inputs | Role-observation fixtures (2026-10-23) |
+|---|---|---|---|
+| Median summary (new column: upper middle) | 0.019 | 0.020 | 0.0179 |
+| 95th-percentile indexed shift | 0.109 | 0.100 | 0.1000 |
+| Maximum observed | 0.139 | 0.134 | 0.1076 |
 
-The current column reruns the test's three scenarios with prior overrides
-disabled against the current committed parameters. Historical measurements
-from the v1.9.3 split are not current measurements merely because the topology
-is unchanged: later prior and likelihood changes also affect sensitivity.
+The new column covers 120 single-entry perturbation results: 20 root-prior/CPT
+targets, two signed perturbations and three fixed synthetic scenarios, with
+prior overrides explicitly disabled. The upper median uses sorted index
+`N // 2`; the 95th-percentile value uses index `int(0.95 * N)`. The
+[machine-readable receipt](../validation/role-observation-assurance-2026-10-23.json)
+records the exact engine revision, model Git blob and SHA-256, inputs, fired
+bindings, effective mass, sparse states and clipping rules. Reproduce with
+`uv run pytest tests/test_bayesian_sensitivity.py -s`.
+
+The dense M365/GWS cases now start from role-bearing `TenantInfo` fixtures
+through the real adapter. Before numerical assertions, shared scenario
+contracts require the named direct bindings, effective-unit counts, non-sparse
+state and intended node movement. Removing identity observations fails that
+precondition. Generic vendor slugs and verification TXT remain intentional
+nonbinding controls. The empty scenario means no fired observations; it does
+not restore unconditional priors for declarative nodes with informative
+nonfires. Unbound auxiliary observations such as DKIM are not counted as
+additional role evidence.
+
+The historical 2026-09-20 inputs used retired generic M365/GWS vendor slugs;
+they did not establish sensitivity of the dense role scenarios their names
+suggested. Those numbers remain historical receipts, not current positive-role
+assurance. The columns use different observation contracts and are not evidence
+of improved population accuracy, calibration or general robustness. Likewise,
+measurements from the v1.9.3 split do not become current merely because the
+topology is unchanged: priors, likelihoods and actual fired inputs matter.
 The retired `email_security_strong` combined three parents
 with five evidence bindings; its replacements each carry one of those burdens
-and not the other (section 4.9). The test itself asserts a deliberately loose
-regression bound rather than these measured values, so ordinary tuning does not
-trip it and a structural regression still does.
+and not the other (section 4.9). The existing 0.30 maximum-shift and 0.10
+upper-median regression ceilings remain unchanged. They apply to this declared
+grid, not arbitrary CPT perturbations, unseen observations or interval coverage.
+
+Grouping assurance uses a purpose-built model with three fired bindings:
+grouped readings retain one effective unit and match the strongest single
+reading, while the explicitly naive product retains three units. Conflict-band
+cases start above the mass floor and require an actual mass decrease and wider
+band at the same mean. Fixed-mean band checks and one selected positive-role
+example replace a universal claim that arbitrary additional evidence narrows
+intervals; section 4.1 explains why that claim is false.
 
 These measurements bound the observed response to the tested one-at-a-time
 perturbations on this scenario set. They do not establish typical behavior in a
