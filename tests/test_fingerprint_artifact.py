@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none, reportUnknownArgumentType=none
 """Contracts for the deterministic built-in fingerprint artifact."""
 
 from __future__ import annotations

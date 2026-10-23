@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Destination and identity-integrity regressions for the BIMI VMC fetch.
 
 ``_parse_bimi_vmc`` fetches the VMC PEM from the BIMI TXT record's ``a=``

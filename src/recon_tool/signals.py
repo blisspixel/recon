@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownMemberType=none, reportUnknownVariableType=none
 """Signal intelligence engine — derives insights from fingerprint matches.
 
 Signals are organized in three layers (defined in signals.yaml):

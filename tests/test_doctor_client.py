@@ -14,9 +14,9 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from recon_tool import client_doctor
+import recon_tool.mcp_client.client_doctor as client_doctor
 from recon_tool.cli import EXIT_NO_DATA, EXIT_VALIDATION, app
-from recon_tool.client_doctor import check_client
+from recon_tool.mcp_client.client_doctor import check_client
 
 runner = CliRunner()
 

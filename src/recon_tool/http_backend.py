@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownMemberType=none
 """HTTP connection adapter with destination admission at the socket boundary."""
 
 from __future__ import annotations

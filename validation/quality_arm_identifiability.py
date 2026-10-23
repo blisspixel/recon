@@ -14,8 +14,6 @@ of any claimed relationship fails the process instead of publishing a partial
 or misleading result.
 """
 
-# pyright: reportPrivateUsage=false
-
 from __future__ import annotations
 
 import json

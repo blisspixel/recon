@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownMemberType=none, reportUnknownVariableType=none
 """Google Workspace opt-in direct discovery source.
 
 Queries public, unauthenticated endpoints to detect Google Workspace

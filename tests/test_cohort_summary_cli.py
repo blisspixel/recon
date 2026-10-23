@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none, reportUnknownMemberType=none
 """Integration test for `recon batch --summary` via the emit path.
 
 Builds a small cohort of TenantInfo, runs the same _batch_emit_summary the batch
@@ -11,6 +13,7 @@ import io
 import json
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
+from io import StringIO
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -151,6 +154,7 @@ def test_summary_panel_renders() -> None:
         as_json=False,
         schema_version="2.2",
     )
+    assert isinstance(console.file, StringIO)
     out = console.file.getvalue()
     assert "Cohort summary" in out
     assert "DMARC enforcing" in out

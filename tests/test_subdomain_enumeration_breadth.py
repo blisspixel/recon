@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Subdomain enumeration breadth.
 
 The common-prefix wordlist used by the active DNS probe and the

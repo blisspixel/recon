@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportPrivateUsage=none, reportUnknownMemberType=none
+# pyright: reportUnknownParameterType=none
 """Regression tests for import-time version resolution."""
 
 from __future__ import annotations

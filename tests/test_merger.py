@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportPrivateUsage=none, reportUnknownArgumentType=none
+# pyright: reportUnknownParameterType=none
 """Property-based tests for M365 tenant lookup result merger and confidence scoring.
 
 Tests Properties 12-15 from the design document:

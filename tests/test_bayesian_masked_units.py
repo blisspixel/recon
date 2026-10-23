@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownMemberType=none
 """Tests for the ``masked_units`` leave-one-unit-out inference primitive.
 
 ``infer(..., masked_units=...)`` treats an evidence unit (a correlation
@@ -34,6 +36,8 @@ import pytest
 
 from recon_tool.bayesian import (
     BayesianNetwork,
+    InferenceResult,
+    NodePosterior,
     infer,
     infer_from_tenant_info,
     load_network,
@@ -47,11 +51,11 @@ def network() -> BayesianNetwork:
     return load_network()
 
 
-def _posterior(result: object, node: str) -> float:
+def _posterior(result: InferenceResult, node: str) -> float:
     return next(p.posterior for p in result.posteriors if p.name == node)
 
 
-def _node_posterior(result: object, node: str) -> object:
+def _node_posterior(result: InferenceResult, node: str) -> NodePosterior:
     return next(p for p in result.posteriors if p.name == node)
 
 

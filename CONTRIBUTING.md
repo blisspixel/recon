@@ -566,7 +566,10 @@ removes an observation when an entry appears as a substring of its statement.
 
 ## Code changes
 
-- Run `pre-commit run --all-files` or `ruff check .` and `uv run pyright` before submitting.
+- Run the full `uv run python scripts/check.py` gate before pushing. The
+  [effective typing policy](docs/typing-policy.md) explains exact legacy
+  exceptions and the blocking unmasked diagnostic audit; `uv run pyright`
+  alone does not perform that additional audit.
 - Run `uv run python scripts/check.py`; branch-aware project coverage must stay
   at or above the enforced 90.2 percent baseline.
 - Use [tests/README.md](tests/README.md) to find behavior-owned focused suites;

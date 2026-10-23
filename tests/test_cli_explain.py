@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportUnknownMemberType=none, reportUnknownParameterType=none
 """QA Round 3 — CLI --explain flag tests (11.1, 11.6).
 
 Unit tests for:

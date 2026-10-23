@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownMemberType=none, reportUnknownVariableType=none
 """Generated-schema support for the separate ReviewBundle v1 contract."""
 
 from __future__ import annotations

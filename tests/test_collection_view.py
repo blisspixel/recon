@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportArgumentType=none, reportPrivateUsage=none
 """Collection-marker precedence across user-facing tenant surfaces."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportPrivateUsage=none, reportUnknownArgumentType=none
+# pyright: reportUnknownParameterType=none, reportUnknownVariableType=none
 """Tests for the CNAME-chain surface-attribution pipeline.
 
 Covers:
@@ -27,7 +30,7 @@ from recon_tool.fingerprints import (
     inject_ephemeral,
     reload_fingerprints,
 )
-from recon_tool.formatter_classify import category_for_slug
+from recon_tool.formatter.classify import category_for_slug
 from recon_tool.models import SurfaceAttribution, UnclassifiedCnameChain
 from recon_tool.sources import dns as dns_source
 from recon_tool.sources.dns import DNSSource, _classify_chain

@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Tests for the v1.9.2 agentic UX validation harness.
 
 These tests cover three things:

@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportArgumentType=none, reportMissingTypeArgument=none, reportPrivateUsage=none
+# pyright: reportUnknownArgumentType=none, reportUnknownParameterType=none, reportUnknownVariableType=none
 """Forward-compatibility tests for the on-disk cache format.
 
 Backward compatibility (today's reader on a yesterday's cache file) is

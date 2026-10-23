@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownMemberType=none, reportUnknownVariableType=none
 """Client-side MCP config check.
 
 `recon doctor --mcp` and `recon mcp doctor` both validate the *server*:

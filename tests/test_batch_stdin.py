@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none, reportUnknownArgumentType=none
 """`recon batch -` reads the domain list from stdin.
 
 Covers the shared bounded reader (`_read_batch_domains`) directly and the
@@ -9,19 +11,21 @@ from __future__ import annotations
 import io
 import json
 import sys
+from importlib import import_module
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from typer.testing import CliRunner
 
-from recon_tool import cli, cli_batch
+from recon_tool import cli
 from recon_tool.cli import app
-from recon_tool.cli_batch import _BatchInputError
-from recon_tool.cli_batch import read_batch_domains as _read_batch_domains
+from recon_tool.cli.batch import _batch_load_domains, _BatchInputError
+from recon_tool.cli.batch import read_batch_domains as _read_batch_domains
 from recon_tool.formatter import get_console
 from recon_tool.models import ConfidenceLevel, SourceResult, TenantInfo
 
+cli_batch = import_module("recon_tool.cli.batch")
 runner = CliRunner()
 
 RESOLVE_PATH = "recon_tool.resolver.resolve_tenant"
@@ -131,7 +135,7 @@ def test_batch_stdin_decodes_utf8_under_a_non_utf8_console(monkeypatch: pytest.M
     raw = "café.invalid\nbeta.invalid\n".encode()
     monkeypatch.setattr(sys, "stdin", io.TextIOWrapper(io.BytesIO(raw), encoding="cp1252"))
 
-    domains = cli_batch._batch_load_domains("-", get_console(), announce_dupes=False)
+    domains = _batch_load_domains("-", get_console(), announce_dupes=False)
 
     assert domains == ["café.invalid", "beta.invalid"]
 
@@ -140,7 +144,7 @@ def test_batch_stdin_strips_a_leading_byte_order_mark(monkeypatch: pytest.Monkey
     raw = "﻿alpha.invalid\n".encode()
     monkeypatch.setattr(sys, "stdin", io.TextIOWrapper(io.BytesIO(raw), encoding="utf-8"))
 
-    assert cli_batch._batch_load_domains("-", get_console(), announce_dupes=False) == ["alpha.invalid"]
+    assert _batch_load_domains("-", get_console(), announce_dupes=False) == ["alpha.invalid"]
 
 
 def test_batch_file_strips_a_leading_byte_order_mark(tmp_path: Path) -> None:
@@ -152,6 +156,6 @@ def test_batch_file_strips_a_leading_byte_order_mark(tmp_path: Path) -> None:
     listing = tmp_path / "domains.txt"
     listing.write_bytes("﻿alpha.invalid\nbeta.invalid\n".encode())
 
-    domains = cli_batch._batch_load_domains(str(listing), get_console(), announce_dupes=False)
+    domains = _batch_load_domains(str(listing), get_console(), announce_dupes=False)
 
     assert domains == ["alpha.invalid", "beta.invalid"]

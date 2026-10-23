@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownMemberType=none, reportUnknownVariableType=none
 """Bounded proof-carrying contracts for narrow public observations.
 
 This module is intentionally internal. It establishes one executable claim

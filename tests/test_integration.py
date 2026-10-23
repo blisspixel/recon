@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none, reportUnknownVariableType=none
 """Integration tests that hit real network endpoints.
 
 These are skipped by default. Run with:

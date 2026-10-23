@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportIndexIssue=none, reportPrivateUsage=none, reportUnknownArgumentType=none
+# pyright: reportUnknownVariableType=none
 """Tests for `recon mcp install` — the MCP-config installer.
 
 Covers the pure-data layer in `recon_tool.mcp_install` (path resolution,
@@ -18,7 +21,7 @@ from typer.testing import CliRunner
 
 from recon_tool.cli import app
 from recon_tool.cli.mcp import _render_install_verification
-from recon_tool.mcp_install import (
+from recon_tool.mcp_client.install import (
     SUPPORTED_CLIENTS,
     InstallError,
     _os_family,
@@ -902,7 +905,7 @@ class TestVscodeServersKey:
     and `mcpServers` for every other client."""
 
     def test_servers_key_helper(self) -> None:
-        from recon_tool.mcp_install import servers_key
+        from recon_tool.mcp_client.install import servers_key
 
         assert servers_key("vscode") == "servers"
         assert servers_key("claude-code") == "mcpServers"

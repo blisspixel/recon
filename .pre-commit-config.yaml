@@ -17,6 +17,14 @@ repos:
         # Match scripts/check.py and CI: pyproject.toml owns the complete scope,
         # including the explicitly covered validation modules.
 
+      - id: typing-policy
+        name: exact typing exception policy
+        stages: [pre-commit]
+        entry: python scripts/check_typing_policy.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
       # Attribution trailers never appear in a diff, so the added-line gate
       # cannot see them. They must be refused before the commit exists:
       # once a commit is pushed to a pull request branch, GitHub retains its

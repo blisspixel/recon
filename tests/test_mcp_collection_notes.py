@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """MCP text distinguishes unavailable CT from cache and provider recovery."""
 
 from __future__ import annotations

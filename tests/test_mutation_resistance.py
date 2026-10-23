@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportPrivateUsage=none, reportUnknownParameterType=none
 """Targeted mutation resistance tests.
 
 Line coverage measures execution, not test quality. A function with

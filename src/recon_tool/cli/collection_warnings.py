@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownVariableType=none
 """Collect library warnings during collection and summarize them once.
 
 Collectors log through the ``recon`` and ``recon_tool`` loggers. Without

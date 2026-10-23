@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownVariableType=none
 """In-process runtime state for the MCP server: the bounded TTL result cache,
 the per-domain rate limiter, and structured JSON logging.
 

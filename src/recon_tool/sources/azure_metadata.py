@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownMemberType=none, reportUnknownVariableType=none
 """Azure AD tenant metadata endpoint lookup source.
 
 NOTE: This source requires a tenant_id from a prior source to construct

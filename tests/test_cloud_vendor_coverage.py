@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Cloud-vendor canonicalization coverage gap test.
 
 The multi-cloud rollup relies on ``_CLOUD_VENDOR_BY_SLUG`` to collapse

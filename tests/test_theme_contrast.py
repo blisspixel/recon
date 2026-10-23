@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Panel contrast on real Omarchy themes (issue #226).
 
 The panel is rendered with color, every styled span is resolved to the color a

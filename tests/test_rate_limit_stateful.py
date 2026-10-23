@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none, reportUnknownMemberType=none, reportUnknownVariableType=none
 """Stateful (model-based) tests for the adaptive rate limiter + breaker.
 
 The existing `test_rate_limit_properties.py` exercises single operations.

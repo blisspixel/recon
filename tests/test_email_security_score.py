@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none, reportUnknownArgumentType=none
 """Email-security score: one definition, shared by every surface.
 
 Regression coverage for the score-divergence bug: DKIM was double-counted
@@ -28,7 +30,7 @@ from recon_tool.email_security import (
     signal_context_metadata,
 )
 from recon_tool.exposure import _compute_email_security_score
-from recon_tool.formatter_serialize import compute_email_security_score
+from recon_tool.formatter.serialize import compute_email_security_score
 from recon_tool.models import ConfidenceLevel, EvidenceRecord, TenantInfo
 from recon_tool.posture import _compute_metadata_value
 from recon_tool.signals import evaluate_signals

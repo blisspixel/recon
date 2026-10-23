@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Tests for GoogleIdentitySource — Google Workspace identity routing detection.
 
 Covers: lookup(), _classify_response(), _is_federated_redirect(),
@@ -202,18 +204,21 @@ class TestGoogleIdentityLookup:
     async def test_invalid_domain_format(self):
         source = GoogleIdentitySource()
         result = await source.lookup("example.com/path")
+        assert result.error is not None
         assert "Invalid domain" in result.error
 
     @pytest.mark.asyncio
     async def test_invalid_domain_backslash(self):
         source = GoogleIdentitySource()
         result = await source.lookup("example.com\\bad")
+        assert result.error is not None
         assert "Invalid domain" in result.error
 
     @pytest.mark.asyncio
     async def test_invalid_domain_dotdot(self):
         source = GoogleIdentitySource()
         result = await source.lookup("example..com")
+        assert result.error is not None
         assert "Invalid domain" in result.error
 
     @pytest.mark.asyncio
@@ -272,6 +277,7 @@ class TestGoogleIdentityLookup:
             source = GoogleIdentitySource()
             result = await source.lookup("example.com")
 
+        assert result.error is not None
         assert "Network error" in result.error
         assert mock_client.get.await_count == 3
         assert retry_delays == [0.5, 1.5]
@@ -288,6 +294,7 @@ class TestGoogleIdentityLookup:
             source = GoogleIdentitySource()
             result = await source.lookup("example.com")
 
+        assert result.error is not None
         assert "Network error" in result.error
         assert mock_client.get.await_count == 3
         assert retry_delays == [0.5, 1.5]
@@ -304,6 +311,7 @@ class TestGoogleIdentityLookup:
             source = GoogleIdentitySource()
             result = await source.lookup("example.com")
 
+        assert result.error is not None
         assert "Unexpected error" in result.error
 
     def test_source_name(self):

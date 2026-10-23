@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportArgumentType=none, reportPrivateUsage=none, reportUnknownArgumentType=none
+# pyright: reportUnknownMemberType=none
 """Per-parser resource-bound assertions + hostile-input fuzz (the CI fuzz gate).
 
 Each parser at an external boundary carries a named resource cap. The unit and

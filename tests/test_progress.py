@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownVariableType=none
 """Unit tests for the resolve-sweep progress helper (no network)."""
 
 from __future__ import annotations

@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """PV2 inference drift gate.
 
 ``validation/drift_check.py`` fingerprints the Bayesian network's CPT-implied

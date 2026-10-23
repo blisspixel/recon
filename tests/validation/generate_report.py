@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownMemberType=none, reportUnknownVariableType=none
 """Accuracy report generator for the validation corpus.
 
 Resolves all fixture domains from tests/validation/fixtures/ (gitignored),

@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownMemberType=none
 """Bayesian-network inference layer (v1.9; stable v2.0+).
 
 Discrete Bayesian network loaded from

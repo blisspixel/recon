@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Regressions for the schema-pinned Agent Plugins candidate."""
 
 from __future__ import annotations

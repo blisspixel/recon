@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportPrivateUsage=none, reportUnknownArgumentType=none
+# pyright: reportUnknownParameterType=none
 """Render-time fuzz tests on render_tenant_panel.
 
 Fixture and snapshot tests pin specific inputs. Property tests pin

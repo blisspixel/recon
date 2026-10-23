@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """`recon doctor` status vocabulary, JSON rendering, summary, and resolver probe.
 
 Every network edge is stubbed: httpx.AsyncClient, dns.resolver.resolve, the
@@ -20,7 +22,7 @@ import pytest
 from rich.console import Console
 from typer.testing import CliRunner
 
-from recon_tool import client_doctor
+import recon_tool.mcp_client.client_doctor as client_doctor
 from recon_tool.cli import app
 from recon_tool.cli.doctor import (
     RESOLVER_ANSWERS_NONEXISTENT,

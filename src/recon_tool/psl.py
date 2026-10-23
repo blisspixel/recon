@@ -15,7 +15,7 @@ updater, so this stays within recon's lean, offline dependency floor.
 
 from __future__ import annotations
 
-from publicsuffixlist import PublicSuffixList
+from publicsuffixlist import PublicSuffixList  # pyright: ignore[reportMissingTypeStubs]
 
 # Parse the bundled suffix list once. Construction reads and indexes the
 # packaged data file, so a module-level singleton avoids re-parsing it on every

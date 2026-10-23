@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportGeneralTypeIssues=none, reportIndexIssue=none, reportPrivateUsage=none
+# pyright: reportUnknownArgumentType=none, reportUnknownVariableType=none
 """Tests for the private catalog ccTLD-delegation frame preparer."""
 
 from __future__ import annotations

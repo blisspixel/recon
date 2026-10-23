@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none
 """Human units and method labels must agree with unchanged cohort values."""
 
 from __future__ import annotations

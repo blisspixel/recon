@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportArgumentType=none
 """Semantic review cannot be bypassed by retaining a rule's matching key."""
 
 from __future__ import annotations

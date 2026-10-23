@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Tests for the Autodiscover XML parser (ElementTree-based)."""
 
 from __future__ import annotations

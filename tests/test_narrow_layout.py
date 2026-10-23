@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Narrow terminals: lay the panel out once at the real width, never break identifiers.
 
 Acceptance for the width rule in ``formatter/layout.py`` and

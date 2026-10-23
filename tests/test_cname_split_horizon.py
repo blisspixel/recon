@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Specify resolver-view disclosure across the CNAME output surfaces.
 
 The synthetic private view returns an alias absent from the public view.

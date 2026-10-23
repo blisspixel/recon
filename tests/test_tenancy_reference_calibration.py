@@ -1,3 +1,7 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportOperatorIssue=none, reportPrivateUsage=none
+# pyright: reportUnknownArgumentType=none, reportUnknownMemberType=none, reportUnknownParameterType=none
+# pyright: reportUnknownVariableType=none
 """Pin the tenancy-reference-calibration harness's pure logic.
 
 `validation/tenancy_reference_calibration.py` compares the M365 tenancy

@@ -1,3 +1,7 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportArgumentType=none, reportMissingParameterType=none, reportMissingTypeArgument=none
+# pyright: reportUnknownArgumentType=none, reportUnknownMemberType=none, reportUnknownParameterType=none
+# pyright: reportUnknownVariableType=none
 """Unit tests for resolver orchestration."""
 
 from __future__ import annotations

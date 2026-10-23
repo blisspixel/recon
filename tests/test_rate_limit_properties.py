@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Hypothesis-based property tests for the adaptive rate limiter.
 
 Verify invariants the AIMD + breaker design must hold across arbitrary
@@ -34,7 +36,7 @@ from recon_tool.rate_limit import AdaptiveRateLimiter, RateLimited
 # event-sequence strategies; each example is fast in absolute terms
 # but the per-test setup adds enough that the default threshold
 # flagged spurious slowness.
-_HYP_OPTS = {"suppress_health_check": [HealthCheck.too_slow]}
+_HYP_HEALTH_CHECKS = [HealthCheck.too_slow]
 
 
 def _fresh(failure_threshold: int = 3, max_interval: float = 1000.0) -> AdaptiveRateLimiter:
@@ -107,7 +109,7 @@ _op_strategy = st.lists(
 
 
 @given(ops=_op_strategy)
-@settings(**_HYP_OPTS)
+@settings(suppress_health_check=_HYP_HEALTH_CHECKS)
 def test_interval_stays_within_bounds(ops: list[int]) -> None:
     lim = _fresh()
     for op in ops:
@@ -125,7 +127,7 @@ def test_interval_stays_within_bounds(ops: list[int]) -> None:
 
 
 @given(ops=_op_strategy)
-@settings(**_HYP_OPTS)
+@settings(suppress_health_check=_HYP_HEALTH_CHECKS)
 def test_breaker_state_matches_consecutive_failures(ops: list[int]) -> None:
     lim = _fresh(failure_threshold=3)
     for op in ops:
@@ -148,7 +150,7 @@ def test_breaker_state_matches_consecutive_failures(ops: list[int]) -> None:
 
 
 @given(ops=_op_strategy)
-@settings(**_HYP_OPTS)
+@settings(suppress_health_check=_HYP_HEALTH_CHECKS)
 def test_success_after_anything_resets_failure_state(ops: list[int]) -> None:
     lim = _fresh()
     for op in ops:
@@ -167,7 +169,7 @@ def test_success_after_anything_resets_failure_state(ops: list[int]) -> None:
 @given(
     retry_after_s=st.floats(min_value=1.0, max_value=10000.0, allow_nan=False, allow_infinity=False),
 )
-@settings(**_HYP_OPTS)
+@settings(suppress_health_check=_HYP_HEALTH_CHECKS)
 def test_retry_after_acts_as_a_floor(retry_after_s: float) -> None:
     """A Retry-After supplied to on_rate_limited is honored as a floor.
 
@@ -188,7 +190,7 @@ def test_retry_after_acts_as_a_floor(retry_after_s: float) -> None:
 
 
 @given(ops=_op_strategy)
-@settings(**_HYP_OPTS)
+@settings(suppress_health_check=_HYP_HEALTH_CHECKS)
 def test_snapshot_is_json_serializable(ops: list[int]) -> None:
     """``snapshot()`` must be JSON-serializable so the corpus runner can
     persist it to ``ct_budget_summary.json``. A regression that returned
@@ -212,7 +214,7 @@ def test_snapshot_is_json_serializable(ops: list[int]) -> None:
     cap=st.integers(min_value=1, max_value=20),
     drains=st.integers(min_value=1, max_value=20),
 )
-@settings(**_HYP_OPTS)
+@settings(suppress_health_check=_HYP_HEALTH_CHECKS)
 def test_acquire_max_wait_raises_synchronously(cap: int, drains: int) -> None:
     """An acquire that would wait beyond ``max_wait_s`` raises
     RateLimited rather than blocking. This is the corpus-scale

@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Synthetic retained-record tests for narrowly supported catalog claims."""
 
 from __future__ import annotations

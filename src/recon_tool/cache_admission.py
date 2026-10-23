@@ -15,7 +15,7 @@ from recon_tool.cache import tenant_info_from_dict
 from recon_tool.cache_contract import DEFAULT_TTL, MAX_RESULT_CACHE_FILE_BYTES, RESULT_CACHE_VERSION
 from recon_tool.cache_insights import validate_insight_claim_coverage
 from recon_tool.cache_paths import resolve_result_cache_path
-from recon_tool.json_limits import load_bounded_json_file
+from recon_tool.json_limits import is_json_object, load_bounded_json_file
 from recon_tool.models import TenantInfo
 from recon_tool.source_status import collection_incomplete
 from recon_tool.validator import validate_domain
@@ -104,7 +104,7 @@ def read_result_cache_entry(
         maximum_bytes=MAX_RESULT_CACHE_FILE_BYTES,
         maximum_age_seconds=ttl if skip_expired else None,
     )
-    if not isinstance(data, dict):
+    if not is_json_object(data):
         raise ValueError("Result cache payload must be a JSON object")
     if data.get("_cache_version") != RESULT_CACHE_VERSION:
         raise ValueError("Result cache version does not match the current format")

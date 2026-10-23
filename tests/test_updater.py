@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Tests for `recon update` (recon_tool.updater + the CLI command).
 
 The version math, install-method detection, and upgrade-command mapping are

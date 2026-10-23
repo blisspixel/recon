@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownMemberType=none
 """Explanation engine — generates structured ExplanationRecords.
 
 Pure functions that consume pipeline output (signals, insights, confidence,

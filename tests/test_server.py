@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Integration tests for MCP server."""
 
 from __future__ import annotations
@@ -361,7 +363,7 @@ class TestErrors:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     async def test_cancelled_resolve_retains_rate_limit_cooldown(self, mock_resolve: AsyncMock) -> None:
         """Cancellation propagates while retaining the started-work cooldown."""
-        from recon_tool.server_runtime import rate_limit_try_acquire
+        from recon_tool.server.runtime import rate_limit_try_acquire
 
         mock_resolve.side_effect = asyncio.CancelledError()
         with pytest.raises(asyncio.CancelledError):

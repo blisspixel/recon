@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Contract tests for the independent JSON Schema interoperability gate."""
 
 from __future__ import annotations

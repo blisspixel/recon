@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingTypeArgument=none, reportUnknownArgumentType=none, reportUnknownMemberType=none
+# pyright: reportUnknownVariableType=none
 """Pattern-shadowing invariants for detection types with broad patterns.
 
 Provider matchers walk patterns in catalog order. When a broad

@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownMemberType=none, reportUnknownVariableType=none
 """Aggregate panel-surface firings (Multi-cloud, ceiling) across a corpus.
 
 This script consumes a ``results.json`` produced by ``validation/scan.py``

@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownVariableType=none
 """Apply a verified upgrade without depending on the package being replaced.
 
 Windows locks the running ``recon.exe``. The handoff copies this module to a

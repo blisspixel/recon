@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportPrivateUsage=none, reportUnknownMemberType=none
+# pyright: reportUnknownParameterType=none
 """Advanced tests for HTTP module — SSRF transport, retry transport, async SSRF check."""
 
 from __future__ import annotations

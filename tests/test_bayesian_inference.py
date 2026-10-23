@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingTypeArgument=none, reportPrivateUsage=none, reportUnknownMemberType=none
+# pyright: reportUnknownParameterType=none
 """Tests for the v1.9 Bayesian-network inference layer.
 
 Covers:

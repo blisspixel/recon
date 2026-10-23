@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownMemberType=none, reportUnknownVariableType=none
 """Helpers for repeatable live-corpus validation runs.
 
 These utilities wrap the existing batch JSON workflow so validation can be

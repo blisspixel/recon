@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Precision boundaries for fingerprint rules promoted from the rank round."""
 
 from __future__ import annotations

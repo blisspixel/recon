@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none, reportUnknownArgumentType=none, reportUnknownMemberType=none
+# pyright: reportUnknownVariableType=none
 """Property-based tests for recon_tool/exposure.py core functions.
 
 Uses Hypothesis to generate random TenantInfo instances and verify
@@ -9,8 +12,9 @@ from __future__ import annotations
 import ast
 import io
 import re
-from dataclasses import replace
+from dataclasses import fields, is_dataclass, replace
 from pathlib import Path
+from typing import Unpack
 
 import hypothesis.strategies as st
 import pytest
@@ -38,6 +42,7 @@ from recon_tool.exposure import (
 )
 from recon_tool.formatter.exposure import render_exposure_panel, render_gaps_panel
 from recon_tool.models import ConfidenceLevel, EvidenceRecord, TenantInfo
+from tests.tenant_fixtures import TenantInfoArguments, TenantInfoOverrides
 
 # ── Custom Hypothesis strategy for TenantInfo ──────────────────────────
 
@@ -488,9 +493,9 @@ def _collect_string_fields(obj: object) -> list[str]:
     elif isinstance(obj, tuple | list):
         for item in obj:
             strings.extend(_collect_string_fields(item))
-    elif hasattr(obj, "__dataclass_fields__"):
-        for field_name in obj.__dataclass_fields__:
-            strings.extend(_collect_string_fields(getattr(obj, field_name)))
+    elif is_dataclass(obj) and not isinstance(obj, type):
+        for field in fields(obj):
+            strings.extend(_collect_string_fields(getattr(obj, field.name)))
     return strings
 
 
@@ -711,9 +716,9 @@ class TestImportSafety:
 class TestNeutralCopyIntegration:
     """**Validates: Requirements 7.1, 7.2, 7.4, 7.5**"""
 
-    def _make_info(self, **overrides) -> TenantInfo:
+    def _make_info(self, **overrides: Unpack[TenantInfoOverrides]) -> TenantInfo:
         """Create a TenantInfo with sensible defaults, allowing overrides."""
-        defaults = {
+        defaults: TenantInfoArguments = {
             "tenant_id": "tid-test",
             "display_name": "Test Corp",
             "default_domain": "test.onmicrosoft.com",

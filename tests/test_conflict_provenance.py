@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Tests for v1.9.1 conflict provenance on NodePosterior.
 
 The v1.7 conflict-aware merger captures which sources disagreed on

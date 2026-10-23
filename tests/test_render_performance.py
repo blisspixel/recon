@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportUnknownArgumentType=none, reportUnknownParameterType=none
 """Render-time performance bounds.
 
 The renderer must complete in bounded time even on pathological

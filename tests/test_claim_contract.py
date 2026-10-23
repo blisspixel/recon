@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownMemberType=none, reportUnknownVariableType=none
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta

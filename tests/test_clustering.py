@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Tests for shared verification token clustering.
 
 Covers the pure clustering API in recon_tool.clustering:

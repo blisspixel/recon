@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownMemberType=none, reportUnknownVariableType=none
 """Load and match built-in, custom, and process-local fingerprint patterns.
 
 Built-ins use deterministic generated package data. Additive custom YAML under

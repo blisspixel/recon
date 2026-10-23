@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownMemberType=none
 """Insight generation engine — derives intelligence signals from collected data.
 
 Decomposes insight generation into focused, testable generators.

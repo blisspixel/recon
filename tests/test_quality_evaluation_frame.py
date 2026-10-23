@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportIndexIssue=none
 """Contracts for the private v2.11 evaluation-frame preparer."""
 
 from __future__ import annotations

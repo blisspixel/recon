@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """The lookup progress must stay truthful.
 
 The source ladder replaced the single status spinner (issue #227). Its header
@@ -13,8 +15,8 @@ import io
 import pytest
 from rich.console import Console
 
+from recon_tool.cli.lookup import _CHAIN_STATUS_MESSAGE
 from recon_tool.cli.source_ladder import HEADER, run_with_source_ladder
-from recon_tool.cli_lookup import _CHAIN_STATUS_MESSAGE
 from recon_tool.formatter.source_ladder import LadderState
 from recon_tool.models import SourceResult
 

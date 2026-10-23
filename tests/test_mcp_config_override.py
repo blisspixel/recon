@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportArgumentType=none
 """Explicit client profiles and workspace installs are independent of HOME."""
 
 from __future__ import annotations

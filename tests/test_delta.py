@@ -1,20 +1,25 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportMissingTypeArgument=none, reportPrivateUsage=none
+# pyright: reportUnknownArgumentType=none, reportUnknownParameterType=none, reportUnknownVariableType=none
 """Tests for the delta engine."""
 
 import json
 from pathlib import Path
+from typing import Unpack
 
 import pytest
 
 from recon_tool.cache import tenant_info_to_dict
 from recon_tool.constants import SVC_DMARC, SVC_SPF_STRICT
 from recon_tool.delta import compute_delta, load_previous
-from recon_tool.formatter_serialize import format_tenant_dict
+from recon_tool.formatter.serialize import format_tenant_dict
 from recon_tool.models import ConfidenceLevel, DeltaReport, EvidenceRecord, TenantInfo
+from tests.tenant_fixtures import TenantInfoArguments, TenantInfoOverrides
 
 
-def _make_info(**overrides) -> TenantInfo:
+def _make_info(**overrides: Unpack[TenantInfoOverrides]) -> TenantInfo:
     """Create a minimal TenantInfo with overrides."""
-    defaults = {
+    defaults: TenantInfoArguments = {
         "tenant_id": "test-id",
         "display_name": "Test Corp",
         "default_domain": "test.invalid",
@@ -790,6 +795,7 @@ class TestScalarChangesRequireARecordedBaseline:
         assert report.changed_auth_type is None
         assert report.changed_dmarc_policy is None
         assert report.has_changes is False
+        assert report.incomplete_comparison is not None
         suppressed = report.incomplete_comparison.suppressed_fields
         assert "changed_auth_type" in suppressed
         assert "changed_dmarc_policy" in suppressed

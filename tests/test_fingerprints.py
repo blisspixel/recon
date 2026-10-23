@@ -1,3 +1,7 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportArgumentType=none, reportIndexIssue=none, reportMissingParameterType=none
+# pyright: reportPrivateUsage=none, reportUnknownArgumentType=none, reportUnknownMemberType=none
+# pyright: reportUnknownParameterType=none, reportUnknownVariableType=none
 """Tests for fingerprint loading, validation, and pattern matching."""
 
 from __future__ import annotations

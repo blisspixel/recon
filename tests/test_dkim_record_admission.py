@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """DKIM TXT observation admission at the existing selector boundaries."""
 
 from __future__ import annotations

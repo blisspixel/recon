@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportUnknownMemberType=none, reportUnknownParameterType=none
 """Tests for insight generation and tiered output."""
 
 from __future__ import annotations
@@ -5,12 +7,15 @@ from __future__ import annotations
 import io
 import json
 import re
+from io import StringIO
+from typing import Unpack
 
 from rich.console import Console
 
 from recon_tool.formatter import format_tenant_json, render_tenant_panel
 from recon_tool.insights import generate_insights
 from recon_tool.models import ConfidenceLevel, EvidenceRecord, TenantInfo
+from tests.tenant_fixtures import TenantInfoArguments, TenantInfoOverrides
 
 _ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
 
@@ -222,8 +227,8 @@ class TestInsightGeneration:
 
 
 class TestTieredOutput:
-    def _make_info(self, **kwargs) -> TenantInfo:
-        defaults = {
+    def _make_info(self, **kwargs: Unpack[TenantInfoOverrides]) -> TenantInfo:
+        defaults: TenantInfoArguments = {
             "tenant_id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
             "display_name": "TestCo",
             "default_domain": "alpha.invalid",
@@ -255,6 +260,7 @@ class TestTieredOutput:
         # Strip ANSI escape sequences so substring assertions match across
         # styled segments (B3 splits insight labels and values into separate
         # styled appends, which would otherwise break "in output" checks).
+        assert isinstance(c.file, StringIO)
         return _strip_ansi(c.file.getvalue())
 
     def test_default_shows_insights_not_services(self):

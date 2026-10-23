@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none, reportUnknownArgumentType=none, reportUnknownVariableType=none
 """Exercise original-run verification without release writes or live transport."""
 
 from __future__ import annotations

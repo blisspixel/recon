@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownMemberType=none, reportUnknownVariableType=none
 """Fingerprint-discovery library: turn unclassified CNAME chains into candidates.
 
 The single-domain ``recon discover <domain>`` command and the corpus-scale

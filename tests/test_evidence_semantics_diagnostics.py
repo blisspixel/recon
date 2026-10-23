@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingTypeArgument=none, reportUnknownArgumentType=none, reportUnknownParameterType=none
+# pyright: reportUnknownVariableType=none
 """Tests for the 2.2.0 evidence-semantics diagnostics.
 
 Three additive diagnostics ship together as the 2.2 surface:
@@ -21,7 +24,7 @@ from __future__ import annotations
 
 import pytest
 
-from recon_tool.bayesian import BayesianNetwork, infer, load_network
+from recon_tool.bayesian import BayesianNetwork, InferenceResult, NodePosterior, infer, load_network
 from recon_tool.infra_graph import adjusted_rand_index, build_infrastructure_clusters
 
 _POLICY = "email_security_policy_enforcing"
@@ -32,7 +35,7 @@ def network() -> BayesianNetwork:
     return load_network()
 
 
-def _node(result: object, name: str) -> object:
+def _node(result: InferenceResult, name: str) -> NodePosterior:
     return next(p for p in result.posteriors if p.name == name)
 
 

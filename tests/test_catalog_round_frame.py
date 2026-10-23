@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Tests for the fail-closed private catalog-round frame preparer."""
 
 from __future__ import annotations

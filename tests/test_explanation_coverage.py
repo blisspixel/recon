@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Coverage tests for explanation.py insight classification + confidence.
 
 explain_insights classifies insight strings into rule categories. Declarative

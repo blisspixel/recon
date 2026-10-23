@@ -1,8 +1,12 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Tests for intelligence-layer-v2 formatter extensions."""
 
 import json
+from typing import Unpack
 
 from rich.console import Console
+from rich.text import Text
 
 from recon_tool.formatter import (
     format_chain_dict,
@@ -26,10 +30,11 @@ from recon_tool.models import (
     Observation,
     TenantInfo,
 )
+from tests.tenant_fixtures import TenantInfoArguments, TenantInfoOverrides
 
 
-def _make_info(**overrides) -> TenantInfo:
-    defaults = {
+def _make_info(**overrides: Unpack[TenantInfoOverrides]) -> TenantInfo:
+    defaults: TenantInfoArguments = {
         "tenant_id": "tid",
         "display_name": "Test",
         "default_domain": "test.invalid",
@@ -140,6 +145,7 @@ class TestDeltaRendering:
             removed_signals=(),
         )
         panel = render_delta_panel(delta)
+        assert isinstance(panel.renderable, Text)
         assert "Service: New" in panel.renderable.plain
 
     def test_render_delta_panel_neutralizes_controls_in_collection_values(self) -> None:
@@ -153,6 +159,7 @@ class TestDeltaRendering:
             removed_signals=(),
         )
         panel = render_delta_panel(delta)
+        assert isinstance(panel.renderable, Text)
         plain = panel.renderable.plain
         assert "\x1b" not in plain
         assert "\nLine2" not in plain

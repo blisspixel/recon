@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportGeneralTypeIssues=none, reportIndexIssue=none, reportUnknownArgumentType=none
+# pyright: reportUnknownVariableType=none
 """Monthly work is bounded, resumable and distinct from verification dates."""
 
 from __future__ import annotations
@@ -93,7 +96,11 @@ def test_future_history_cannot_claim_a_completed_source_review(
 def test_proposal_claim_serializes_rule_intents_and_requires_remote_resolution(tmp_path: Path) -> None:
     from validation.prepare_catalog_round import canonical_json_digest
 
-    first = {"rule_id": "synthetic.yaml/rule/txt/pattern", "basis_revision": "first", "status": "pending"}
+    first: dict[str, object] = {
+        "rule_id": "synthetic.yaml/rule/txt/pattern",
+        "basis_revision": "first",
+        "status": "pending",
+    }
     first["proposal_id"] = canonical_json_digest(first)
     second = {**first, "basis_revision": "second"}
     second["proposal_id"] = canonical_json_digest({key: value for key, value in second.items() if key != "proposal_id"})

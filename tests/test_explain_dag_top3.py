@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportUnknownArgumentType=none, reportUnknownParameterType=none
 """Tests for v1.9.3.2 top-3 influential-edge rendering in --explain-dag.
 
 Two responsibilities:

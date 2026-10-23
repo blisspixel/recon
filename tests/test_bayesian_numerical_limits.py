@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Numerical failure must not turn accepted extreme models into uniform beliefs."""
 
 from __future__ import annotations

@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """The agent gets the same briefing a human does (ADR-0017).
 
 MCP text was a roll call (every insight and related host joined raw, no role

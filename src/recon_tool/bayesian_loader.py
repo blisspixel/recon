@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownMemberType=none, reportUnknownVariableType=none
 """Bayesian-network YAML loading, parsing, and topology validation.
 
 Extracted from ``bayesian.py`` (docs/roadmap.md god-file track). Builds and

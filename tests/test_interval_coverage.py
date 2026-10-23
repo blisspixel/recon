@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Uncertainty-band perturbation-containment regressions.
 
 ``validation/interval_coverage.py`` measures how often the shipped 80%

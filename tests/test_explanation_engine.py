@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none, reportUnknownArgumentType=none
 """QA Round 2 — Conflict Merge and Explanation Engine tests.
 
 Unit tests and Hypothesis property-based tests for:

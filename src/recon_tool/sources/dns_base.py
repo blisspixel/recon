@@ -97,7 +97,7 @@ class DnsQueryLedger:
     itself. It records response classes only, never record data.
     """
 
-    outcomes: list[tuple[str, str, DnsQueryOutcome]] = field(default_factory=list)
+    outcomes: list[tuple[str, str, DnsQueryOutcome]] = field(default_factory=list[tuple[str, str, DnsQueryOutcome]])
 
     def record(self, name: str, rdtype: str, outcome: DnsQueryOutcome) -> None:
         """Append one query outcome."""

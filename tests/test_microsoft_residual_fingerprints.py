@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Evidence and precision boundaries for reviewed Microsoft residual rules."""
 
 from __future__ import annotations

@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """CPT sensitivity analysis for the v1.9 Bayesian network.
 
 Quantifies how much each posterior moves under a ±0.10 perturbation

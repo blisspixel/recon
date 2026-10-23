@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingTypeArgument=none, reportUnknownArgumentType=none, reportUnknownMemberType=none
+# pyright: reportUnknownParameterType=none, reportUnknownVariableType=none
 """Tests for recon_tool.cohort_summary's compatible 2.1 and opt-in 2.2 contracts.
 
 Pins the statistics and the honest behaviors: declarative public-claim rates
@@ -9,6 +12,7 @@ edge cases that must not crash (empty cohort, no fusion, single domain).
 from __future__ import annotations
 
 import io
+from io import StringIO
 from typing import Any
 
 import pytest
@@ -525,6 +529,7 @@ def test_panel_strips_control_chars_from_record_strings() -> None:
     recs = [_rec(provider="Microsoft 365", cloud_instance="evil\x1b[31mred\x07") for _ in range(3)]
     console = Console(file=io.StringIO(), width=82, force_terminal=False)
     console.print(render_cohort_summary(build_summary_document(recs)))
+    assert isinstance(console.file, StringIO)
     out = console.file.getvalue()
     assert "\x1b" not in out
     assert "\x07" not in out

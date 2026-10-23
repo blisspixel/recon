@@ -280,37 +280,8 @@ venvPath = "."
 # pytest puts the repo root on sys.path; mirror that for pyright, plus src/ so
 # `import recon_tool` resolves to the source under the src layout.
 extraPaths = [".", "src"]
-include = ["src/recon_tool", "tests", "validation/corpus_aggregator.py", "validation/drift_check.py", "validation/quality_arm_identifiability.py"]
-# Global reportUnknown* suppressions are needed across multiple files, not just YAML loaders.
-# Root causes: (1) yaml.safe_load returns Any, propagating through fingerprints.py and
-# signals.py; (2) dnspython's type stubs are incomplete (dns.py); (3) urllib.parse.urlparse
-# returns untyped path components (oidc.py); (4) downstream Any propagation into formatter.py,
-# cli.py, and insights.py. Per-file overrides were evaluated but 7 files are affected;
-# the global suppression is the pragmatic choice until upstream stubs improve.
-reportMissingTypeStubs = false
-# networkx ships its type info via stubs but pyright still warns on
-# "could not be resolved from source" when only the wheel is
-# installed (no source distribution alongside). The stubs are
-# sufficient for our purposes.
-reportMissingModuleSource = false
-reportUnknownMemberType = false
-reportUnknownArgumentType = false
-reportUnknownVariableType = false
-reportUnknownParameterType = false
-
-# Test-only relaxations. Tests legitimately reach into private APIs for
-# white-box behavior verification, omit parameter annotations on fixtures
-# that pytest injects by name (`mock_resolve`, `tmp_path`, etc.), and use
-# untyped test-helper `_fixture` methods. Production code stays strict.
-[[tool.pyright.executionEnvironments]]
-root = "tests"
-reportPrivateUsage = "none"
-reportMissingParameterType = "none"
-reportUnusedFunction = "none"
-reportMissingTypeArgument = "none"
-reportArgumentType = "none"
-reportOperatorIssue = "none"
-reportIndexIssue = "none"
-reportGeneralTypeIssues = "none"
-reportOptionalMemberAccess = "none"
-reportAttributeAccessIssue = "none"
+include = ["src/recon_tool", "tests", "validation/corpus_aggregator.py", "validation/drift_check.py", "validation/quality_arm_identifiability.py", "scripts/check_typing_policy.py"]
+# All strict diagnostic families apply by default, including to tests.
+# Exact legacy exceptions and their ownership are documented and ratcheted in
+# docs/typing-policy.md and docs/typing-exceptions.json.
+reportMissingModuleSource = "error"

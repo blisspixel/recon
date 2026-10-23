@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Fail-closed retry semantics for the dependency-audit runner."""
 
 from __future__ import annotations
@@ -9,7 +11,7 @@ from pathlib import Path
 
 import pytest
 import yaml
-from pip_audit._dependency_source.requirement import RequirementSource
+from pip_audit._dependency_source.requirement import RequirementSource  # pyright: ignore[reportMissingTypeStubs]
 
 from scripts import run_dependency_audit
 

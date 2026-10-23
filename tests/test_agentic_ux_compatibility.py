@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportUnknownArgumentType=none, reportUnknownParameterType=none
 """Re-render the v1.9.2 agentic UX fixtures through v1.9.9.
 
 The v1.9.2 agentic-UX milestone validated that AI agents read the panel

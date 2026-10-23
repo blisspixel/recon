@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Release preparation transactions against disposable, offline Git repositories."""
 
 from __future__ import annotations

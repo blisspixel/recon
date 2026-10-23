@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportPrivateUsage=none, reportUnknownParameterType=none
 """Precision boundaries for fingerprint rules promoted from the regional round."""
 
 from __future__ import annotations

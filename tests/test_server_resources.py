@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Tests for the MCP catalog resources.
 
 Agents browse `recon://fingerprints`, `recon://signals`,
@@ -16,7 +18,7 @@ import json
 
 from recon_tool.fingerprints import load_fingerprints
 from recon_tool.profiles import list_profiles
-from recon_tool.server_introspection import (
+from recon_tool.server.introspection import (
     _resource_fingerprints,
     _resource_profiles,
     _resource_signals,

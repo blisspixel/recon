@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownMemberType=none, reportUnknownVariableType=none
 """Stateless cohort summary over a batch of recon records.
 
 This is the thin, in-core surface for `recon batch --summary`: one cohort in, one

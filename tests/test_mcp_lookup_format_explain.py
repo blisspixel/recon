@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Every accepted MCP lookup format honors its explanation flag offline."""
 
 from __future__ import annotations

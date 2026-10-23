@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Pin the scoring math the validation diagnostics rest on.
 
 The historical synthetic ECE, CAL8 sensitivity deviations, and Brier scores in

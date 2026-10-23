@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportIndexIssue=none, reportPrivateUsage=none, reportUnknownArgumentType=none
 """Tests for the bounded official regional-source freezer."""
 
 from __future__ import annotations

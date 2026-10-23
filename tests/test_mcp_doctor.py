@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Tests for the live `recon mcp doctor` JSON-RPC self-check.
 
 The handshake actually spawns a subprocess and exercises the MCP
@@ -22,8 +24,7 @@ import pytest
 from typer.testing import CliRunner
 
 from recon_tool.cli import app
-from recon_tool.mcp_client.sdk_compat import SDK_FAMILY
-from recon_tool.mcp_doctor import (
+from recon_tool.mcp_client.doctor import (
     REQUIRED_RESOURCES,
     REQUIRED_TOOLS,
     DoctorCheck,
@@ -36,6 +37,7 @@ from recon_tool.mcp_doctor import (
     _validate_resource_read,
     run_doctor,
 )
+from recon_tool.mcp_client.sdk_compat import SDK_FAMILY
 
 pytest.importorskip("mcp")
 
@@ -730,7 +732,7 @@ class TestCLI:
 class TestLaunchScopes:
     def test_generated_config_mirrors_the_installer_block(self, tmp_path: Path) -> None:
         from recon_tool.mcp_client.doctor import generated_launch_config
-        from recon_tool.mcp_install import build_recon_block
+        from recon_tool.mcp_client.install import build_recon_block
 
         block = build_recon_block()
         config = generated_launch_config(tmp_path)

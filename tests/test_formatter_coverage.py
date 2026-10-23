@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Targeted coverage tests for formatter rendering paths.
 
 Exercises panel render branches that weren't hit by the existing test

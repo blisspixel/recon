@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Contract tests for the narrow MCP SDK compatibility boundary."""
 
 from __future__ import annotations

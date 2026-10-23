@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Color roles, color precedence and the ASCII glyph fallback (issue #226).
 
 The role table in ``formatter/theme.py`` is the only place a renderer color is

@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportOperatorIssue=none, reportPrivateUsage=none
 """Tests for the fingerprint freshness mechanism (verified date + auditor).
 
 The ``verified`` date is advisory metadata: it does not affect matching, but it

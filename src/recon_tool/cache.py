@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownMemberType=none, reportUnknownVariableType=none
 """Lightweight JSON disk cache for serialized ``TenantInfo`` values.
 
 Entries expire lazily and cache I/O degrades to misses instead of escaping errors.

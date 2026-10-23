@@ -1,0 +1,11 @@
+from pathlib import Path
+
+from recon_tool.json_limits import load_bounded_json_file
+
+
+def needs_text(value: str) -> str:
+    return value
+
+
+loaded, _stat, _elapsed = load_bounded_json_file(Path("example.json"), maximum_bytes=1024)
+needs_text(loaded)  # expected: reportArgumentType

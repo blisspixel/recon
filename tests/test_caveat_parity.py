@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Caveat parity across every lookup surface (issue #229).
 
 Two qualifiers travel with a lookup result: a provider-reported display name

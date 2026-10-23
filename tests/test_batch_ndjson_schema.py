@@ -1,3 +1,7 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportMissingTypeArgument=none, reportPrivateUsage=none
+# pyright: reportUnknownArgumentType=none, reportUnknownMemberType=none, reportUnknownParameterType=none
+# pyright: reportUnknownVariableType=none
 """Batch / NDJSON record contract.
 
 The single-domain ``--json`` contract is pinned by
@@ -241,7 +245,7 @@ def test_batch_token_overlap_ignores_unavailable_apex_txt(capsys) -> None:
             degraded_sources=("dns:apex_txt",),
         ),
     }
-    records = [{"queried_domain": domain} for domain in infos]
+    records: list[object] = [{"queried_domain": domain} for domain in infos]
 
     from recon_tool.cli import _batch_emit_json
 
@@ -261,7 +265,7 @@ def test_batch_ecosystem_ignores_unavailable_bimi(capsys) -> None:
             degraded_sources=("dns:bimi",),
         ),
     }
-    records = [{"queried_domain": domain} for domain in infos]
+    records: list[object] = [{"queried_domain": domain} for domain in infos]
 
     from recon_tool.cli import _batch_emit_json
 
@@ -282,7 +286,7 @@ def test_batch_ecosystem_uses_collection_observable_slugs(capsys) -> None:
             degraded_sources=("dns:apex_txt",),
         ),
     }
-    records = [{"queried_domain": domain} for domain in infos]
+    records: list[object] = [{"queried_domain": domain} for domain in infos]
 
     from recon_tool.cli import _batch_emit_json
 
@@ -299,7 +303,7 @@ def test_shared_tenant_uses_positive_identity_across_dns_degradation(capsys) -> 
         "a.invalid": _cross_domain_info("a.invalid", tenant_id=tenant_id),
         "b.invalid": _cross_domain_info("b.invalid", tenant_id=tenant_id, degraded_sources=("dns",)),
     }
-    records = [{"queried_domain": domain} for domain in infos]
+    records: list[object] = [{"queried_domain": domain} for domain in infos]
 
     from recon_tool.cli import _batch_emit_json
 
@@ -326,7 +330,7 @@ def test_shared_tenant_excludes_conflicted_identity(capsys) -> None:
         "a.invalid": _cross_domain_info("a.invalid", tenant_id=tenant_id),
         "b.invalid": _cross_domain_info("b.invalid", tenant_id=tenant_id, merge_conflicts=conflicts),
     }
-    records = [{"queried_domain": domain} for domain in infos]
+    records: list[object] = [{"queried_domain": domain} for domain in infos]
 
     from recon_tool.cli import _batch_emit_json
 

@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none, reportUnknownArgumentType=none
 """Section-link gate: every correlation.md cross-reference resolves.
 
 ``scripts/check_section_links.py`` parses correlation.md's headings and verifies

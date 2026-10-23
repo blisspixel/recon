@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportPrivateUsage=none, reportUnknownArgumentType=none
+# pyright: reportUnknownParameterType=none, reportUnknownVariableType=none
 """Tests for DNS sub-detectors: BIMI, MTA-STS, NS, CNAME infra, Domain Connect,
 subdomain TXT, CAA, and SRV records.
 

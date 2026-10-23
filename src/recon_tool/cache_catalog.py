@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownVariableType=none
 """Cache serialization for the opt-in catalog-discovery payload.
 
 ``--include-unclassified`` produces three related collections: the unclassified

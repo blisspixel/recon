@@ -10,6 +10,7 @@ the gloss belongs on the row, and only where the gap is wide enough to jar.
 from __future__ import annotations
 
 import io
+from io import StringIO
 
 import pytest
 from rich.console import Console
@@ -45,6 +46,7 @@ def _claim(low: float) -> PosteriorObservation:
 def _panel_text(info: TenantInfo) -> str:
     console = Console(file=io.StringIO(), width=78, no_color=True, legacy_windows=False)
     console.print(render_tenant_panel(info))
+    assert isinstance(console.file, StringIO)
     return console.file.getvalue()
 
 

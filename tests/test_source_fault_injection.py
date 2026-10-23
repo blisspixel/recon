@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Source-boundary fault injection (Track B, B3).
 
 The per-source tests (e.g. `test_sources/test_oidc.py`) already prove each

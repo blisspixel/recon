@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportPrivateUsage=none, reportUnknownParameterType=none
 """Phase 2b: tests for the MCP agentic and introspection tools.
 
 Covers tools that didn't get coverage in v0.9.1 or earlier v0.9.2 work:

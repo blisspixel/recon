@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Server-tool coverage for the Bayesian + token-clustering MCP tools (Track B, B4).
 
 `get_posteriors`, `explain_dag`, and `cluster_verification_tokens` were the

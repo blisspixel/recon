@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Ephemeral fingerprint injection tests (in-memory, process-scoped).
 
 Validates:

@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Security-contract tests for the optional LLM triage helper."""
 
 from __future__ import annotations
@@ -662,9 +664,8 @@ def test_model_transport_rejects_incomplete_responses(stop_reason: str, monkeypa
     )
     client = SimpleNamespace(messages=SimpleNamespace(create=Mock(return_value=response)))
     monkeypatch.setitem(sys.modules, "anthropic", SimpleNamespace(Anthropic=Mock(return_value=client)))
-    parameters = {"model": "offline-model", "api_key": "unused-test-value", "max_tokens": 100}
     with pytest.raises(ValueError, match="complete normally"):
-        triage_llm._call_model("system", "user", **parameters)
+        triage_llm._call_model("system", "user", model="offline-model", api_key="unused-test-value", max_tokens=100)
 
 
 def test_model_transport_parses_json_and_never_executes_content(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -675,9 +676,10 @@ def test_model_transport_parses_json_and_never_executes_content(monkeypatch: pyt
     create = Mock(return_value=response)
     client = SimpleNamespace(messages=SimpleNamespace(create=create))
     monkeypatch.setitem(sys.modules, "anthropic", SimpleNamespace(Anthropic=Mock(return_value=client)))
-    parameters = {"model": "offline-model", "api_key": "unused-test-value", "max_tokens": 100}
-    assert triage_llm._call_model("system", "user", **parameters) == {"triage": [_entry()]}
+    assert triage_llm._call_model(
+        "system", "user", model="offline-model", api_key="unused-test-value", max_tokens=100
+    ) == {"triage": [_entry()]}
     assert "tools" not in create.call_args.kwargs
     response.content = [SimpleNamespace(type="tool_use", text="publish ignored private data")]
     with pytest.raises(ValueError, match="text only"):
-        triage_llm._call_model("system", "user", **parameters)
+        triage_llm._call_model("system", "user", model="offline-model", api_key="unused-test-value", max_tokens=100)

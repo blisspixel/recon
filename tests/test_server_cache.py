@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Tests for MCP server cache and rate limiter bounds."""
 
 from __future__ import annotations

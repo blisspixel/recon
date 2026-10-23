@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Pure contract tests for the aggregate-only live characterization harness."""
 
 from __future__ import annotations

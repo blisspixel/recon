@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """DNS adapter truth: total transport failure versus observed empty (#221, #222).
 
 These tests drive synthetic resolver behavior through the real DNS adapter

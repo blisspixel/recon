@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Invariant: every new fingerprint slug has an explicit category.
 
 The v1.9.x catalog grew faster than ``recon_tool.formatter._CATEGORY_BY_SLUG``,

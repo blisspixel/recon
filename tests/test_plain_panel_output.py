@@ -18,6 +18,7 @@ to grep, went missing on exactly the record class the role split exists for.
 from __future__ import annotations
 
 from dataclasses import replace
+from io import StringIO
 
 import pytest
 
@@ -199,6 +200,7 @@ def test_the_two_renderers_name_the_same_related_domains() -> None:
     info = _rich_record()
     console = Console(file=io.StringIO(), width=78, no_color=True, legacy_windows=False)
     console.print(render_tenant_panel(info))
+    assert isinstance(console.file, StringIO)
     panel = console.file.getvalue()
 
     listed = [

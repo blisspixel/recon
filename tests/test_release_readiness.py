@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportArgumentType=none, reportPrivateUsage=none, reportUnknownMemberType=none
+# pyright: reportUnknownVariableType=none
 """Release-readiness gate regressions."""
 
 from __future__ import annotations
