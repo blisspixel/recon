@@ -83,6 +83,7 @@ _STAGES: list[tuple[str, str, list[str]]] = [
     (_CORE, "fingerprint-artifact", [_PY, "scripts/generate_fingerprint_catalog.py", "--check"]),
     (_CORE, "metadata-coverage", [_PY, "scripts/check_metadata_coverage.py"]),
     (_CORE, "fingerprint-freshness", [_PY, "scripts/check_fingerprint_freshness.py"]),
+    (_CORE, "catalog-overlaps", [_PY, "-m", "scripts.check_catalog_overlaps"]),
     (_CORE, "validation-hygiene", [_PY, "scripts/check_validation_hygiene.py"]),
     (_CORE, "agent-portability-contract", [_PY, "-m", "validation.agent_portability_contract"]),
     (_CORE, "agent-plugin-generated", [_PY, "scripts/generate_agent_plugin.py", "--check"]),

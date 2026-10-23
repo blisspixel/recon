@@ -28,6 +28,12 @@ operator, corporate group, ownership, or control.
 
 ### Fixed
 
+- Gate cross-slug catalog overlaps with shared synthetic witnesses and reviewed
+  retained provenance, including equal patterns and differently written
+  regexes. Require exact review dispositions for rule additions, retirements
+  and claim/provenance edits while keeping source-check dates distinct from
+  editorial changes.
+
 - Characterize shared-response identity deductions and distinguish individual
   model-unit masks from complete source withdrawal. Preserve separately
   supported roles, conflicts and missing observations in offline regression

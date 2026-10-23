@@ -69,6 +69,59 @@ See the [maintainer acceptance rule](maintainer-loop-runbook.md#acceptance-rule)
    A hash is an integrity commitment, not anonymization or collector attestation;
    small-cell suppression alone is not a general privacy guarantee.
 
+## Matcher overlap and claim review gates
+
+`uv run python -m scripts.check_catalog_overlaps` checks canonical YAML rules
+against the shared
+[synthetic witness corpus](../tests/fixtures/catalog-match-witnesses.json),
+plus deterministic literal-host positives, child hosts and deceptive
+prefix/suffix variants. Equal-pattern rules across different slugs are also
+reported when no witness is available. Different regex spellings are tested
+on the same values. This is finite candidate-match coverage before first-match
+selection or AND gating, not a general regex-equivalence solver, a claim that
+every rule has a positive witness, or evidence of real-world precision.
+
+An overlap diagnostic includes both source/slug/type/pattern IDs and its
+synthetic witness. Narrow or retire an accidental collision. An intentional
+overlap belongs in
+[catalog-overlap-reviews.json](catalog-overlap-reviews.json), with its reason,
+expected retained rule IDs, record type and namespace scope. The gate replays
+actual CNAME tier selection for those exceptions. A specificity exception must
+retain one selected rule; a distinct-role exception must retain both roles.
+Other record families need their own explicit selection proof before expanding
+exception support. Stale exceptions fail. Oracle's existing overlap retains
+Fusion as application and OCI as infrastructure, from one CNAME observation;
+the old suppression comment was inaccurate. Multiple roles are not independent
+corroboration.
+
+The existing diff-aware
+`uv run python scripts/check_fingerprint_freshness.py` now also compares claim
+metadata under unchanged matching keys. Entry-level subject, category, role,
+confidence and grouping context, plus rule descriptions, references, tier,
+weight and other rule fields participate. Description whitespace is normalized.
+Added/removed rules, meaningful edits and changes to `verified` require an
+exact before/after disposition in
+[catalog-rule-reviews.json](catalog-rule-reviews.json). The diagnostic prints
+the required digests; an absent side is JSON `null`. Matching-key changes need
+both retirement and addition dispositions. Historical dispositions remain as
+review evidence and cannot authorize a different metadata revision.
+
+Each disposition records `semantic` or `editorial`, a real `reviewed_on` date,
+a reason with supporting basis, and `source_checked_on` or JSON `null` when the
+source was not checked. Editorial dispositions permit description spelling or
+layout corrections; structural, role and reference changes require semantic
+review. Whitespace-only edits need no record. A review can narrow an unsupported
+claim without pretending the vendor source was rechecked. Advancing `verified`
+requires the actual declared source-check date, independently of the local
+edit/review date. Removing an unsupported verification date is also reviewable.
+A changed URL or description alone supplies no fresh verification evidence.
+These offline gates validate the review record's consistency; they do not
+prove that a reviewer read a source or that a vendor's configuration is current.
+
+Both gates run locally in `scripts/check.py` and in blocking catalog CI. Keep
+the original positive/lookalike/sparse/provenance tests as well: a passing finite
+witness corpus does not replace claim-specific regression evidence.
+
 ## Executable path
 
 Run from the checkout root. The strict plan schemas and specialized rank,

@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "reviews": [
+    {
+      "rules": [
+        "surface.yaml/oracle-cloud/cname_target/oraclecloud.com",
+        "surface.yaml/oracle-fusion/cname_target/fa.oraclecloud.com"
+      ],
+      "disposition": "distinct_roles",
+      "reason": "The same related-host CNAME matches Fusion at application tier and OCI at infrastructure tier. classify_chain retains both roles from one observation; these are not independent corroborating sources. This corrects the old substring exception's suppression explanation without changing runtime attribution.",
+      "retained": [
+        "surface.yaml/oracle-cloud/cname_target/oraclecloud.com",
+        "surface.yaml/oracle-fusion/cname_target/fa.oraclecloud.com"
+      ],
+      "source_type": "CNAME",
+      "scope": "related_host"
+    }
+  ]
+}

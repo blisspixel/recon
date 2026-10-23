@@ -1,0 +1,302 @@
+[
+  {
+    "detection_type": "cname",
+    "value": "trace.p.api.smith.langchain.com",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname",
+    "value": "trace.p.api.smith.langchain.com.attacker.invalid",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname",
+    "value": "d.sni.global.fastly.net",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname",
+    "value": "d.sni.global.fastly.net.attacker.invalid",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname",
+    "value": "dualstack.k.shared.global.fastlylb.net",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname",
+    "value": "dualstack.k.shared.global.fastlylb.net.attacker.invalid",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname",
+    "value": "myapp.fly.dev",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname",
+    "value": "myapp.fly.dev.attacker.invalid",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname",
+    "value": "myapp.edgeapp.net",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname",
+    "value": "myapp.edgeapp.net.attacker.invalid",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname",
+    "value": "myproject.up.railway.app",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname",
+    "value": "myproject.up.railway.app.attacker.invalid",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname",
+    "value": "ingest.us0.signalfx.com",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname",
+    "value": "ingest.us0.signalfx.com.attacker.invalid",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname",
+    "value": "tenant.id.idaptive.com",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname",
+    "value": "tenant.id.idaptive.com.attacker.invalid",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname",
+    "value": "tenant.id.idaptive.app",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname",
+    "value": "tenant.id.idaptive.app.attacker.invalid",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname",
+    "value": "authenticator.beyondidentity.com",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname",
+    "value": "authenticator.beyondidentity.com.attacker.invalid",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname",
+    "value": "tenant.vmwareidentity.com",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname",
+    "value": "tenant.vmwareidentity.com.attacker.invalid",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname",
+    "value": "tenant.workspaceoneaccess.com",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname",
+    "value": "tenant.workspaceoneaccess.com.attacker.invalid",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname",
+    "value": "synthetic.fa.oraclecloud.com",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname",
+    "value": "synthetic.fa.oraclecloud.com.attacker.invalid",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname_target",
+    "value": "trace.p.api.smith.langchain.com",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname_target",
+    "value": "trace.p.api.smith.langchain.com.attacker.invalid",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname_target",
+    "value": "d.sni.global.fastly.net",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname_target",
+    "value": "d.sni.global.fastly.net.attacker.invalid",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname_target",
+    "value": "dualstack.k.shared.global.fastlylb.net",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname_target",
+    "value": "dualstack.k.shared.global.fastlylb.net.attacker.invalid",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname_target",
+    "value": "myapp.fly.dev",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname_target",
+    "value": "myapp.fly.dev.attacker.invalid",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname_target",
+    "value": "myapp.edgeapp.net",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname_target",
+    "value": "myapp.edgeapp.net.attacker.invalid",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname_target",
+    "value": "myproject.up.railway.app",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname_target",
+    "value": "myproject.up.railway.app.attacker.invalid",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname_target",
+    "value": "ingest.us0.signalfx.com",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname_target",
+    "value": "ingest.us0.signalfx.com.attacker.invalid",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname_target",
+    "value": "tenant.id.idaptive.com",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname_target",
+    "value": "tenant.id.idaptive.com.attacker.invalid",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname_target",
+    "value": "tenant.id.idaptive.app",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname_target",
+    "value": "tenant.id.idaptive.app.attacker.invalid",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname_target",
+    "value": "authenticator.beyondidentity.com",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname_target",
+    "value": "authenticator.beyondidentity.com.attacker.invalid",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname_target",
+    "value": "tenant.vmwareidentity.com",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname_target",
+    "value": "tenant.vmwareidentity.com.attacker.invalid",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname_target",
+    "value": "tenant.workspaceoneaccess.com",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname_target",
+    "value": "tenant.workspaceoneaccess.com.attacker.invalid",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname_target",
+    "value": "synthetic.fa.oraclecloud.com",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "cname_target",
+    "value": "synthetic.fa.oraclecloud.com.attacker.invalid",
+    "owner": "synthetic.example.com"
+  },
+  {
+    "detection_type": "txt",
+    "value": "MS=ms12345678",
+    "owner": "example.com"
+  },
+  {
+    "detection_type": "txt",
+    "value": "note=MS=ms12345678",
+    "owner": "example.com"
+  },
+  {
+    "detection_type": "txt",
+    "value": "google-site-verification=synthetic-token",
+    "owner": "example.com"
+  },
+  {
+    "detection_type": "txt",
+    "value": "forward-email-site-verification=synthetic-token",
+    "owner": "example.com"
+  },
+  {
+    "detection_type": "txt",
+    "value": "forward-email-site-verification=",
+    "owner": "example.com"
+  },
+  {
+    "detection_type": "txt",
+    "value": "note=forward-email-site-verification=synthetic-token",
+    "owner": "example.com"
+  },
+  {
+    "detection_type": "subdomain_txt",
+    "value": "synthetic-token",
+    "owner": "_slack-challenge.example.com"
+  },
+  {
+    "detection_type": "subdomain_txt",
+    "value": "",
+    "owner": "_slack-challenge.example.com"
+  }
+]
