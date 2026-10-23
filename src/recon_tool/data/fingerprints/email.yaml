@@ -683,3 +683,63 @@ fingerprints:
       acquired by Mimecast). Indicates the domain sends DMARC
       aggregate reports for analysis; commonly seen alongside
       Mimecast gateway use.
+
+- name: ImprovMX
+  slug: improvmx
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: mx
+    pattern: mx1.improvmx.com
+    reference: https://www.improvmx.com/api/v4/
+    verified: 2026-10-23
+    description: Published inbound-mail routing toward ImprovMX's documented primary MX host. Uses the
+      existing DNS-label suffix matcher, which also admits child hosts. Does not establish successful
+      forwarding, a mailbox, destination, delivery or paid plan. White-label routing may be unobserved.
+  - type: mx
+    pattern: mx2.improvmx.com
+    reference: https://improvmx.com/guides/white-label-mx-records/
+    verified: 2026-10-23
+    description: Published inbound-mail routing toward ImprovMX's documented secondary MX host. Uses DNS-label
+      suffix matching, including child hosts. Does not establish forwarding success, mailbox existence,
+      destination, delivery or paid plan. White-label routing may be unobserved.
+  - type: spf
+    pattern: spf.improvmx.com
+    reference: https://www.improvmx.com/api/v4/
+    verified: 2026-10-23
+    description: Declared SPF policy reference to the documented ImprovMX SPF domain, matched on parsed
+      reachable include or redirect targets using DNS-label suffixes. Does not establish full sender authorization,
+      primary sender, message activity, delivery or an active account.
+- name: Forward Email
+  slug: forward-email
+  category: Email & Communication
+  confidence: high
+  detections:
+  - type: mx
+    pattern: mx1.forwardemail.net
+    reference: https://forwardemail.net/en/faq
+    verified: 2026-10-23
+    description: Published inbound-mail routing toward Forward Email's documented primary MX host. Uses
+      DNS-label suffix matching, including child hosts. Does not establish successful forwarding, a mailbox,
+      destination, delivery, paid plan or active service use.
+  - type: mx
+    pattern: mx2.forwardemail.net
+    reference: https://forwardemail.net/en/faq
+    verified: 2026-10-23
+    description: Published inbound-mail routing toward Forward Email's documented secondary MX host. Uses
+      DNS-label suffix matching, including child hosts. Does not establish successful forwarding, a mailbox,
+      destination, delivery, paid plan or active service use.
+  - type: txt
+    pattern: ^forward-email-site-verification=\S+$
+    reference: https://forwardemail.net/en/faq
+    verified: 2026-10-23
+    description: Published Forward Email verification/configuration marker with a nonempty token, anchored
+      to the full TXT value. Does not prove completed verification, active service use or ownership. Plaintext
+      forward-email= destination rules are outside this detection's scope.
+  - type: spf
+    pattern: spf.forwardemail.net
+    reference: https://forwardemail.net/en/faq#how-do-i-set-up-spf-for-forward-email
+    verified: 2026-10-23
+    description: Declared SPF policy reference to Forward Email's documented SPF domain, matched on parsed
+      reachable include or redirect targets using DNS-label suffixes. Does not establish full sender authorization,
+      primary sender, message activity, delivery or an active account.

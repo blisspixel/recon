@@ -5545,3 +5545,17 @@ fingerprints:
       This does not establish completed domain setup, a running application,
       accessible data, a product plan, or account ownership. Self-hosted and
       apex A-record configurations need not publish this target.
+
+- name: Convex
+  slug: convex
+  category: Cloud
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: ^convex\.domains\.?$
+    tier: application
+    reference: https://docs.convex.dev/production/abuse-protection
+    verified: 2026-10-23
+    description: CNAME routing to the documented Convex custom-domain target convex.domains. Applies to
+      the queried related host, not an apex-wide service inventory. Does not establish an active deployment,
+      traffic, plan, ownership or security state. Child targets are not admitted.

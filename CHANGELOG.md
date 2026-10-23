@@ -26,6 +26,13 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Added
+
+- Add documented Convex custom-domain routing, ImprovMX and Forward Email MX
+  routing and SPF policy references, plus Forward Email's nonempty verification
+  marker. Preserve record roles, related-host scope and existing suffix grammar;
+  no additional probes or active-use claims.
+
 ### Fixed
 
 - Gate cross-slug catalog overlaps with shared synthetic witnesses and reviewed

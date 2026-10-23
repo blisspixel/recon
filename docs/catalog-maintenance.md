@@ -122,6 +122,33 @@ Both gates run locally in `scripts/check.py` and in blocking catalog CI. Keep
 the original positive/lookalike/sparse/provenance tests as well: a passing finite
 witness corpus does not replace claim-specific regression evidence.
 
+### Documented family review, 2026-10-23
+
+The [Convex abuse-protection guide](https://docs.convex.dev/production/abuse-protection)
+documents the literal `convex.domains` custom-domain CNAME target. Its rule is
+anchored to that target, including the optional DNS root dot. Attribution stays
+with the queried related host and does not establish active deployment, traffic,
+plan, ownership or security state. No `_convex_domains` TXT probes were added.
+
+The [ImprovMX API reference](https://www.improvmx.com/api/v4/) and
+[white-label guide](https://improvmx.com/guides/white-label-mx-records/) support
+the `mx1.improvmx.com`, `mx2.improvmx.com` and `spf.improvmx.com` rules.
+The [Forward Email FAQ](https://forwardemail.net/en/faq) supports its two
+`mx1`/`mx2.forwardemail.net` MX targets, `spf.forwardemail.net`, and the anchored
+nonempty `forward-email-site-verification=` marker. MX and SPF reuse existing
+DNS-label suffix matching, including child hosts; this is not exact-host
+enforcement. SPF is a parsed policy reference, not full sender authorization.
+The TXT marker does not establish completed verification or active use.
+
+All eight rules record the actual 2026-10-23 source-check date and an exact
+addition disposition. The synthetic family tests preserve raw records and
+namespace scope, cover lookalikes, duplicates, sparse/failed sources and cached
+replay, and reject unsupported active-use/ownership/health wording. They do not
+establish population precision. White-label mail routes can remain unobserved;
+forwarding destinations, DKIM selector expansion, Domain Connect owners and
+Cloudflare Tunnel remain outside this addition batch. No collection scope or
+bare-domain invocation changed.
+
 ## Executable path
 
 Run from the checkout root. The strict plan schemas and specialized rank,
