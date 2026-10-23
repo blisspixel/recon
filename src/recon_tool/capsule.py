@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownVariableType=none
 """Caller-owned observation capsules and classified comparisons.
 
 Capsules are separate from recon's stable lookup JSON. They retain the bounded

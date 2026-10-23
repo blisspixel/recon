@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Determinism and privacy contracts for tracked validation fixtures."""
 
 from __future__ import annotations

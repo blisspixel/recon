@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingTypeArgument=none, reportUnknownArgumentType=none, reportUnknownMemberType=none
+# pyright: reportUnknownParameterType=none, reportUnknownVariableType=none
 """Schema disposition table is enforced by a test.
 
 The roadmap's v2.0 schema-lock disposition table is policy. This

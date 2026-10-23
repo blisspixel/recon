@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownVariableType=none
 """CT co-occurrence graph + community detection.
 
 Build an in-memory undirected graph from a domain's certificate

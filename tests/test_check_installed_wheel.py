@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none, reportUnknownMemberType=none, reportUnknownVariableType=none
 """Fast regression tests for the installed-artifact probe, without installation."""
 
 from __future__ import annotations

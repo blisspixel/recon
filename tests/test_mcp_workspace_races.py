@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Workspace installation keeps filesystem authority inside its bound directory."""
 
 from __future__ import annotations

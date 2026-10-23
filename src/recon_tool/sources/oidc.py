@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 from urllib.parse import urlparse
 
 import httpx
 
 from recon_tool.http import http_client
+from recon_tool.json_limits import is_json_object
 from recon_tool.models import EvidenceRecord, ReconLookupError, SourceResult
 from recon_tool.retry import retry_on_transient
 from recon_tool.validator import UUID_RE, strip_control_chars
@@ -15,7 +17,7 @@ from recon_tool.validator import UUID_RE, strip_control_chars
 DISCOVERY_URL_TEMPLATE = "https://login.microsoftonline.com/{domain}/.well-known/openid-configuration"
 
 
-def parse_tenant_info_from_oidc(response_json: dict[str, Any]) -> SourceResult:
+def parse_tenant_info_from_oidc(response_json: Mapping[str, object]) -> SourceResult:
     """
     Pure function: extracts tenant data from a discovery endpoint JSON response.
 
@@ -44,7 +46,7 @@ def parse_tenant_info_from_oidc(response_json: dict[str, Any]) -> SourceResult:
     auth_endpoint = response_json.get("authorization_endpoint", "")
     tenant_id: str | None = None
 
-    if auth_endpoint:
+    if isinstance(auth_endpoint, str) and auth_endpoint:
         parsed = urlparse(auth_endpoint)
         # Path looks like /{tenant_id}/oauth2/v2.0/authorize
         parts = [p for p in parsed.path.split("/") if p]
@@ -142,7 +144,7 @@ class OIDCSource:
             try:
                 response = await c.get(url)
                 response.raise_for_status()
-                data = response.json()
+                data: object = response.json()
             except httpx.HTTPStatusError as exc:
                 return SourceResult(
                     source_name="oidc_discovery",
@@ -155,7 +157,7 @@ class OIDCSource:
                     error="Invalid JSON from OIDC discovery endpoint",
                     source_unavailable=True,
                 )
-        if not isinstance(data, dict):
+        if not is_json_object(data):
             return SourceResult(
                 source_name="oidc_discovery",
                 error="Invalid JSON response shape from OIDC discovery endpoint",

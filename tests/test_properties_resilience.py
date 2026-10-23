@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportUnknownArgumentType=none, reportUnknownMemberType=none
+# pyright: reportUnknownParameterType=none, reportUnknownVariableType=none
 """Property-based tests for resilience and validation features.
 
 Properties 1–6 from the design document. Property 7 (fixture schema) is
@@ -141,6 +144,7 @@ class TestProperty2CertSummaryInvariants:
 
         # build_cert_summary may return None if all entries are invalid
         assume(cs is not None)
+        assert cs is not None
 
         # (a) cert_count >= 1
         assert cs.cert_count >= 1

@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingTypeArgument=none, reportUnknownArgumentType=none, reportUnknownParameterType=none
+# pyright: reportUnknownVariableType=none
 """Role-neutral Markdown rendering for validated ReviewBundle v1 artifacts."""
 
 from __future__ import annotations

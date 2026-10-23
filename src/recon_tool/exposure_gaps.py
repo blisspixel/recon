@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownVariableType=none
 """Hardening-gap detection over resolved TenantInfo data.
 
 Split out of ``exposure.py`` to keep that module under the size guard in

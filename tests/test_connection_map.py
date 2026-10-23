@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownMemberType=none
 """Derived connection_map: grouped vendors, empty lanes, related-host classes."""
 
 from __future__ import annotations

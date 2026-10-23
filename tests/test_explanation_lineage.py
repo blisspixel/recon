@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Exact-lineage diagnostics for flat and graph explanations."""
 
 from __future__ import annotations

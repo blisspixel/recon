@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownMemberType=none
 """Work, materialization and completeness contracts for supplied batch inputs."""
 
 from __future__ import annotations

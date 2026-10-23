@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownVariableType=none
 """Narrow compatibility boundary for supported MCP SDK generations.
 
 Production runs the v2 SDK line, which is what speaks MCP 2026-07-28. The v1

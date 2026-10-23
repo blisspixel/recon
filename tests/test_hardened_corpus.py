@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Regression guards for A1-A7 fixes across synthetic hardened-target archetypes.
 
 This module pins the behavior of the A-bug fixes discovered when the tool was

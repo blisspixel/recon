@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none, reportUnknownArgumentType=none, reportUnknownVariableType=none
 """Launch-contract regression matrix for the generated MCP launcher (issue 220).
 
 The launcher that ``recon mcp install`` writes must start from any client

@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Collection authority, HTTP admission and cross-view cache regressions."""
 
 from __future__ import annotations
@@ -13,6 +15,7 @@ from typing import Any
 
 import dns.asyncresolver
 import dns.exception
+import dns.nameserver
 import pytest
 
 from recon_tool import cache, ct_cache, network_policy
@@ -31,6 +34,7 @@ import asyncio
 import sys
 from unittest.mock import patch
 import dns.asyncresolver
+import dns.nameserver
 import dns.resolver
 
 original = dns.asyncresolver.Resolver
@@ -85,7 +89,7 @@ def test_saved_policy_restarts_with_identical_authority_and_no_provider_substitu
     assert first == CollectionPolicy.from_environment(saved)
     assert first.identity == CollectionPolicy.from_environment(saved).identity
     with pytest.raises(FrozenInstanceError):
-        first.mode = "operator"
+        first.mode = "operator"  # pyright: ignore[reportAttributeAccessIssue]  # Assert frozen runtime enforcement.
     assert not CollectionPolicy.from_environment({}, ("127.0.0.53",)).available
     assert not CollectionPolicy.from_environment({}, ("192.0.2.53",)).available
     assert not CollectionPolicy.from_environment({}).available

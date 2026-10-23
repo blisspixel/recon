@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportIndexIssue=none, reportUnknownArgumentType=none
 """Structural-identifiability checks for the frozen v2.11 M365 arms."""
 
 from __future__ import annotations

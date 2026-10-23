@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportPrivateUsage=none, reportUnknownMemberType=none
+# pyright: reportUnknownParameterType=none
 """Tests for `recon cache show` and `recon cache clear` CLI commands."""
 
 from __future__ import annotations
@@ -516,10 +519,10 @@ class TestCacheClear:
         )
         original_unlink = Path.unlink
 
-        def unlink_with_ct_failure(path: Path, *args: object, **kwargs: object) -> None:
+        def unlink_with_ct_failure(path: Path, missing_ok: bool = False) -> None:
             if path.parent.name == "ct-cache":
                 raise PermissionError("secret-cache-path")
-            original_unlink(path, *args, **kwargs)
+            original_unlink(path, missing_ok=missing_ok)
 
         with (
             caplog.at_level(logging.DEBUG, logger="recon"),
@@ -559,10 +562,10 @@ class TestCacheClear:
         )
         original_unlink = Path.unlink
 
-        def unlink_with_result_failure(path: Path, *args: object, **kwargs: object) -> None:
+        def unlink_with_result_failure(path: Path, missing_ok: bool = False) -> None:
             if path.parent.name == "cache":
                 raise PermissionError("secret-result-path")
-            original_unlink(path, *args, **kwargs)
+            original_unlink(path, missing_ok=missing_ok)
 
         with patch.object(Path, "unlink", unlink_with_result_failure):
             result = runner.invoke(app, ["cache", "clear", "--all", "--force"])

@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Manager evidence and destination checks use isolated receipts and mocked processes."""
 
 from __future__ import annotations

@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportArgumentType=none
 """Exact generation-time lineage for public hardening guidance."""
 
 from __future__ import annotations

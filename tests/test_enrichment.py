@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportPrivateUsage=none, reportUnknownArgumentType=none
+# pyright: reportUnknownMemberType=none, reportUnknownParameterType=none
 """Tests for related domain auto-enrichment in the resolver."""
 
 from __future__ import annotations

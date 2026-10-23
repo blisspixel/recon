@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportArgumentType=none, reportPrivateUsage=none
 from __future__ import annotations
 
 from dataclasses import dataclass

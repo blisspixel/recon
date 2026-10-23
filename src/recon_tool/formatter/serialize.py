@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownVariableType=none
 """Non-Rich data serializers for TenantInfo.
 
 The json-dict (the shared ``format_tenant_dict``), json, plain, and CSV

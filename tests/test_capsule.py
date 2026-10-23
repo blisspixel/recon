@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingTypeArgument=none, reportPrivateUsage=none, reportUnknownArgumentType=none
+# pyright: reportUnknownMemberType=none, reportUnknownParameterType=none, reportUnknownVariableType=none
 """Observation-capsule integrity, replay, and comparison tests."""
 
 from __future__ import annotations

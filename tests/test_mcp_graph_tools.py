@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportUnknownArgumentType=none, reportUnknownMemberType=none
+# pyright: reportUnknownParameterType=none
 """Unit tests for the v1.8 MCP graph-export tools.
 
 Covers ``get_infrastructure_clusters`` and ``export_graph``:

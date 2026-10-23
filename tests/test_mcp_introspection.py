@@ -296,7 +296,7 @@ class TestExplainSignal:
         _signal, public_label = reportable_signals()[0]
         raw = "https://www.alpha.invalid/private/path?token=secret"
 
-        data = await explain_signal(public_label, domain=raw)
+        data = dict(await explain_signal(public_label, domain=raw))
 
         assert data["domain"] == "alpha.invalid"
         assert raw not in str(data)
@@ -322,7 +322,7 @@ class TestExplainSignal:
         )
         mock_resolve.return_value = (info, list(SAMPLE_RESULTS))
 
-        data = await explain_signal("AI-platform indicators observed", domain="alpha.invalid")
+        data = dict(await explain_signal("AI-platform indicators observed", domain="alpha.invalid"))
 
         assert data["fired"] is False
         assert data["matched_slugs"] == []

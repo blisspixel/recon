@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Public email-policy declarations must survive protocol record admission."""
 
 from __future__ import annotations

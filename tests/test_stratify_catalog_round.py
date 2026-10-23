@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownMemberType=none, reportUnknownVariableType=none
 """Tests for disclosure-safe, membership-bound catalog stratification."""
 
 from __future__ import annotations

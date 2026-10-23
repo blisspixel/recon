@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Provider-domain motifs use hostname grammar, not arbitrary substrings."""
 
 from __future__ import annotations

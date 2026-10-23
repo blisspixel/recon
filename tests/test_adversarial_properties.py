@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """The suppression-monotonicity property, as a CI gate.
 
 `validation/adversarial_properties.py` ships the proposition of

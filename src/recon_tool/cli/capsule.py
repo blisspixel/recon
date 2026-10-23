@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none
 """CLI commands for caller-owned observation capsules."""
 
 from __future__ import annotations

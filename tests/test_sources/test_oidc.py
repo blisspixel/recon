@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportUnknownArgumentType=none, reportUnknownMemberType=none
+# pyright: reportUnknownParameterType=none
 """Unit tests for the OIDC discovery lookup source."""
 
 import httpx
@@ -24,6 +27,25 @@ def retry_delays(monkeypatch: pytest.MonkeyPatch) -> list[float]:
 
 
 # --- parse_tenant_info_from_oidc tests ---
+
+
+@pytest.mark.parametrize("endpoint", [42, True, [], {}, b"not-a-JSON-string"])
+def test_nonstring_authorization_endpoint_is_a_parse_error(endpoint: object) -> None:
+    with pytest.raises(ReconLookupError) as error:
+        parse_tenant_info_from_oidc({"authorization_endpoint": endpoint})
+    assert error.value.error_type == "parse_error"
+
+
+@pytest.mark.asyncio
+async def test_malformed_endpoint_response_stays_unavailable_not_negative() -> None:
+    def response(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"authorization_endpoint": 42})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(response)) as client:
+        result = await OIDCSource().lookup("example.com", client=client)
+    assert result.tenant_id is None
+    assert result.source_unavailable
+    assert result.error == "Could not extract a valid tenant ID from OIDC discovery response"
 
 
 class TestParseTenantInfoFromOIDC:

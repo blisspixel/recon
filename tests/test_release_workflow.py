@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownVariableType=none
 """Release workflow security regressions."""
 
 from __future__ import annotations

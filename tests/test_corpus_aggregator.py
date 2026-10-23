@@ -1,3 +1,7 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportMissingTypeArgument=none, reportPrivateUsage=none
+# pyright: reportUnknownArgumentType=none, reportUnknownMemberType=none, reportUnknownParameterType=none
+# pyright: reportUnknownVariableType=none
 """Tests for the corpus-aggregator script.
 
 The aggregator (``validation/corpus_aggregator.py``) mirrors the

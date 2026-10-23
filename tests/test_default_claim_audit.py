@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none, reportUnknownVariableType=none
 """Fail-closed coverage for the material default-claim taxonomy."""
 
 from __future__ import annotations

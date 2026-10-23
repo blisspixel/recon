@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Unit tests for the batch-scope ecosystem hypergraph.
 
 Covers each hyperedge type:

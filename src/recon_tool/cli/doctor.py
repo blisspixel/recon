@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none
 """Doctor command implementation: environment/identity/CT/MCP/catalog checks.
 
 Extracted from cli.py (docs/roadmap.md god-file track). Plain command-logic

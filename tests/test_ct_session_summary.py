@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportUnknownMemberType=none, reportUnknownParameterType=none
+# pyright: reportUnknownVariableType=none
 from __future__ import annotations
 
 import importlib.util

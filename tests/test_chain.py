@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportPrivateUsage=none, reportUnknownArgumentType=none
+# pyright: reportUnknownMemberType=none, reportUnknownParameterType=none, reportUnknownVariableType=none
 """Tests for the chain resolver."""
 
 import pytest

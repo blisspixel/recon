@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportArgumentType=none, reportIndexIssue=none, reportOperatorIssue=none
+# pyright: reportUnknownArgumentType=none, reportUnknownVariableType=none
 """Contract guard for the MCP structured-output revision (stable 2025-11-25 spec).
 
 The data tools return objects rather than JSON strings, so FastMCP surfaces them

@@ -1,0 +1,23 @@
+from pathlib import Path
+
+from recon_tool.collection_limits import CollectionBudget
+from recon_tool.json_limits import is_json_object, load_bounded_json_file
+from recon_tool.models import TenantInfo
+from tests.tenant_fixtures import TenantInfoOverrides
+
+
+def needs_text(value: str) -> str:
+    return value
+
+
+def checked_container_still_has_untrusted_values(raw: object) -> None:
+    if is_json_object(raw):
+        needs_text(raw["label"])  # expected: reportArgumentType
+
+
+CollectionBudget(frozenset({"example.test"}), max_dns_queries="three")  # expected: reportArgumentType
+load_bounded_json_file(Path("example.json"), maximum_bytes="many")  # expected: reportArgumentType
+loaded, _stat, _elapsed = load_bounded_json_file(Path("example.json"), maximum_bytes=1024)
+needs_text(loaded)  # expected: reportArgumentType
+fixture: TenantInfoOverrides = {"services": "Example"}  # expected: reportAssignmentType
+TenantInfo(tenant_id=None, display_name=None, default_domain="", queried_domain="example.test")  # expected: reportArgumentType

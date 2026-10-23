@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportUnknownParameterType=none
 """Tests for medium-tier subdomain enrichment (v0.10.2).
 
 medium_subdomain_lookup adds MX + DKIM probing on top of the lightweight

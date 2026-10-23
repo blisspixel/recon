@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownMemberType=none
 """Domain input validation and scheme stripping."""
 
 import contextlib

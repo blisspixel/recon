@@ -10,9 +10,25 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TypeGuard
 
 MAX_JSON_NESTING = 100
+
+
+def _is_object_mapping(value: object) -> TypeGuard[dict[object, object]]:
+    return isinstance(value, dict)
+
+
+def is_json_object(value: object) -> TypeGuard[dict[str, object]]:
+    """Check a JSON object's container and keys without trusting its values."""
+    if not _is_object_mapping(value):
+        return False
+    return all(isinstance(key, str) for key in value)
+
+
+def is_object_list(value: object) -> TypeGuard[list[object]]:
+    """Check an array container while leaving every element untrusted."""
+    return isinstance(value, list)
 
 
 @dataclass(frozen=True)
@@ -146,12 +162,13 @@ def load_bounded_json_file(
     maximum_bytes: int,
     maximum_age_seconds: float | None = None,
     future_mtime_tolerance_seconds: float = 300.0,
-    decoder: Callable[[str], Any] | None = None,
-) -> tuple[Any, os.stat_result, float]:
+    decoder: Callable[[str], object] | None = None,
+) -> tuple[object, os.stat_result, float]:
     """Decode stable regular JSON with byte, nesting and optional age limits.
 
     Symlinks and materially future modification times are rejected. The
     optional decoder runs after file and nesting admission; its errors propagate.
+    Decoded data stays untrusted until the caller checks its required shape.
     """
     raw, after, age_seconds = read_bounded_regular_file(
         path,

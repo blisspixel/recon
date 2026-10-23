@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Exercise the MCP public DNS boundary without opening network sockets."""
 
 from __future__ import annotations
@@ -208,7 +210,7 @@ async def test_mcp_lookup_cache_and_replay_exclude_split_view_records(
     assert all(public for public, _, _ in dns_views)
     count = len(dns_views)
     assert await lookup.lookup_tenant("example.com", format="json", explain=True) == first
-    replayed = await ephemeral.reevaluate_domain("example.com")
+    replayed = dict(await ephemeral.reevaluate_domain("example.com"))
     assert _PRIVATE not in json.dumps(replayed)
     assert "private-view-value" not in json.dumps(replayed)
     assert replayed["resolution_policy_id"] == _SAFE_POLICY.identity
@@ -264,7 +266,7 @@ async def test_network_tool_entrypoints_use_public_view(
         assert values == ["public-declaration"]
         return (
             TenantInfo(None, "Synthetic namespace", domain, domain),
-            [SourceResult(source_name="dns", raw_dns_records=(("TXT", tuple(values)),))],
+            [SourceResult(source_name="dns", raw_dns_records=tuple(("TXT", value) for value in values))],
         )
 
     monkeypatch.setattr(app, "_resolve_tenant", collect)
@@ -290,7 +292,7 @@ async def test_fresh_and_recursive_artifacts_bind_real_related_enrichment(
     class RelatedSeed:
         name = "synthetic-seed"
 
-        async def lookup(self, _domain: str, **_kwargs: Any) -> SourceResult:
+        async def lookup(self, domain: str, **kwargs: Any) -> SourceResult:
             return SourceResult(source_name=self.name, related_domains=("related.example.net",))
 
     async def collect(domain: str, **_kwargs: Any) -> tuple[TenantInfo, list[SourceResult]]:

@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownVariableType=none
 """Audit helpers for multi-detection fingerprint hardening.
 
 The audit is intentionally advisory. It does not change match behavior; it

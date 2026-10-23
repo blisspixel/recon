@@ -1,3 +1,7 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportGeneralTypeIssues=none, reportIndexIssue=none, reportMissingParameterType=none
+# pyright: reportOperatorIssue=none, reportPrivateUsage=none, reportUnknownArgumentType=none
+# pyright: reportUnknownMemberType=none, reportUnknownParameterType=none, reportUnknownVariableType=none
 """Pin the reference-calibration harness's pure logic.
 
 `validation/reference_calibration.py` calibrates the email-policy posterior

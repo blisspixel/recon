@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownMemberType=none, reportUnknownVariableType=none
 """End-to-end MCP self-check.
 
 `recon doctor --mcp` (existing) confirms the *static* shape of an MCP

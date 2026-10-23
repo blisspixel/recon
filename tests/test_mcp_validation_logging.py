@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownMemberType=none
 """Privacy contract for MCP validation-failure diagnostics."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportUnknownArgumentType=none, reportUnknownMemberType=none
+# pyright: reportUnknownParameterType=none, reportUnknownVariableType=none
 """Config / cache / state directory resolution (recon_tool.paths).
 
 Three precedence tiers, all pinned here: RECON_CONFIG_DIR override (single dir,

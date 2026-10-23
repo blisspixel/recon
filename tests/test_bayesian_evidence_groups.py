@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Evidence-group correction for conditionally-dependent bindings (CAL7).
 
 Co-firing bindings that share a `group` are redundant readings of one fact, so

@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownParameterType=none, reportUnknownVariableType=none
 """Operator timeout choices bound each chain lookup and its remaining budget."""
 
 from __future__ import annotations
@@ -32,6 +34,7 @@ def test_cli_forwards_chain_timeout(json_output: bool) -> None:
             app, ["example.com", "--chain", "--timeout", "2.5", *(["--json"] if json_output else [])]
         )
     assert result.exit_code == 0, result.output
+    assert resolve.await_args is not None
     assert resolve.await_args.args[1].timeout == 2.5
 
 

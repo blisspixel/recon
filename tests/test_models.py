@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportUnknownArgumentType=none, reportUnknownParameterType=none
 """Property-based tests for M365 tenant lookup data models.
 
 Tests Property 18: SourceResult completeness invariant

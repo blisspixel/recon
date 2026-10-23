@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownMemberType=none, reportUnknownVariableType=none
 """Posture analyzer — derives neutral observations from resolved domain data.
 
 Observations are factual statements about a domain's configuration state.

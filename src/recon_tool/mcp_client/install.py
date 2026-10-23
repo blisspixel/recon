@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownVariableType=none
 """MCP client config installer.
 
 `recon mcp install --client=<name>` writes (or merges) the recon stanza

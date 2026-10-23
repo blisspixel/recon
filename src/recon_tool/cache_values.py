@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownVariableType=none
 """Shared validation, inspection, and cleanup helpers for persisted cache data.
 
 Cache files are untrusted local JSON. These helpers preserve legacy defaults

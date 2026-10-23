@@ -33,7 +33,7 @@ class CollectionBudget:
     on_start: Callable[[str], None] | None = None
     max_attempts_per_namespace: int = 1
     dns_queries: int = field(default=0, init=False)
-    namespace_attempts: dict[str, int] = field(default_factory=dict, init=False)
+    namespace_attempts: dict[str, int] = field(default_factory=dict[str, int], init=False)
     stopped_reason: str | None = field(default=None, init=False)
 
     def __post_init__(self) -> None:

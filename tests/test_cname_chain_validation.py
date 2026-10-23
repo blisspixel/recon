@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportPrivateUsage=none, reportUnknownArgumentType=none
+# pyright: reportUnknownMemberType=none, reportUnknownParameterType=none
 """CNAME chain target validation regression tests.
 
 Pins the chain-walker defenses in

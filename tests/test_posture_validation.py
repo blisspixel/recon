@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Coverage tests for posture rule YAML validation and edge-case evaluation.
 
 Targets uncovered branches in posture.py:

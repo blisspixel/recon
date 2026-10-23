@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none
 """CycloneDX release SBOM regressions."""
 
 from __future__ import annotations

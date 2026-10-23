@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportPrivateUsage=none, reportUnknownArgumentType=none
+# pyright: reportUnknownMemberType=none, reportUnknownParameterType=none, reportUnknownVariableType=none
 """MCP path-isolation regression tests.
 
 Pins the three defense layers that close the audit finding "MCP doctor
@@ -83,7 +86,7 @@ class TestMcpInstallPersistsSafeEnv:
         supported Python version (including Python 3.10 where
         ``PYTHONSAFEPATH`` is a no-op). The launcher strips empty
         and "." entries from sys.path BEFORE importing recon_tool."""
-        from recon_tool.mcp_install import build_recon_block
+        from recon_tool.mcp_client.install import build_recon_block
 
         block = build_recon_block()
         assert block["command"] == sys.executable
@@ -111,7 +114,7 @@ class TestMcpInstallPersistsSafeEnv:
         assert block.get("env") == {"PYTHONSAFEPATH": "1"}
 
     def test_compatibility_warning_is_retired(self):
-        from recon_tool.mcp_install import warn_if_fallback
+        from recon_tool.mcp_client.install import warn_if_fallback
 
         assert warn_if_fallback() is None
 
@@ -326,7 +329,7 @@ class TestShadowWorkspaceIntegration:
         runs on every supported Python."""
         self._write_shadow_package(tmp_path)
 
-        from recon_tool.mcp_install import _FALLBACK_LAUNCH_CODE
+        from recon_tool.mcp_client.install import _FALLBACK_LAUNCH_CODE
 
         env = dict(os.environ)
         # Deliberately do NOT set PYTHONSAFEPATH — the language-level

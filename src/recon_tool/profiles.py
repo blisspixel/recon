@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none
 """Custom profile templates — reweight and filter posture observations
 for a specific audience lens.
 

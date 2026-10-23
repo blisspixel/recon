@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Tests for CT per-domain cache (recon_tool/ct_cache.py).
 
 Covers: get/put/clear/clear_all/show/list, TTL expiry, corruption

@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportPrivateUsage=none, reportUnknownArgumentType=none
+# pyright: reportUnknownMemberType=none, reportUnknownParameterType=none, reportUnknownVariableType=none
 """Differential verification of the Bayesian inference core.
 
 The shipped engine answers ``P(node = present | E)`` by variable

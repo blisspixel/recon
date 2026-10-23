@@ -1,4 +1,5 @@
-# pyright: reportPrivateUsage=false
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Public formatter facade.
 
 Implementation lives in focused formatter submodules. This package preserves

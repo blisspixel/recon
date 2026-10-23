@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Characterization tests for the `recon fingerprints` CLI surface."""
 
 from __future__ import annotations

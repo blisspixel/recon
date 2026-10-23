@@ -51,10 +51,12 @@ import os
 import re
 import tempfile
 import time
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TypedDict
 
-from recon_tool.json_limits import load_bounded_json_file
+from recon_tool.json_limits import is_json_object, load_bounded_json_file
 
 logger = logging.getLogger("recon")
 
@@ -65,6 +67,20 @@ __all__ = [
     "ct_rate_limiter_crtsh",
     "rate_limit_state_dir",
 ]
+
+
+class _RateLimitSnapshot(TypedDict):
+    name: str
+    interval_s: float
+    next_slot_in_s: float
+    consecutive_failures: int
+    breaker_open: bool
+    breaker_remaining_s: float
+    success_count: int
+    rate_limit_count: int
+    other_failure_count: int
+    breaker_trip_count: int
+    local_decline_count: int
 
 
 def rate_limit_state_dir() -> Path:
@@ -94,7 +110,7 @@ _MAX_PERSISTED_FAILURES = 1_000_000
 _LIMITER_NAME_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}")
 
 
-def _finite_state_number(data: dict[object, object], field: str) -> float:
+def _finite_state_number(data: Mapping[str, object], field: str) -> float:
     raw = data.get(field)
     if isinstance(raw, bool) or not isinstance(raw, (int, float)):
         raise ValueError(f"{field} must be numeric")
@@ -107,7 +123,7 @@ def _finite_state_number(data: dict[object, object], field: str) -> float:
     return value
 
 
-def _bounded_state_count(data: dict[object, object], field: str) -> int:
+def _bounded_state_count(data: Mapping[str, object], field: str) -> int:
     raw = data.get(field)
     if isinstance(raw, bool) or not isinstance(raw, int) or not 0 <= raw <= _MAX_PERSISTED_FAILURES:
         raise ValueError(f"{field} must be a bounded non-negative integer")
@@ -231,7 +247,7 @@ class AdaptiveRateLimiter:
             return
         except OSError:
             return
-        if not isinstance(data, dict):
+        if not is_json_object(data):
             return
         if data.get("_state_version") != _PERSISTED_STATE_VERSION or data.get("name") != self.name:
             return
@@ -432,7 +448,7 @@ class AdaptiveRateLimiter:
         else:
             self._persist_state()
 
-    def snapshot(self) -> dict[str, object]:
+    def snapshot(self) -> _RateLimitSnapshot:
         """Return current state for logging / panel surfacing."""
         is_open, remaining = self._breaker_state()
         return {

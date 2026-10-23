@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Passive-by-default contract: direct probes to target-controlled hosts are opt-in.
 
 recon's collection is passive. DNS queries use the configured recursive

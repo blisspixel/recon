@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportPrivateUsage=none, reportUnknownArgumentType=none
+# pyright: reportUnknownParameterType=none
 """Hypothesis property tests on count_cloud_vendors.
 
 The fixture-based tests in ``test_multi_cloud_rollup.py`` pin specific

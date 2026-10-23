@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportArgumentType=none, reportPrivateUsage=none
 """Tests for signal validation logic — covers the untested validation paths."""
 
 from __future__ import annotations

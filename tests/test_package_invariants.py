@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownMemberType=none, reportUnknownVariableType=none
 """Package artifact invariants for recon's intentionally small box.
 
 These tests build a local wheel and inspect the archive directly. They pin the

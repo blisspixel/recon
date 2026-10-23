@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Adobe's domain-verification marker does not identify a corporate IdP."""
 
 from __future__ import annotations
@@ -76,7 +78,7 @@ def test_current_and_cached_adobe_labels_stay_out_of_identity(name: str) -> None
 
 @pytest.mark.parametrize("options", [{"evidence": False}, {"degraded": True}])
 def test_adobe_label_needs_available_txt_evidence(options: dict[str, bool]) -> None:
-    info = _info(**options)
+    info = _info(evidence=options.get("evidence", True), degraded=options.get("degraded", False))
     compact, _, _ = compact_categorized_services(categorize_services(info))
 
     assert not compact

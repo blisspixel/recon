@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownMemberType=none, reportUnknownVariableType=none
 """Certificate transparency intelligence providers.
 
 Abstracts CT querying behind a CertIntelProvider protocol with shared
@@ -11,6 +13,7 @@ from __future__ import annotations
 
 import logging
 from collections import Counter
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime, timedelta
 from typing import Any, Protocol, runtime_checkable
 
@@ -364,7 +367,7 @@ def filter_subdomains(
 
 
 def _extract_wildcard_sibling_clusters(
-    entries: list[dict[str, str | int | list[str] | None]],
+    entries: Sequence[Mapping[str, str | int | list[str] | None]],
 ) -> tuple[tuple[str, ...], ...]:
     """Walk cert entries, harvesting non-wildcard SANs from any cert that
     also covered a wildcard SAN.
@@ -408,7 +411,7 @@ def _extract_wildcard_sibling_clusters(
 
 
 def _detect_deployment_bursts(
-    entries: list[dict[str, str | int | list[str] | None]],
+    entries: Sequence[Mapping[str, str | int | list[str] | None]],
 ) -> tuple[CertBurst, ...]:
     """Cluster cert entries by ``not_before`` proximity.
 
@@ -479,7 +482,7 @@ def _detect_deployment_bursts(
 
 
 def build_cert_summary(
-    entries: list[dict[str, str | int | list[str] | None]],
+    entries: Sequence[Mapping[str, str | int | list[str] | None]],
     now: datetime,
 ) -> CertSummary | None:
     """Build a CertSummary from certificate metadata entries.

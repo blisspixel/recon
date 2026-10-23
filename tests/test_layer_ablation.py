@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportArgumentType=none, reportMissingParameterType=none, reportUnknownArgumentType=none
+# pyright: reportUnknownMemberType=none, reportUnknownParameterType=none, reportUnknownVariableType=none
 """Pin the layer-ablation harness's pure logic.
 
 `validation/layer_ablation.py` compares the Bayesian layer with slug-matching

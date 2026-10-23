@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportUnknownParameterType=none
 """Unit tests for CLI --exposure and --gaps flags.
 
 Tests use typer.testing.CliRunner with mocked resolution to verify

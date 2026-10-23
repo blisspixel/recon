@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportArgumentType=none, reportPrivateUsage=none
 """Fail-closed checks for PyPI and sealed release artifact parity."""
 
 from __future__ import annotations

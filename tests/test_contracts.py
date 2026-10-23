@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none, reportUnknownMemberType=none
 """Design-by-Contract wiring tests (the `deal` adoption).
 
 Three things are worth proving about contracts, because a contract that

@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportPrivateUsage=none, reportUnknownArgumentType=none
+# pyright: reportUnknownMemberType=none, reportUnknownParameterType=none, reportUnknownVariableType=none
 """Shared test fixtures.
 
 Auto-patches the cert intel HTTP calls in all non-integration tests to avoid
@@ -193,17 +196,16 @@ def _reset_global_console():
     to construct a fresh Console bound to whatever sys.stdout the current
     test framework has captured.
     """
-    import recon_tool.formatter as _formatter
     from recon_tool.formatter import terminal as _terminal
     from recon_tool.formatter import theme as _theme
 
-    _formatter._console = None
-    _formatter._err_console = None
+    _terminal._console = None
+    _terminal._err_console = None
     _terminal._ascii_override = False
     _theme.set_ascii_active(False)
     yield
-    _formatter._console = None
-    _formatter._err_console = None
+    _terminal._console = None
+    _terminal._err_console = None
     _terminal._ascii_override = False
     _theme.set_ascii_active(False)
 

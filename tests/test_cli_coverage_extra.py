@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportPrivateUsage=none, reportUnknownArgumentType=none
+# pyright: reportUnknownParameterType=none
 """CLI coverage tests for paths not exercised by existing tests.
 
 Targets: version callback, debug callback, doctor --fix template

@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownVariableType=none
 from __future__ import annotations
 
 from recon_tool.discovery import find_candidates, pattern_matches_hostname

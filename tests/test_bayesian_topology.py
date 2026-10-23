@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportUnknownArgumentType=none, reportUnknownMemberType=none
+# pyright: reportUnknownParameterType=none, reportUnknownVariableType=none
 """Regression tests for the v1.9.3 topology surgery.
 
 The v1.9.3 bridge milestone (docs/roadmap.md §v1.9.3) replaced the

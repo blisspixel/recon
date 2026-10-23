@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportPrivateUsage=none, reportUnknownArgumentType=none
+# pyright: reportUnknownMemberType=none, reportUnknownParameterType=none, reportUnknownVariableType=none
 """Property-based tests for M365 tenant lookup formatter.
 
 Tests Properties 9, 10, 19, 20, 21 from the design document.
@@ -9,6 +12,7 @@ import dataclasses
 import io
 import json
 import os
+from io import StringIO
 
 import pytest
 from hypothesis import HealthCheck, given, settings
@@ -84,6 +88,7 @@ def _render_panel_to_str(panel) -> str:
         highlight=False,
     )
     c.print(panel)
+    assert isinstance(c.file, StringIO)
     return c.file.getvalue()
 
 

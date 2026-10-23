@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Services panel: the category label never collides with its value.
 
 Regression for the "Data & AnalyticsMongoDB Atlas" bug: the Services

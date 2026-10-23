@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """CLI and MCP delivery coverage for NamespaceReviewBundle v1."""
 
 from __future__ import annotations
@@ -73,6 +75,7 @@ def test_review_cli_preserves_trimmed_coordinate(coordinate: str) -> None:
         result = runner.invoke(app, ["review", coordinate, "--json", "--no-ct"])
     assert result.exit_code == 0, result.output
     assert json.loads(result.stdout)["scope"]["input_coordinate"] == coordinate.strip()
+    assert resolve.await_args is not None
     assert resolve.await_args.args == ("example.com",)
 
 
@@ -96,6 +99,7 @@ async def test_review_mcp_preserves_trimmed_coordinate(coordinate: str) -> None:
     with patch("recon_tool.server.app.resolve_tenant", new=resolve):
         bundle = await build_review_bundle(coordinate, no_ct=True)
     assert bundle["scope"]["input_coordinate"] == coordinate.strip()
+    assert resolve.await_args is not None
     assert resolve.await_args.args == ("example.com",)
 
 

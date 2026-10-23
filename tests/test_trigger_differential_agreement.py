@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportMissingTypeArgument=none, reportPrivateUsage=none
+# pyright: reportUnknownArgumentType=none, reportUnknownParameterType=none, reportUnknownVariableType=none
 """Differential agreement: three independent trigger
 implementations.
 

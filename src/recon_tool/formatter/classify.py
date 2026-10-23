@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownMemberType=none
 """Service-classification logic shared by every formatter renderer.
 
 Extracted from ``formatter.py`` so the panel, markdown, plain, and json-dict

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import dataclasses
 from io import StringIO
+from typing import Unpack
 
 import pytest
 from rich.console import Console
@@ -22,11 +23,12 @@ from recon_tool.formatter import (
 )
 from recon_tool.merger import merge_results
 from recon_tool.models import ConfidenceLevel, SourceResult, TenantInfo
+from tests.tenant_fixtures import TenantInfoArguments, TenantInfoOverrides
 
 
-def _make_tenant_info(**overrides) -> TenantInfo:
+def _make_tenant_info(**overrides: Unpack[TenantInfoOverrides]) -> TenantInfo:
     """Build a minimal TenantInfo with sensible defaults."""
-    defaults = {
+    defaults: TenantInfoArguments = {
         "tenant_id": "test-id",
         "display_name": "Test Corp",
         "default_domain": "test.invalid",

@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none
 """Per-domain CT subdomain cache.
 
 Stores CT provider results as JSON files in {Config_Dir}/ct-cache/.

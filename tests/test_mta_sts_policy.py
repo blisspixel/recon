@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """RFC 8461 policy-fetch and parsing regressions."""
 
 from unittest.mock import AsyncMock, patch

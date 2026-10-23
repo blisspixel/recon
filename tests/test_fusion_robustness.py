@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """End-to-end robustness checks for the v1.9 fusion path.
 
 Bundles cache round-trip, CLI flag combinations, MCP tool error paths,
@@ -13,6 +15,7 @@ import json
 import time
 from dataclasses import replace
 from pathlib import Path
+from typing import Unpack
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -28,10 +31,11 @@ from recon_tool.bayesian import (
 )
 from recon_tool.cache import tenant_info_from_dict, tenant_info_to_dict
 from recon_tool.models import EvidenceRecord, PosteriorObservation, TenantInfo
+from tests.tenant_fixtures import TenantInfoArguments, TenantInfoOverrides
 
 
-def _bare_tenant_info(**overrides) -> TenantInfo:
-    base = {
+def _bare_tenant_info(**overrides: Unpack[TenantInfoOverrides]) -> TenantInfo:
+    base: TenantInfoArguments = {
         "tenant_id": None,
         "display_name": "Synthetic Alpha",
         "default_domain": "alpha.invalid",
@@ -365,7 +369,7 @@ class TestScale:
         """Linear chain of 15 nodes (each dependent on its predecessor)
         must complete inference in under 100ms on a modern laptop. This
         is well within the operational budget for a recon lookup."""
-        nodes = [{"name": "n0", "description": "x", "prior": 0.5}]
+        nodes: list[dict[str, object]] = [{"name": "n0", "description": "x", "prior": 0.5}]
         for i in range(1, 15):
             nodes.append(
                 {
@@ -396,7 +400,7 @@ class TestScale:
         """One root node with 10 children; each child has independent
         evidence. Should complete quickly — wide networks are easier
         than deep ones for variable elimination."""
-        nodes = [{"name": "root", "description": "x", "prior": 0.5}]
+        nodes: list[dict[str, object]] = [{"name": "root", "description": "x", "prior": 0.5}]
         for i in range(10):
             nodes.append(
                 {

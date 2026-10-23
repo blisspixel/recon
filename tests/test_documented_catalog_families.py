@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none, reportUnknownArgumentType=none, reportUnknownVariableType=none
 """Documented routing/marker families preserve record and namespace roles."""
 
 from __future__ import annotations

@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Canonical local-gate orchestration regressions."""
 
 from __future__ import annotations
@@ -84,6 +86,14 @@ def test_pyright_scope_comes_only_from_pyproject() -> None:
     assert "pyright src/recon_tool/ tests/" not in workflow
     assert pre_commit_hook["entry"] == "pyright"
     assert "args" not in pre_commit_hook
+    policy_stage = next(command for _group, name, command in check._STAGES if name == "typing-policy")
+    assert policy_stage == [check._PY, "scripts/check_typing_policy.py"]
+    assert "run: uv run python scripts/check_typing_policy.py" in workflow
+    policy_hook = next(hook for hook in local_repo["hooks"] if hook["id"] == "typing-policy")
+    assert policy_hook["entry"] == "python scripts/check_typing_policy.py"
+    assert policy_hook["pass_filenames"] is False
+    assert policy_hook["always_run"] is True
+    assert policy_hook["stages"] == ["pre-commit"]
 
 
 def test_ci_cancels_obsolete_runs_for_the_same_ref() -> None:

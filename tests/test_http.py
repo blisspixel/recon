@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Tests for the HTTP client module — SSRF protection, retry logic, and client lifecycle."""
 
 from __future__ import annotations

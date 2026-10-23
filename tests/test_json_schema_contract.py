@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownVariableType=none
 """JSON schema conformance tests.
 
 Asserts that the JSON output shape matches docs/schema.md. Changes to the

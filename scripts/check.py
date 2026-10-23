@@ -38,6 +38,7 @@ _STAGES: list[tuple[str, str, list[str]]] = [
     (_CORE, "ruff", [_PY, "-m", "ruff", "check", "--no-cache", "."]),
     (_CORE, "ruff-format", [_PY, "-m", "ruff", "format", "--check", "."]),
     (_CORE, "pyright", [_PY, "-m", "pyright"]),
+    (_CORE, "typing-policy", [_PY, "scripts/check_typing_policy.py"]),
     (
         _TEST,
         "pytest+cov-parallel",

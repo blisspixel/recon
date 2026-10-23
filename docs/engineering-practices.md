@@ -132,9 +132,13 @@ catalog generation.
   conventional meaning.
 - **Docstrings** (PEP 257, imperative summary) on public surfaces; comments
   explain **why**, not what.
-- **Types** on public APIs, modern `X | None`, checked with pyright `strict`;
-  `py.typed` ships. Validate untrusted input at the edge (CLI args, DNS/CT/HTTP
-  responses); trust static types internally.
+- **Types** on public APIs use modern `X | None`; `py.typed` ships. Pyright
+  defaults to `strict` across the configured source, tests, three validation
+  modules and the policy checker. Exact legacy file/line exceptions remain, with an additional
+  blocking audit of their diagnostic identities. See [effective typing policy](typing-policy.md)
+  for the measured baseline, ownership and narrowing procedure. Validate
+  untrusted input at the edge (CLI args, DNS/CT/HTTP responses); an annotation
+  or a JSON-object container check does not validate its values.
 - **Imports** absolute, ordered by ruff isort, no wildcard imports (except a
   package re-export). `# noqa` is always rule-specific and justified; `RUF100`
   removes stale ones.

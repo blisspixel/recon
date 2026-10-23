@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportArgumentType=none
 """Tests for descriptor-bound JSON file admission."""
 
 from __future__ import annotations
@@ -13,6 +15,22 @@ import pytest
 
 from recon_tool import json_limits
 from recon_tool.json_limits import load_bounded_json_file
+
+
+@pytest.mark.parametrize("value", [None, [], (), 1, {1: "invalid key"}, {None: "invalid key"}])
+def test_object_guard_rejects_nonobjects_and_nonstring_keys(value: object) -> None:
+    assert not json_limits.is_json_object(value)
+
+
+def test_shape_guards_leave_nested_values_untrusted_and_preserve_identity() -> None:
+    sentinel = object()
+    values = [sentinel]
+    payload = {"values": values}
+    assert json_limits.is_json_object(payload)
+    assert json_limits.is_object_list(values)
+    assert payload["values"] is values
+    assert values[0] is sentinel
+    assert not json_limits.is_object_list((sentinel,))
 
 
 def test_load_bounded_json_file_returns_data_metadata_and_age(tmp_path: Path) -> None:

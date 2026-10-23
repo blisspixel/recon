@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Offline, manifest-driven portable launch checks, not real-client validation."""
 
 from __future__ import annotations
@@ -8,6 +10,7 @@ import os
 import re
 import shutil
 import sys
+from inspect import isawaitable
 from pathlib import Path
 from typing import Any
 
@@ -100,7 +103,9 @@ async def _discover_catalog(params: StdioServerParameters) -> set[str]:
         compatible_session: Any = session
         discover = getattr(compatible_session, "discover", None)
         if callable(discover):
-            discovery = model_wire_dict(await discover())
+            discovery_response = discover()
+            assert isawaitable(discovery_response)
+            discovery = model_wire_dict(await discovery_response)
             _assert_runtime_version(discovery, _project_version(DEFAULT_PROJECT))
         else:
             # Legacy FastMCP does not advertise recon's own version. The modern

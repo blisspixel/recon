@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownMemberType=none
 """Regression tests for collection-aware declarative missingness.
 
 Transient collection failures are provenance about what recon could observe,

@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import re
 
-from recon_tool.fingerprints import load_fingerprints, reload_fingerprints
+from recon_tool.fingerprints import Fingerprint, load_fingerprints, reload_fingerprints
 from recon_tool.models import SignalContext
 from recon_tool.posture import analyze_posture, reload_posture
 from recon_tool.signals import evaluate_signals, load_signals, reload_signals
@@ -129,15 +129,15 @@ class TestEnrichedFingerprints:
         from collections import defaultdict
         from dataclasses import replace
 
-        by_slug: dict[str, list] = defaultdict(list)
+        by_slug: dict[str, list[Fingerprint]] = defaultdict(list)
         for fp in load_fingerprints():
             by_slug[fp.slug].append(fp)
-        merged: dict[str, object] = {}
+        merged: dict[str, Fingerprint] = {}
         for slug, group in by_slug.items():
             base = group[0]
             all_detections = tuple(d for fp in group for d in fp.detections)
             merged[slug] = replace(base, detections=all_detections)
-        self.fps = merged  # pyright: ignore[reportAttributeAccessIssue]
+        self.fps = merged
 
     def test_sonatype_has_two_detections(self) -> None:
         fp = self.fps["sonatype"]

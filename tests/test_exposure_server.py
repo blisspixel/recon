@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Unit tests for MCP tool integration — assess_exposure, find_hardening_gaps, compare_postures.
 
 Tests mock resolve_tenant and verify JSON output structure, error handling,

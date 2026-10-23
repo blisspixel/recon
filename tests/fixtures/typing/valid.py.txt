@@ -1,0 +1,21 @@
+from pathlib import Path
+
+from recon_tool.collection_limits import CollectionBudget
+from recon_tool.json_limits import is_json_object, load_bounded_json_file
+from recon_tool.models import TenantInfo
+from tests.tenant_fixtures import TenantInfoOverrides
+
+
+def read_label(raw: object) -> str | None:
+    if is_json_object(raw):
+        label = raw.get("label")
+        if isinstance(label, str):
+            return label
+    return None
+
+
+budget = CollectionBudget(frozenset({"example.test"}), max_dns_queries=3)
+fixture: TenantInfoOverrides = {"display_name": "Synthetic", "services": ("Example",)}
+info = TenantInfo(tenant_id=None, display_name="", default_domain="", queried_domain="example.test")
+loaded, _stat, _elapsed = load_bounded_json_file(Path("example.json"), maximum_bytes=1024)
+label = read_label(loaded)

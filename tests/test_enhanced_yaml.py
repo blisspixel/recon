@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownVariableType=none
 """QA Round 1 — Enhanced YAML Engine tests.
 
 Unit tests and Hypothesis property-based tests for:

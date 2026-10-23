@@ -64,6 +64,7 @@ generated discovery context, not stable runtime contracts. See
 |---|---|
 | Contribution workflow | [../CONTRIBUTING.md](../CONTRIBUTING.md) |
 | Engineering practices | [engineering-practices.md](engineering-practices.md) |
+| Effective typing, measured baseline and exact legacy exceptions | [typing-policy.md](typing-policy.md) |
 | Operator layout, visual semantics and brand direction | [design-language.md](design-language.md) |
 | Linux terminal and native-panel qualification evidence | [interface-qualification-2026-10-20.md](interface-qualification-2026-10-20.md) |
 | Catalog growth and quality strategy | [catalog-strategy.md](catalog-strategy.md) |

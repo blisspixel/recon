@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownMemberType=none, reportUnknownVariableType=none
 """Self-update support for the `recon update` command.
 
 recon can be installed several ways (pipx, uv tool, plain pip, or an editable

@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownMemberType=none
 """Pattern-specificity gate for fingerprint regexes.
 
 A valid-YAML fingerprint can still be a catastrophic false positive — a

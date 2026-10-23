@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportUnknownArgumentType=none, reportUnknownMemberType=none
+# pyright: reportUnknownParameterType=none, reportUnknownVariableType=none
 """SIEM consumption-example regression tests.
 
 Pins the `examples/siem/` worked examples against schema drift. The

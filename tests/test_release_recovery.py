@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownMemberType=none
 """Human release metadata must be complete before read-only verification."""
 
 from __future__ import annotations

@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownMemberType=none
 """Evidence-responsive uncertainty-band arithmetic for Bayesian output."""
 
 from __future__ import annotations

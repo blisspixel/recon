@@ -26,6 +26,8 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.23.0] - 2026-10-23
+
 ### Added
 
 - Publish a harness-neutral catalog maintenance entry point with a runnable
@@ -39,6 +41,11 @@ operator, corporate group, ownership, or control.
   no additional probes or active-use claims.
 
 ### Fixed
+
+- Replace global and suite-wide typing relaxations with exact owned scopes and
+  a blocking audit that restores their diagnostics. Check JSON containers and
+  OIDC endpoint values, type rate-limit snapshots and shared fixtures, and
+  repair canonical test imports without changing ordinary lookup commands.
 
 - Gate cross-slug catalog overlaps with shared synthetic witnesses and reviewed
   retained provenance, including equal patterns and differently written
@@ -69,6 +76,13 @@ operator, corporate group, ownership, or control.
   so deceptive prefixes and appended domains cannot create provider-chain
   observations. Preserve ordered matching, queried-host provenance and legacy
   custom substring markers; custom domain markers can select `dns_suffix`.
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes. Batch JSON adds optional
+correlation completeness diagnostics; existing array/wrapper shapes remain.
+No MCP tool, resource or prompt names change. Private catalog maintenance
+helpers require a source checkout and do not change ordinary lookup setup.
 
 ## [2.22.0] - 2026-10-22
 

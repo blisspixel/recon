@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownMemberType=none, reportUnknownVariableType=none
 """User Realm discovery source for tenant display name, auth type, and domains.
 
 Queries two public Microsoft endpoints (no auth required):

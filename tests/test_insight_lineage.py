@@ -1,10 +1,12 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none, reportUnknownVariableType=none
 """Exact generation-time lineage for the bounded insight generators."""
 
 from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import replace
-from typing import Any
+from typing import Any, TypedDict, Unpack
 
 import pytest
 
@@ -24,10 +26,20 @@ from recon_tool.insight_scopes import (
 from recon_tool.insights import _INSIGHT_GENERATORS, InsightContext, generate_insight_claims, generate_insights
 from recon_tool.merger import merge_results
 from recon_tool.models import ConfidenceLevel, EvidenceRecord, InsightClaim, SourceResult, TenantInfo
+from tests.tenant_fixtures import TenantInfoArguments, TenantInfoOverrides
 
 
-def _info(**overrides: object) -> TenantInfo:
-    values: dict[str, object] = {
+class _InsightArguments(TypedDict):
+    services: set[str]
+    slugs: set[str]
+    auth_type: str
+    dmarc_policy: str
+    domain_count: int
+    evidence: tuple[EvidenceRecord, ...]
+
+
+def _info(**overrides: Unpack[TenantInfoOverrides]) -> TenantInfo:
+    values: TenantInfoArguments = {
         "tenant_id": None,
         "display_name": "example.test",
         "default_domain": "example.test",
@@ -35,7 +47,7 @@ def _info(**overrides: object) -> TenantInfo:
         "confidence": ConfidenceLevel.MEDIUM,
     }
     values.update(overrides)
-    return TenantInfo(**values)  # type: ignore[arg-type]
+    return TenantInfo(**values)
 
 
 def _claims(*args: Any, **kwargs: Any) -> list[InsightClaim]:
@@ -44,7 +56,7 @@ def _claims(*args: Any, **kwargs: Any) -> list[InsightClaim]:
 
 
 def test_public_string_projection_is_derived_from_exact_claims() -> None:
-    kwargs = {
+    kwargs: _InsightArguments = {
         "services": {"DKIM"},
         "slugs": {"microsoft365", "okta"},
         "auth_type": "Federated",

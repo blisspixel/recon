@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none
 """Batch command implementation: input bounds, per-domain processing, emitters.
 
 Extracted from cli.py (docs/roadmap.md god-file track). Plain command-logic

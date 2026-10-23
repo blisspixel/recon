@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Evidence-semantic contracts for the default panel assembly."""
 
 from __future__ import annotations

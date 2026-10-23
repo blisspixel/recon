@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Resilience hardening: confirmed gaps from the boundary fault-injection audit.
 
 Four ingestion-boundary gaps that an attacker who controls a queried domain (or

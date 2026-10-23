@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Wordlist sanity invariants.
 
 The active-DNS probe wordlist (``_COMMON_SUBDOMAIN_PREFIXES`` in

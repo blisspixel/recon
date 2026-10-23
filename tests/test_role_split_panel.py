@@ -15,6 +15,7 @@ only where the ambiguity exists.
 from __future__ import annotations
 
 import io
+from io import StringIO
 
 from rich.console import Console
 
@@ -88,6 +89,7 @@ def single_vendor_info() -> TenantInfo:
 def _panel_text(info: TenantInfo) -> str:
     console = Console(file=io.StringIO(), width=78, no_color=True, legacy_windows=False)
     console.print(render_tenant_panel(info))
+    assert isinstance(console.file, StringIO)
     return console.file.getvalue()
 
 

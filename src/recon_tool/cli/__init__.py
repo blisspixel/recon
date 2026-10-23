@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownMemberType=none, reportUnknownVariableType=none
 """CLI application facade for recon.
 Routes bare domains to lookup and registers commands so validation owns diagnostics.
 """

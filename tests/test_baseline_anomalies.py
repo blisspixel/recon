@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Unit tests for the v1.8 vertical-baseline anomaly rules in profiles.py.
 
 Covers:

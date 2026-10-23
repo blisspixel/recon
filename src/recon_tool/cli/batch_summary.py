@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownMemberType=none
 """Aggregate-only summary construction and rendering for batch commands."""
 
 from __future__ import annotations

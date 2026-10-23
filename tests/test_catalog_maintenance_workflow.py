@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportAttributeAccessIssue=none, reportIndexIssue=none, reportOperatorIssue=none
+# pyright: reportUnknownArgumentType=none, reportUnknownMemberType=none, reportUnknownVariableType=none
 """Offline admission, disclosure and one-use holdout contracts."""
 
 from __future__ import annotations

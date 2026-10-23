@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportPrivateUsage=none, reportUnknownMemberType=none
+# pyright: reportUnknownParameterType=none
 """Deterministic DNS fingerprint replay regressions."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportPrivateUsage=none, reportUnknownArgumentType=none
+# pyright: reportUnknownMemberType=none, reportUnknownParameterType=none, reportUnknownVariableType=none
 """Tests for CLI batch mode."""
 
 from __future__ import annotations
@@ -330,7 +333,9 @@ class TestBatchCommand:
             result = runner.invoke(app, ["batch", str(domain_file), "--json", "-c", "3"])
 
         assert result.exit_code == 0
+        assert ordered_map.await_args is not None
         assert ordered_map.await_args.args[0] == ["alpha.invalid", "example.com"]
+        assert ordered_map.await_args is not None
         assert ordered_map.await_args.kwargs["max_pending"] == 3
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
@@ -342,6 +347,7 @@ class TestBatchCommand:
         result = runner.invoke(app, ["batch", str(domain_file), "--json", "--timeout", "7"])
 
         assert result.exit_code == 0
+        assert mock_resolve.await_args is not None
         assert mock_resolve.await_args.kwargs["timeout"] == 7.0
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)

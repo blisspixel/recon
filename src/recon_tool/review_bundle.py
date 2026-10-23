@@ -1,5 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownMemberType=none, reportUnknownVariableType=none
 """Deterministic, caller-owned single-namespace review artifacts.
-
 ReviewBundle is separate from the stable lookup and observation-capsule
 contracts. It composes one fresh lookup, its exact collection opportunities,
 an explained lookup baseline, and evidence-linked review candidates without

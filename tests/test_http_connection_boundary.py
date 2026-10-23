@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportPrivateUsage=none, reportUnknownArgumentType=none
+# pyright: reportUnknownParameterType=none
 """Socket-boundary admission, TLS identity, and connection lifecycle checks."""
 
 from __future__ import annotations

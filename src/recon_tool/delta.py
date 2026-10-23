@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportUnknownArgumentType=none, reportUnknownVariableType=none
 """Delta engine — compares two domain intelligence snapshots.
 
 Computes structured diffs between a previous JSON export and a live

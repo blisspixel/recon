@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportPrivateUsage=none, reportUnknownArgumentType=none
+# pyright: reportUnknownParameterType=none, reportUnknownVariableType=none
 """Tests for GWS-related features across multiple modules.
 
 Covers:
@@ -495,6 +498,7 @@ class TestGoogleSourceLookup:
     async def test_invalid_domain(self):
         source = GoogleSource()
         result = await source.lookup("example.com/path")
+        assert result.error is not None
         assert "Invalid domain" in result.error
 
     @pytest.mark.asyncio

@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Tests for the fail-closed prior-sample catalog drift protocol."""
 
 from __future__ import annotations

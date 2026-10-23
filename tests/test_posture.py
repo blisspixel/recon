@@ -1,5 +1,7 @@
 """Tests for the posture analyzer."""
 
+from typing import Unpack
+
 import pytest
 
 from recon_tool.models import (
@@ -12,6 +14,7 @@ from recon_tool.models import (
 )
 from recon_tool.posture import DISCOURAGED_COPY_TERMS, analyze_posture
 from recon_tool.posture_models import metadata_predicate_satisfied
+from tests.tenant_fixtures import TenantInfoArguments, TenantInfoOverrides
 
 
 def test_posture_lineage_models_reject_incomplete_identity_and_scope() -> None:
@@ -37,8 +40,8 @@ def test_posture_metadata_predicate_handles_all_typed_operators_fail_closed() ->
     assert not metadata_predicate_satisfied("unsupported", "expected", "observed")
 
 
-def _make_info(**overrides) -> TenantInfo:
-    defaults = {
+def _make_info(**overrides: Unpack[TenantInfoOverrides]) -> TenantInfo:
+    defaults: TenantInfoArguments = {
         "tenant_id": None,
         "display_name": "Test",
         "default_domain": "test.invalid",

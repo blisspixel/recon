@@ -8,6 +8,7 @@ threshold-relative display without turning the hand-set band into confidence.
 from __future__ import annotations
 
 import io
+from io import StringIO
 
 from rich.console import Console
 
@@ -50,6 +51,7 @@ def _panel_text(posteriors: tuple[PosteriorObservation, ...]) -> str:
     )
     console = Console(file=io.StringIO(), width=80, force_terminal=False)
     console.print(render_tenant_panel(info))
+    assert isinstance(console.file, StringIO)
     return console.file.getvalue()
 
 

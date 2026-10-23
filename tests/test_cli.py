@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportMissingParameterType=none, reportUnknownArgumentType=none, reportUnknownMemberType=none
+# pyright: reportUnknownParameterType=none
 """Unit tests for CLI application."""
 
 from __future__ import annotations
@@ -9,6 +12,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 import typer
 import typer.rich_utils as typer_rich_utils
+from typer.core import TyperGroup, TyperOption
 from typer.main import get_command
 from typer.testing import CliRunner
 
@@ -123,9 +127,9 @@ class TestHelp:
         assert evidence < plain.index("--fusion")
 
         root_command = get_command(app)
-        assert isinstance(root_command, typer.core.TyperGroup)
+        assert isinstance(root_command, TyperGroup)
         lookup_command = root_command.commands["lookup"]
-        options = tuple(param for param in lookup_command.params if isinstance(param, typer.core.TyperOption))
+        options = tuple(param for param in lookup_command.params if isinstance(param, TyperOption))
         assert len(options) == 28
         primary_tokens = tuple(next(token for token in option.opts if token.startswith("--")) for option in options)
         assert all(token in plain for token in primary_tokens)
@@ -565,7 +569,7 @@ class TestRootOptionPlacement:
     def test_typo_suggestion_is_skipped_while_completing(self) -> None:
         ctx = get_command(app).make_context("recon", ["lookpu", "example.com"], resilient_parsing=True)
         group = ctx.command
-        assert isinstance(group, typer.core.TyperGroup)
+        assert isinstance(group, TyperGroup)
         name, _command, _args = group.resolve_command(ctx, ["lookpu", "example.com"])
         assert name == "lookup"
 

@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Tests for the frozen, disclosure-safe vendor-seed round contract."""
 
 from __future__ import annotations

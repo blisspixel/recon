@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportPrivateUsage=none
 """Round-trip tests for the disk cache's TenantInfo serialization.
 
 Covers every field that lives on TenantInfo, including the

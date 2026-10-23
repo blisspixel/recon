@@ -1,3 +1,5 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportIndexIssue=none, reportPrivateUsage=none
 """Interrupted maintenance keeps durable starts and uncertainty about legacy starts."""
 
 from __future__ import annotations

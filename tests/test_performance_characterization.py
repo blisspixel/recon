@@ -1,3 +1,6 @@
+# Legacy typing exceptions are owned in docs/typing-exceptions.json.
+# pyright: reportArgumentType=none, reportGeneralTypeIssues=none, reportPrivateUsage=none
+# pyright: reportUnknownArgumentType=none, reportUnknownVariableType=none
 """Contract tests for the network-free performance characterization harness."""
 
 from __future__ import annotations
