@@ -28,6 +28,11 @@ operator, corporate group, ownership, or control.
 
 ### Fixed
 
+- Characterize shared-response identity deductions and distinguish individual
+  model-unit masks from complete source withdrawal. Preserve separately
+  supported roles, conflicts and missing observations in offline regression
+  cases; clarify explanation limits without changing inference parameters.
+
 - Require current role-observation bindings and effective evidence before
   Bayesian assurance assertions. Repair vacuous grouping, sensitivity and
   conflict-band scenarios, retain generic-vendor negatives, and record a

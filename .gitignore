@@ -110,6 +110,7 @@ docs/accuracy.md
 !/validation/analyze_v19_calibration.py
 # Fixed synthetic role-observation inputs and aggregate model diagnostics only.
 !/validation/role-observation-assurance-2026-10-23.json
+!/validation/shared-response-characterization-2026-10-23.json
 # Differential verification of the inference core: independent full-joint
 # reference, no target data (synthetic network only). Imported by the test.
 !/validation/differential_verification.py

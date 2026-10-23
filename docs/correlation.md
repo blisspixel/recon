@@ -662,6 +662,16 @@ calculation uses `log(likelihood_present) - log(likelihood_absent)` for both
 group selection and ranking, preserving valid small likelihoods without
 division overflow or an explanatory clamp.
 
+An evidence unit is a committed model factor, not a raw-response identifier.
+One response can produce several role observations at connected nodes; local
+grouping does not establish their independence across those nodes. Removing
+one unit can leave other consequences of that response active. Conversely,
+masking every role associated with a response can also remove support from
+other observations that satisfy the same Boolean role. The bounded offline
+[shared-response characterization](shared-response-characterization.md)
+records both differences, direct versus graph support, duplicate invariance
+under the current adapter, and the limits of that result.
+
 ### 4.6 Relationship to the per-slug evidence-strength layer
 
 recon carries two numeric layers that are easy to conflate because both emit a
