@@ -1,0 +1,117 @@
+{
+  "version": 1,
+  "reviews": [
+    {
+      "rule": {
+        "source": "email.yaml",
+        "slug": "improvmx",
+        "detection_type": "mx",
+        "pattern": "mx1.improvmx.com"
+      },
+      "before": null,
+      "after": "758eb6dcecdaa274c8dd4ed1c06fde3e9a7719c781b98dc36461989db91fc6b7",
+      "disposition": "semantic",
+      "reviewed_on": "2026-10-23",
+      "source_checked_on": "2026-10-23",
+      "reason": "First-party documentation checked 2026-10-23: https://www.improvmx.com/api/v4/. Published routing, parsed SPF policy reference or verification marker only, according to record type. No active-use, delivery, ownership or completed-verification claim. Existing MX/SPF suffix semantics retained; no probes added."
+    },
+    {
+      "rule": {
+        "source": "email.yaml",
+        "slug": "improvmx",
+        "detection_type": "mx",
+        "pattern": "mx2.improvmx.com"
+      },
+      "before": null,
+      "after": "9661b328cd5ad4094595f10d548ac5aebf63d4932b6301fd03ef846a7d504eac",
+      "disposition": "semantic",
+      "reviewed_on": "2026-10-23",
+      "source_checked_on": "2026-10-23",
+      "reason": "First-party documentation checked 2026-10-23: https://improvmx.com/guides/white-label-mx-records/. Published routing, parsed SPF policy reference or verification marker only, according to record type. No active-use, delivery, ownership or completed-verification claim. Existing MX/SPF suffix semantics retained; no probes added."
+    },
+    {
+      "rule": {
+        "source": "email.yaml",
+        "slug": "improvmx",
+        "detection_type": "spf",
+        "pattern": "spf.improvmx.com"
+      },
+      "before": null,
+      "after": "bddd482310d09f9ec70b9f23b6cd8397e8f16b25439cef138af680b20047c28a",
+      "disposition": "semantic",
+      "reviewed_on": "2026-10-23",
+      "source_checked_on": "2026-10-23",
+      "reason": "First-party documentation checked 2026-10-23: https://www.improvmx.com/api/v4/. Published routing, parsed SPF policy reference or verification marker only, according to record type. No active-use, delivery, ownership or completed-verification claim. Existing MX/SPF suffix semantics retained; no probes added."
+    },
+    {
+      "rule": {
+        "source": "email.yaml",
+        "slug": "forward-email",
+        "detection_type": "mx",
+        "pattern": "mx1.forwardemail.net"
+      },
+      "before": null,
+      "after": "bf003b34c55b90543b9501a6ac32b56a89327c8d1dfb176ddfa74dde186019d1",
+      "disposition": "semantic",
+      "reviewed_on": "2026-10-23",
+      "source_checked_on": "2026-10-23",
+      "reason": "First-party documentation checked 2026-10-23: https://forwardemail.net/en/faq. Published routing, parsed SPF policy reference or verification marker only, according to record type. No active-use, delivery, ownership or completed-verification claim. Existing MX/SPF suffix semantics retained; no probes added."
+    },
+    {
+      "rule": {
+        "source": "email.yaml",
+        "slug": "forward-email",
+        "detection_type": "mx",
+        "pattern": "mx2.forwardemail.net"
+      },
+      "before": null,
+      "after": "3db9065c45063eedd48f0c238ac75d3caf8950a930bbf56b16242e4ffa05c573",
+      "disposition": "semantic",
+      "reviewed_on": "2026-10-23",
+      "source_checked_on": "2026-10-23",
+      "reason": "First-party documentation checked 2026-10-23: https://forwardemail.net/en/faq. Published routing, parsed SPF policy reference or verification marker only, according to record type. No active-use, delivery, ownership or completed-verification claim. Existing MX/SPF suffix semantics retained; no probes added."
+    },
+    {
+      "rule": {
+        "source": "email.yaml",
+        "slug": "forward-email",
+        "detection_type": "txt",
+        "pattern": "^forward-email-site-verification=\\S+$"
+      },
+      "before": null,
+      "after": "d1dbc2c9b2a8b3ebb558cb95ad16577750adaeed728122a19c80aafdd5545ce9",
+      "disposition": "semantic",
+      "reviewed_on": "2026-10-23",
+      "source_checked_on": "2026-10-23",
+      "reason": "First-party documentation checked 2026-10-23: https://forwardemail.net/en/faq. Published routing, parsed SPF policy reference or verification marker only, according to record type. No active-use, delivery, ownership or completed-verification claim. Existing MX/SPF suffix semantics retained; no probes added."
+    },
+    {
+      "rule": {
+        "source": "email.yaml",
+        "slug": "forward-email",
+        "detection_type": "spf",
+        "pattern": "spf.forwardemail.net"
+      },
+      "before": null,
+      "after": "6c28c0e10e282028847c4f09310bc0d844abea8ea5aa7d39c52d63e0c7503d25",
+      "disposition": "semantic",
+      "reviewed_on": "2026-10-23",
+      "source_checked_on": "2026-10-23",
+      "reason": "First-party documentation checked 2026-10-23: https://forwardemail.net/en/faq#how-do-i-set-up-spf-for-forward-email. Published routing, parsed SPF policy reference or verification marker only, according to record type. No active-use, delivery, ownership or completed-verification claim. Existing MX/SPF suffix semantics retained; no probes added."
+    },
+    {
+      "rule": {
+        "source": "surface.yaml",
+        "slug": "convex",
+        "detection_type": "cname_target",
+        "pattern": "^convex\\.domains\\.?$"
+      },
+      "before": null,
+      "after": "0305dcf6b54699c131cf230926a7d71339517a56cf6e38744588430b96e6bc54",
+      "disposition": "semantic",
+      "reviewed_on": "2026-10-23",
+      "source_checked_on": "2026-10-23",
+      "reason": "First-party documentation checked 2026-10-23: https://docs.convex.dev/production/abuse-protection. Related-host custom-domain routing only; exact target, no active-use or plan claim."
+    }
+  ]
+}

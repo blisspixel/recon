@@ -334,6 +334,9 @@ jobs:
         # "fix these N entries" rather than a percentage.
         run: uv run python scripts/check_metadata_coverage.py
 
+      - name: Review witnessed catalog overlaps
+        run: uv run python -m scripts.check_catalog_overlaps
+
       - name: Enforce verification dates on new fingerprint detections
         # A branch-creation push (including renaming the default branch away and
         # back) reports ``github.event.before`` as all zeros, which is not a

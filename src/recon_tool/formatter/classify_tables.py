@@ -79,6 +79,8 @@ CATEGORY_BY_SLUG: dict[str, str] = {
     "mailgun": "Email",
     "postmark": "Email",
     "resend": "Email",
+    "improvmx": "Email",
+    "forward-email": "Email",
     "sparkpost": "Email",
     "brevo": "Email",
     "mailchimp": "Email",
@@ -158,6 +160,7 @@ CATEGORY_BY_SLUG: dict[str, str] = {
     "railway": "Cloud",
     "render": "Cloud",
     "supabase": "Cloud",
+    "convex": "Cloud",
     # Hosting-provider detection from A → PTR
     "aws-ec2": "Cloud",
     "aws-compute": "Cloud",
@@ -847,6 +850,8 @@ CLOUD_VENDOR_ROLLUP_EXCLUSIONS: frozenset[str] = frozenset(
         "wordpress-vip",
         "webflow",
         "github-pages",
+        # Application-backend routing is not a general-cloud footprint.
+        "convex",
         # Developer / prototyping platforms - not production cloud
         "replit",
         "glitch",

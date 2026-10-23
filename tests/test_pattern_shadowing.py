@@ -36,8 +36,8 @@ from recon_tool.fingerprints import filter_shadowed_matches, load_fingerprints
 # specific rule.
 _SUBSTRING_TYPES = {"spf", "mx", "ns", "dmarc_rua", "caa", "cname_target", "cname"}
 
-# Pattern-pair shadows that are accepted because the engine demonstrably
-# suppresses them at lookup time. Each entry is
+# Pattern-pair shadows with reviewed selection or distinct-role behavior.
+# The witness gate also checks actual retained provenance. Each entry is
 # ``(detection_type, broader_pattern, broader_slug, narrower_pattern, narrower_slug)``.
 # Adding a row here is an explicit decision; the test fails when a new
 # shadow appears that is not on this list.
@@ -45,7 +45,8 @@ _ALLOWED_SHADOWS: frozenset[tuple[str, str, str, str, str]] = frozenset(
     {
         # oracle-cloud's cname_target is the broad OCI infrastructure
         # marker; oracle-fusion's fa.oraclecloud.com is the SaaS app
-        # endpoint. Same suppression: most-specific match per tier.
+        # endpoint. OCI is infrastructure tier and Fusion application tier:
+        # both are retained as distinct roles from the same CNAME observation.
         ("cname_target", "oraclecloud.com", "oracle-cloud", "fa.oraclecloud.com", "oracle-fusion"),
     }
 )
@@ -83,16 +84,16 @@ def _collect_substring_pattern_pairs() -> list[tuple[str, str, str, str, str]]:
 def test_no_unapproved_substring_shadows() -> None:
     """Every cross-slug substring shadow must be on the approved list.
 
-    Adding a new shadow without a documented engine-level mitigation
+    Adding a new shadow without documented selection or distinct roles
     means the catalog can silently double-count vendors at lookup time.
     See the docstring for the resolution path.
     """
     shadows = _collect_substring_pattern_pairs()
     unapproved = [s for s in shadows if s not in _ALLOWED_SHADOWS]
     assert not unapproved, (
-        f"{len(unapproved)} unapproved pattern shadows. Each is a broader "
-        f"pattern that would fire alongside a narrower one and double-count "
-        f"the underlying vendor at lookup time.\n\n"
+        f"{len(unapproved)} unapproved pattern shadows. Cross-slug candidate "
+        f"matches need reviewed selection or distinct-role behavior and "
+        f"retained provenance.\n\n"
         + "\n".join(
             f"  {typ}: {short_pat!r} ({short_slug}) shadowed by {long_pat!r} ({long_slug})"
             for typ, short_pat, short_slug, long_pat, long_slug in unapproved
@@ -100,9 +101,8 @@ def test_no_unapproved_substring_shadows() -> None:
         + "\n\nResolution options:\n"
         "  1. Narrow the broader pattern (e.g. add a leading dot).\n"
         "  2. Remove the broader pattern if redundant with the narrower one.\n"
-        "  3. If the engine demonstrably suppresses the shadow at lookup\n"
-        "     time, add the tuple to _ALLOWED_SHADOWS in this test with a\n"
-        "     comment explaining the suppression path."
+        "  3. Review actual selection or distinct-role behavior in the witness\n"
+        "     gate and add the tuple to _ALLOWED_SHADOWS with its rationale."
     )
 
 

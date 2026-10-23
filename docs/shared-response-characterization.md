@@ -1,7 +1,7 @@
 # Shared-response identity characterization
 
-Reviewed 2026-10-23 against runtime revision
-`73fd0c36` and the exact shipped model digest in the
+Reviewed 2026-10-23; reproducible from merged assurance revision
+`9d1c84ed1b8d717f07856d12ac3498a1208e9517` and the exact shipped model digest in the
 [synthetic receipt](../validation/shared-response-characterization-2026-10-23.json).
 This is a bounded offline characterization for issue #269, following the
 active-role assurance repair in #263. It establishes no population calibration
