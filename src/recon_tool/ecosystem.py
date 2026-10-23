@@ -26,7 +26,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from itertools import combinations
 
 from recon_tool.fingerprints import load_fingerprints
@@ -42,14 +42,10 @@ __all__ = [
 # Caps applied across all hyperedge types combined.
 MAX_HYPEREDGES = 200
 MAX_MEMBERS_PER_HYPEREDGE = 100
+MAX_PAIR_VISITS = 100_000
 
-# Per-builder cap on candidate edges, enforced during the scan rather than
-# after it. The shared-slugs pair scan is O(n^2) in batch size, and with the
-# cap applied only post-hoc a 4000-domain batch materialised 3.5M candidate
-# edges (~930 MiB) before MAX_HYPEREDGES truncation ever ran; the documented
-# 10,000-domain batch limit extrapolates to an out-of-memory. Ten times the
-# output cap keeps the final (edge_type, key, members) sort choosing from a
-# wide candidate pool while holding peak memory flat.
+# Per-builder candidate cap, independent of the indexed pair-visit budget.
+# Bound intermediate edge materialization before final output selection.
 _MAX_CANDIDATE_HYPEREDGES = MAX_HYPEREDGES * 10
 
 # Minimum overlap to fire a ``shared_slugs`` hyperedge between a pair
@@ -88,6 +84,48 @@ class Hyperedge:
     members: tuple[str, ...]
 
 
+@dataclass
+class _EcosystemWork:
+    """Actual enumeration counters, separate from the bounded emitted edges."""
+
+    baseline_slugs_filtered: int = 0
+    pair_visits: int = 0
+    pair_visits_possible: int = 0
+    unique_pairs_examined: int = 0
+    pair_search_complete: bool = True
+    candidate_limit_reached: bool = False
+    known_omitted_candidates: int = 0
+    omitted_member_occurrences: int = 0
+
+
+@dataclass(frozen=True)
+class EcosystemReport:
+    """Retained edges plus bounded-search and omission diagnostics."""
+
+    hyperedges: tuple[Hyperedge, ...]
+    completeness: dict[str, object]
+
+
+def _bucket_hyperedges(
+    buckets: Mapping[str, list[str] | set[str]], edge_type: str, work: _EcosystemWork | None
+) -> list[Hyperedge]:
+    """Project indexed groups and count omissions without expanding pairs."""
+    out: list[Hyperedge] = []
+    for key, members in sorted(buckets.items()):
+        if len(members) < 2:
+            continue
+        if len(out) >= _MAX_CANDIDATE_HYPEREDGES:
+            if work is not None:
+                work.candidate_limit_reached = True
+                work.known_omitted_candidates += 1
+            continue
+        ordered = tuple(sorted(set(members)))
+        if work is not None:
+            work.omitted_member_occurrences += max(0, len(ordered) - MAX_MEMBERS_PER_HYPEREDGE)
+        out.append(Hyperedge(edge_type=edge_type, key=key, members=ordered[:MAX_MEMBERS_PER_HYPEREDGE]))
+    return out
+
+
 def _slug_to_parent_vendor() -> dict[str, str]:
     """Return ``{slug: parent_vendor}`` for fingerprints with the
     metadata populated."""
@@ -96,6 +134,7 @@ def _slug_to_parent_vendor() -> dict[str, str]:
 
 def _top_issuer_hyperedges(
     infos: Mapping[str, TenantInfo],
+    work: _EcosystemWork | None = None,
 ) -> list[Hyperedge]:
     buckets: dict[str, list[str]] = defaultdict(list)
     for domain, info in infos.items():
@@ -105,21 +144,12 @@ def _top_issuer_hyperedges(
         # build_cert_summary.
         top = info.cert_summary.top_issuers[0]
         buckets[top].append(domain)
-    out: list[Hyperedge] = []
-    # Sorted key order means the candidate cap keeps exactly the edges the
-    # final (edge_type, key, members) output sort would have kept.
-    for issuer, members in sorted(buckets.items()):
-        if len(out) >= _MAX_CANDIDATE_HYPEREDGES:
-            break
-        if len(members) < 2:
-            continue
-        members_sorted = tuple(sorted(set(members)))[:MAX_MEMBERS_PER_HYPEREDGE]
-        out.append(Hyperedge(edge_type="top_issuer", key=issuer, members=members_sorted))
-    return out
+    return _bucket_hyperedges(buckets, "top_issuer", work)
 
 
 def _parent_vendor_hyperedges(
     infos: Mapping[str, TenantInfo],
+    work: _EcosystemWork | None = None,
 ) -> list[Hyperedge]:
     slug_to_vendor = _slug_to_parent_vendor()
     if not slug_to_vendor:
@@ -130,17 +160,7 @@ def _parent_vendor_hyperedges(
             vendor = slug_to_vendor.get(slug)
             if vendor:
                 buckets[vendor].add(domain)
-    out: list[Hyperedge] = []
-    # Sorted key order means the candidate cap keeps exactly the edges the
-    # final (edge_type, key, members) output sort would have kept.
-    for vendor, members in sorted(buckets.items()):
-        if len(out) >= _MAX_CANDIDATE_HYPEREDGES:
-            break
-        if len(members) < 2:
-            continue
-        members_sorted = tuple(sorted(members))[:MAX_MEMBERS_PER_HYPEREDGE]
-        out.append(Hyperedge(edge_type="parent_vendor", key=vendor, members=members_sorted))
-    return out
+    return _bucket_hyperedges(buckets, "parent_vendor", work)
 
 
 def _baseline_slugs(
@@ -167,6 +187,7 @@ def _baseline_slugs(
 
 def _shared_slugs_hyperedges(
     infos: Mapping[str, TenantInfo],
+    work: _EcosystemWork | None = None,
 ) -> list[Hyperedge]:
     """Pairs of domains sharing ``_MIN_SLUG_OVERLAP`` or more slugs.
 
@@ -186,28 +207,31 @@ def _shared_slugs_hyperedges(
     # Strip baseline once per domain rather than per pair — saves
     # work when the corpus is large.
     discriminating = {d: slugs - baseline for d, slugs in domain_slugs.items()}
-    domains_sorted = sorted(discriminating)
-    seen_keys: set[tuple[str, ...]] = set()
-    for a, b in combinations(domains_sorted, 2):
-        # The pair scan is quadratic in batch size, so the candidate cap must
-        # stop the scan itself, not just trim its result. Slug-intersection
-        # keys are only known per pair, so unlike the bucketed builders the
-        # cap here keeps the first qualifying pairs in sorted-domain order
-        # (deterministic) rather than the globally smallest keys; the output
-        # sort still ranks within the collected pool.
-        if len(out) >= _MAX_CANDIDATE_HYPEREDGES:
-            break
-        overlap = discriminating[a] & discriminating[b]
-        if len(overlap) < _MIN_SLUG_OVERLAP:
-            continue
-        members: tuple[str, ...] = tuple(sorted({a, b}))
-        if members in seen_keys:
-            continue
-        seen_keys.add(members)
-        # The "key" for shared-slug edges is the canonical slug
-        # intersection so consumers can group similar pairs.
-        key = ",".join(sorted(overlap))
-        out.append(Hyperedge(edge_type="shared_slugs", key=key, members=members))
+    postings: dict[str, list[str]] = defaultdict(list)
+    for domain in sorted(discriminating):
+        slugs = discriminating[domain]
+        if len(slugs) >= _MIN_SLUG_OVERLAP:
+            for slug in sorted(slugs):
+                postings[slug].append(domain)
+    progress = work if work is not None else _EcosystemWork()
+    progress.baseline_slugs_filtered = len(baseline)
+    progress.pair_visits_possible = sum(len(members) * (len(members) - 1) // 2 for members in postings.values())
+    seen_pairs: set[tuple[str, str]] = set()
+    for slug in sorted(postings):
+        for a, b in combinations(postings[slug], 2):
+            progress.pair_visits += 1
+            if (a, b) not in seen_pairs:
+                seen_pairs.add((a, b))
+                progress.unique_pairs_examined += 1
+                overlap = discriminating[a] & discriminating[b]
+                if len(overlap) >= _MIN_SLUG_OVERLAP:
+                    out.append(Hyperedge(edge_type="shared_slugs", key=",".join(sorted(overlap)), members=(a, b)))
+            if progress.pair_visits >= MAX_PAIR_VISITS or len(out) >= _MAX_CANDIDATE_HYPEREDGES:
+                progress.pair_search_complete = progress.pair_visits == progress.pair_visits_possible
+                progress.candidate_limit_reached = (
+                    len(out) >= _MAX_CANDIDATE_HYPEREDGES and not progress.pair_search_complete
+                )
+                return out
     return out
 
 
@@ -223,8 +247,17 @@ def build_ecosystem_hyperedges(
     ``parent_vendor`` and ``top_issuer`` categories. No type establishes shared
     infrastructure or ownership, and no transitive relationship is inferred.
     """
-    if len(infos) < 2:
-        return ()
+    return build_ecosystem_report(infos).hyperedges
+
+
+def build_ecosystem_report(infos: Mapping[str, TenantInfo], *, input_count: int | None = None) -> EcosystemReport:
+    """Build the same edge projection with explicit completeness and work bounds.
+
+    Indexed shared-slug candidates avoid comparing disjoint namespaces. Pair
+    visits (including duplicate posting encounters) are capped independently
+    of qualifying results; the candidate pool and final output retain their
+    existing caps. Unvisited pairs have unknown qualifying edge counts.
+    """
 
     # Enforce observability at the public builder boundary. The CLI batch path
     # already supplies these views, but keeping the invariant here prevents a
@@ -234,18 +267,28 @@ def build_ecosystem_hyperedges(
 
     observable_infos = {domain: collection_observable_info(info) for domain, info in infos.items()}
 
-    by_type: list[tuple[str, list[Hyperedge]]] = [
-        ("shared_slugs", _shared_slugs_hyperedges(observable_infos)),
-        ("parent_vendor", _parent_vendor_hyperedges(observable_infos)),
-        ("top_issuer", _top_issuer_hyperedges(observable_infos)),
+    work = _EcosystemWork()
+    by_type: list[list[Hyperedge]] = [
+        _shared_slugs_hyperedges(observable_infos, work),
+        _parent_vendor_hyperedges(observable_infos, work),
+        _top_issuer_hyperedges(observable_infos, work),
     ]
 
     flat: list[Hyperedge] = []
-    for _, edges in by_type:
+    for edges in by_type:
         edges.sort(key=lambda e: (e.edge_type, e.key, e.members))
         flat.extend(edges)
-        if len(flat) >= MAX_HYPEREDGES:
-            flat = flat[:MAX_HYPEREDGES]
-            break
-
-    return tuple(flat)
+    completeness: dict[str, object] = {
+        **asdict(work),
+        "input_namespaces": input_count if input_count is not None else len(infos),
+        "resolved_namespaces": len(infos),
+        "failed_namespaces": max(0, input_count - len(infos)) if input_count is not None else 0,
+        "source_unavailable_namespaces": sum(bool(info.degraded_sources) for info in infos.values()),
+        "pair_visit_limit": MAX_PAIR_VISITS,
+        "candidate_limit_per_type": _MAX_CANDIDATE_HYPEREDGES,
+        "edge_limit": MAX_HYPEREDGES,
+        "member_limit_per_edge": MAX_MEMBERS_PER_HYPEREDGE,
+        "known_omitted_edges_lower_bound": work.known_omitted_candidates + max(0, len(flat) - MAX_HYPEREDGES),
+        "unvisited_qualifying_edges_unknown": not work.pair_search_complete,
+    }
+    return EcosystemReport(tuple(flat[:MAX_HYPEREDGES]), completeness)

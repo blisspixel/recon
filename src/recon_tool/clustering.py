@@ -27,6 +27,7 @@ Design rationale
 
 from __future__ import annotations
 
+import json
 import re
 from collections import defaultdict
 from collections.abc import Mapping
@@ -35,9 +36,11 @@ from dataclasses import dataclass
 __all__ = [
     "ClusterEntry",
     "DisplayNameCluster",
+    "SharedTokenReport",
     "TenantCluster",
     "cluster_tokens",
     "compute_display_name_clusters",
+    "compute_shared_token_report",
     "compute_shared_tokens",
     "compute_tenant_clusters",
 ]
@@ -118,6 +121,18 @@ class ClusterEntry:
 
     token: str
     peer: str
+
+
+@dataclass(frozen=True)
+class SharedTokenReport:
+    """Bounded token projection with exact omitted peer-entry counts."""
+
+    clusters: dict[str, tuple[ClusterEntry, ...]]
+    omitted_peers: dict[str, int]
+    high_cardinality_peers: dict[str, int]
+    emitted_entries: int
+    encoded_bytes_budgeted: int
+    output_limited: bool
 
 
 def _normalize(token: str) -> str:
@@ -201,28 +216,69 @@ def compute_shared_tokens(
         * Deterministic — peer lists are sorted by ``(token, peer)``
           so output is stable across runs with the same input.
     """
-    token_map = cluster_tokens(domain_tokens)
+    return compute_shared_token_report(domain_tokens).clusters
 
+
+def compute_shared_token_report(
+    domain_tokens: dict[str, tuple[str, ...]],
+    *,
+    max_entries: int | None = None,
+    max_encoded_bytes: int | None = None,
+) -> SharedTokenReport:
+    """Admit whole token groups before expanding any quadratic peer entries.
+
+    Groups above the existing 200-member policy are filtered. Optional output
+    budgets bound materialization; omitted counts remain exact because group
+    cardinalities are known without expanding their cross-products. Sorted
+    token selection and whole-group admission preserve deterministic symmetry.
+    The encoded budget includes escaped JSON values and padding for the batch
+    wrapper's indentation, rather than assuming one byte per character.
+    """
+    if (max_entries is not None and max_entries < 0) or (max_encoded_bytes is not None and max_encoded_bytes < 0):
+        raise ValueError("Token projection budgets must be nonnegative")
     per_domain: dict[str, list[ClusterEntry]] = defaultdict(list)
-    for token, domains in token_map.items():
+    omitted: dict[str, int] = defaultdict(int)
+    filtered: dict[str, int] = defaultdict(int)
+    emitted = 0
+    encoded = 0
+    limited = False
+    for token, domains in sorted(cluster_tokens(domain_tokens).items()):
         if len(domains) < 2:
             continue
-        # Skip very high-cardinality tokens: the observation is low-specificity
-        # and the peer cross-product below is O(k^2). Skipping keeps a 10k-domain
-        # CLI batch from spiking CPU or memory on one token. Callers must not
-        # interpret omitted output as proof that no reuse was observed.
         if len(domains) > _MAX_CLUSTER_DOMAINS_PER_TOKEN:
+            for domain in domains:
+                filtered[domain] += len(domains) - 1
             continue
-        # For each domain in the cluster, every other domain is a peer
-        # via this token.
-        for d in domains:
-            for peer in domains:
+        count = len(domains) * (len(domains) - 1)
+        # Each peer value appears once for every other subject. Bound bytes
+        # with one encoding per member, not a quadratic temporary JSON list.
+        cost = (len(domains) - 1) * sum(
+            len(json.dumps({"token": token, "peer": d}, ensure_ascii=True, indent=2).encode("utf-8")) + 64
+            for d in domains
+        )
+        if (max_entries is not None and emitted + count > max_entries) or (
+            max_encoded_bytes is not None and encoded + cost > max_encoded_bytes
+        ):
+            limited = True
+            for domain in domains:
+                omitted[domain] += len(domains) - 1
+            continue
+        emitted += count
+        encoded += cost
+        ordered = sorted(domains)
+        for d in ordered:
+            for peer in ordered:
                 if peer == d:
                     continue
                 per_domain[d].append(ClusterEntry(token=token, peer=peer))
-
-    # Sort each entry list for deterministic output and freeze to tuples
-    return {d: tuple(sorted(entries, key=lambda e: (e.token, e.peer))) for d, entries in per_domain.items()}
+    return SharedTokenReport(
+        clusters={d: tuple(sorted(entries, key=lambda e: (e.token, e.peer))) for d, entries in per_domain.items()},
+        omitted_peers=dict(omitted),
+        high_cardinality_peers=dict(filtered),
+        emitted_entries=emitted,
+        encoded_bytes_budgeted=encoded,
+        output_limited=limited,
+    )
 
 
 def _normalize_display_name(name: str) -> str:

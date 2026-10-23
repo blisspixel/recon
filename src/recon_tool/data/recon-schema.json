@@ -621,6 +621,10 @@
       ],
       "pattern": "^[0-9a-f]{64}$",
       "description": "Opaque identity of the collection policy and version; no resolver endpoints."
+    },
+    "correlation_completeness": {
+      "$ref": "#/$defs/BatchCorrelationCompleteness",
+      "description": "Batch-only projection limits; omitted or unavailable comparisons are not observed absence."
     }
   },
   "$defs": {
@@ -2175,6 +2179,171 @@
         "cohort_summary": {
           "description": "Optional aggregate-only sibling emitted when --summary is combined with --json --include-ecosystem. It describes only the caller-supplied cohort and names no individual domain.",
           "$ref": "#/$defs/CohortSummary"
+        },
+        "ecosystem_completeness": {
+          "$ref": "#/$defs/EcosystemCompleteness",
+          "description": "Enumeration, filtering, unavailable-input and omission diagnostics for retained ecosystem edges."
+        }
+      }
+    },
+    "BatchCorrelationCompleteness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "failed_namespaces",
+        "source_unavailable_namespaces",
+        "omitted_tenant_peers",
+        "omitted_display_name_peers",
+        "omitted_token_peers",
+        "high_cardinality_token_peers",
+        "peer_candidates_examined",
+        "peer_limit",
+        "token_entry_limit",
+        "token_encoded_byte_limit",
+        "enumeration_complete",
+        "token_output_limited"
+      ],
+      "properties": {
+        "failed_namespaces": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_unavailable_namespaces": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "omitted_tenant_peers": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "omitted_display_name_peers": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "omitted_token_peers": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "high_cardinality_token_peers": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "peer_candidates_examined": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "peer_limit": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "token_entry_limit": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "token_encoded_byte_limit": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "enumeration_complete": {
+          "type": "boolean"
+        },
+        "token_output_limited": {
+          "type": "boolean"
+        }
+      }
+    },
+    "EcosystemCompleteness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "baseline_slugs_filtered",
+        "pair_visits",
+        "pair_visits_possible",
+        "unique_pairs_examined",
+        "known_omitted_candidates",
+        "omitted_member_occurrences",
+        "input_namespaces",
+        "resolved_namespaces",
+        "failed_namespaces",
+        "source_unavailable_namespaces",
+        "pair_visit_limit",
+        "candidate_limit_per_type",
+        "edge_limit",
+        "member_limit_per_edge",
+        "known_omitted_edges_lower_bound",
+        "pair_search_complete",
+        "candidate_limit_reached",
+        "unvisited_qualifying_edges_unknown"
+      ],
+      "properties": {
+        "baseline_slugs_filtered": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pair_visits": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pair_visits_possible": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unique_pairs_examined": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "known_omitted_candidates": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "omitted_member_occurrences": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "input_namespaces": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "resolved_namespaces": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failed_namespaces": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_unavailable_namespaces": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pair_visit_limit": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "candidate_limit_per_type": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "edge_limit": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "member_limit_per_edge": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "known_omitted_edges_lower_bound": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pair_search_complete": {
+          "type": "boolean"
+        },
+        "candidate_limit_reached": {
+          "type": "boolean"
+        },
+        "unvisited_qualifying_edges_unknown": {
+          "type": "boolean"
         }
       }
     }

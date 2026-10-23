@@ -181,25 +181,32 @@
       "classification": "direct_observation",
       "evidence_path": [
         "src/recon_tool/evidence_models.py#EvidenceRecord",
-        "src/recon_tool/formatter/serialize.py#format_tenant_dict"
+        "src/recon_tool/formatter/serialize.py#format_tenant_dict",
+        "docs/schema.md"
       ],
       "limits": [
         "Overlap does not establish ownership, shared control, a business relationship, or current use.",
-        "Absence of an optional public token is non-informative."
+        "Absence of an optional public token is non-informative.",
+        "Enumeration is bounded over supplied namespaces; missing sources, baseline filtering, projected peers and unvisited pairs preclude an exhaustive absence claim. Known omission counts and unknown unvisited qualifying edges are distinct."
       ],
       "lineage_status": "exact",
       "material": true,
       "producer_paths": [
         "src/recon_tool/ecosystem.py#build_ecosystem_hyperedges",
         "src/recon_tool/cli/batch.py",
-        "src/recon_tool/server/graph.py"
+        "src/recon_tool/server/graph.py",
+        "src/recon_tool/batch_correlation.py#attach_batch_correlations",
+        "src/recon_tool/clustering.py#compute_shared_token_report",
+        "src/recon_tool/ecosystem.py#build_ecosystem_report"
       ],
       "regression_tests": [
         "tests/test_ecosystem.py",
-        "tests/test_batch.py"
+        "tests/test_batch.py",
+        "tests/test_batch_correlation_bounds.py"
       ],
       "renderer_obligations": [
-        "Name the exact token, tenant-ID, display-label, issuer, provider, or slug overlap and keep alternative explanations open."
+        "Name the exact token, tenant-ID, display-label, issuer, provider, or slug overlap and keep alternative explanations open.",
+        "Retain bounded-correlation diagnostics, distinguish omitted and unavailable comparisons from observed empty output, and never present retained peer or edge counts as exhaustive membership."
       ],
       "subject_scope": "operator-supplied public namespace coordinates"
     },
@@ -1154,6 +1161,7 @@
       "cloud_instance": "runtime.identity-and-tenant.v1",
       "confidence": "runtime.confidence-summary.v1",
       "connection_map": "runtime.catalog-indicator.v1",
+      "correlation_completeness": "runtime.cross-domain-overlap.v1",
       "ct_attempt_outcome": "runtime.ct-observation.v1",
       "ct_cache_age_days": "runtime.ct-observation.v1",
       "ct_provider_used": "runtime.ct-observation.v1",
@@ -1390,6 +1398,7 @@
   "coverage_contract": {
     "json_definition_owners": {
       "BIMIIdentity": "runtime.bimi-observation.v1",
+      "BatchCorrelationCompleteness": "runtime.cross-domain-overlap.v1",
       "BatchErrorRecord": "runtime.structured-transport.v1",
       "BatchResult": "runtime.structured-transport.v1",
       "CertBurst": "runtime.ct-observation.v1",
@@ -1403,6 +1412,7 @@
       "ConnectionLane": "runtime.catalog-indicator.v1",
       "ConnectionMap": "runtime.catalog-indicator.v1",
       "DeltaReport": "runtime.delta-report.v1",
+      "EcosystemCompleteness": "runtime.cross-domain-overlap.v1",
       "EcosystemHyperedge": "runtime.cross-domain-overlap.v1",
       "EvidenceConflict": "runtime.collection-status.v1",
       "EvidenceRecord": "runtime.collection-status.v1",
@@ -1423,7 +1433,7 @@
     ],
     "surface_digest_algorithm": "sha256(sorted UTF-8 surface IDs joined by LF)",
     "surface_digests": {
-      "json_fields": "3f0dd28dfda744057a919dd795e6646b7ed15a3422053a852e9f77196cb7cc98",
+      "json_fields": "9d9c05f08dcc6ec158a5b8eeddbb3c1ca3f1cbcec0b234f8581e62d452e40d29",
       "mcp_tools": "c5606814d74e8f27a9885d094f0f80d4bb76df0fa467733eb42b496a0f241d1c"
     }
   },

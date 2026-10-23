@@ -28,6 +28,11 @@ operator, corporate group, ownership, or control.
 
 ### Fixed
 
+- Bound batch tenant/name peer projection, token expansion and indexed
+  ecosystem pair work independently of qualifying results. Preserve small
+  groups and existing JSON array/wrapper shapes, and add explicit diagnostics
+  for unavailable comparisons, filtering, truncation and unfinished search.
+
 - Keep unrecorded historical delta sets distinct from explicitly empty arrays.
   Withhold unsupported service, slug and signal changes and report missing
   confidence/domain-count comparisons in the existing incomplete diagnostic.

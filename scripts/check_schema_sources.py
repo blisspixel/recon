@@ -31,6 +31,7 @@ SPECIAL_SCHEMA_SOURCES: Mapping[str, str] = {
     "schema_version": "static formatter envelope version",
     "shared_display_name": "batch-mode extension",
     "shared_tenant": "batch-mode extension",
+    "correlation_completeness": "batch-mode bounded peer projection and comparison-opportunity diagnostics",
 }
 
 INTENTIONAL_TENANTINFO_OMISSIONS: Mapping[str, str] = {
