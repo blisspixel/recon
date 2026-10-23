@@ -5,6 +5,7 @@
 [![Python](https://img.shields.io/pypi/pyversions/recon-tool.svg?cacheSeconds=300)](https://pypi.org/project/recon-tool/)
 [![License](https://img.shields.io/pypi/l/recon-tool.svg?cacheSeconds=300)](https://github.com/blisspixel/recon/blob/main/LICENSE)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/blisspixel/recon/badge)](https://scorecard.dev/viewer/?uri=github.com/blisspixel/recon)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15800/badge)](https://www.bestpractices.dev/projects/15800)
 
 Point recon at a domain to see its **public technology and identity
 footprint**: email providers and controls, identity indicators, SaaS services,
@@ -180,6 +181,8 @@ Catalog corrections and documented vendor patterns are especially useful.
 Start with [CONTRIBUTING.md](https://github.com/blisspixel/recon/blob/main/CONTRIBUTING.md)
 for setup, verification, and contribution requirements; coding agents should
 also read [AGENTS.md](https://github.com/blisspixel/recon/blob/main/AGENTS.md).
+For repeatable catalog work, start with the harness-neutral
+[maintenance skill and offline example](https://github.com/blisspixel/recon/blob/main/agents/maintainer/skills/recon-catalog-maintenance/SKILL.md).
 
 Use [issues](https://github.com/blisspixel/recon/issues) for bugs and feature
 requests. Keep public examples reserved and synthetic; never post evaluated

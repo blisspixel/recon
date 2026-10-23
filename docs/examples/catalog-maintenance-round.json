@@ -1,0 +1,24 @@
+{
+  "schema_version": 2,
+  "private": true,
+  "round_id": "synthetic-demo-v1",
+  "round_kind": "vertical",
+  "question": "Can a fictional maintenance round preserve sparse evidence and selection caveats?",
+  "source": {"name": "Fictional operator-supplied inputs", "revision": "2026-10-23 synthetic v1"},
+  "strata": [
+    {"id": "community", "label": "Fictional community presence", "input": "community.txt"},
+    {"id": "institution", "label": "Fictional institutional presence", "input": "institution.txt"}
+  ],
+  "policies": {
+    "exclusions": "Only supplied fictional namespaces; no inferred related domains or target expansion.",
+    "overlap": "first-stratum-wins"
+  },
+  "collection": {"ct_enabled": false, "direct_probes_enabled": false},
+  "thresholds": {"minimum_occurrences": 3, "minimum_distinct_namespaces": 2},
+  "promotion_budget": {
+    "metric": "classified share by record type",
+    "minimum_improvement": 0.01,
+    "maximum_regression": 0.0,
+    "decision_rule": "No automatic promotion; require documented rule support, independent review and existing gates."
+  }
+}

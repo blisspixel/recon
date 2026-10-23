@@ -1,5 +1,10 @@
 # Contributing
 
+For atomic fingerprint and structural-pattern maintenance, start with the
+harness-neutral
+[maintenance skill](agents/maintainer/skills/recon-catalog-maintenance/SKILL.md)
+and its [offline example and monthly receipts](docs/catalog-maintenance.md).
+
 Thanks for your interest in contributing to recon. Read the section below
 first: it is the project's single non-negotiable rule. By taking part you also
 agree to the [Code of Conduct](CODE_OF_CONDUCT.md).

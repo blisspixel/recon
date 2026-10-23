@@ -151,7 +151,7 @@ def test_surface_inventory_has_agent_surfaces() -> None:
     assert guidance_files["agents/claude-code/skills/recon-fingerprint-triage/SKILL.md"]["frontmatter"]["name"] == (
         "recon-fingerprint-triage"
     )
-    for name in ("recon-corpus-plan", "recon-catalog-round"):
+    for name in ("recon-corpus-plan", "recon-catalog-round", "recon-catalog-maintenance", "recon-fingerprint-triage"):
         maintainer_skill = guidance_files[f"agents/maintainer/skills/{name}/SKILL.md"]
         assert maintainer_skill["kind"] == "maintainer_skill"
         assert maintainer_skill["frontmatter"]["name"] == name

@@ -1,0 +1,277 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/blisspixel/recon/blob/main/docs/catalog-maintenance-plan.schema.json",
+  "title": "Private maintenance admission around the existing round contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "question",
+    "role",
+    "round_plan",
+    "development_frame",
+    "exclusions",
+    "candidate_catalog_digest",
+    "budgets",
+    "layers",
+    "attributes_file",
+    "expected_strata",
+    "sampling_notes"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_.-]{0,79}$"
+    },
+    "question": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 2000
+    },
+    "role": {
+      "enum": [
+        "documentation",
+        "development",
+        "holdout"
+      ]
+    },
+    "round_plan": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 4096,
+      "minLength": 1
+    },
+    "development_frame": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 4096,
+      "minLength": 1
+    },
+    "exclusions": {
+      "type": "array",
+      "maxItems": 20,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4096
+      }
+    },
+    "candidate_catalog_digest": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "budgets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_namespaces",
+        "max_dns_queries",
+        "concurrency",
+        "namespace_timeout_seconds",
+        "max_runtime_seconds",
+        "max_attempts",
+        "max_review_items",
+        "max_proposals"
+      ],
+      "properties": {
+        "max_namespaces": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "max_dns_queries": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000000
+        },
+        "concurrency": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "namespace_timeout_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 600
+        },
+        "max_runtime_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 86400
+        },
+        "max_attempts": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3
+        },
+        "max_review_items": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50
+        },
+        "max_proposals": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 50
+        }
+      }
+    },
+    "layers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "atomic",
+        "composite",
+        "ct"
+      ],
+      "properties": {
+        "atomic": {
+          "type": "boolean"
+        },
+        "composite": {
+          "type": "boolean"
+        },
+        "ct": {
+          "type": "boolean"
+        }
+      }
+    },
+    "attributes_file": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "expected_strata": {
+      "type": "array",
+      "maxItems": 50,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 80
+      }
+    },
+    "sampling_notes": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 4000
+    }
+  },
+  "$defs": {
+    "attributes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "rows"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "rows": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "domain",
+              "basis"
+            ],
+            "properties": {
+              "domain": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 253
+              },
+              "basis": {
+                "type": "string",
+                "minLength": 10,
+                "maxLength": 1000
+              },
+              "geography": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 200
+              },
+              "language": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 200
+              },
+              "scale": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 200
+              },
+              "sector": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 200
+              },
+              "ownership": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 200
+              },
+              "website_role": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 200
+              },
+              "provider_mix": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 200
+              },
+              "footprint": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 200
+              },
+              "dependency_group": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 200
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

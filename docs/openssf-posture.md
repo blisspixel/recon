@@ -37,7 +37,7 @@ The remaining low or unknown checks are process-bound:
 |---|---|---|
 | `Branch-Protection` | `main` requires PRs, strict CI, CodeQL and gitleaks, linear history, no deletion or force pushes, and no bypass actors. Independent approvals, last-push approval and required CODEOWNERS review are absent because there is one maintainer. | Stale approvals are dismissed and review threads must resolve. Release readiness enforces these controls. Add independent approval requirements when a second qualified reviewer is available. |
 | `Code-Review` | No human-approved changesets appear in Scorecard's sampled window; automated review comments are not approvals. | Use normal reviewed PRs for non-urgent work when there is another qualified reviewer. Do not manufacture review history. |
-| `CII-Best-Practices` | No OpenSSF Best Practices Badge project is linked. | Use [openssf-badge-readiness.md](openssf-badge-readiness.md) to answer the questionnaire from committed evidence; link a badge only after the real project page exists and the answers match the repository. |
+| `CII-Best-Practices` | The real badge project is now linked from README. Its status is separate from this dated Scorecard snapshot. | Keep questionnaire answers consistent with the repository; check the current Scorecard API before claiming its sampled result changed. |
 | `Contributors` | Scorecard sees no contributor diversity across organizations. | Accept this for a single-maintainer project. Do not add artificial contributors. |
 
 ## Best Practices Badge Readiness
@@ -64,10 +64,14 @@ passing result:
 | Security | CodeQL, ruff security rules, `pip-audit`, secret scanning, push protection, least-privilege workflow tokens, pinned workflow actions, SBOM, same-job deterministic-build checks, Trusted Publishing, PyPI attestations, and GitHub build provenance. |
 | Analysis | Strict type checking, static analysis, workflow-pin checks, validation hygiene, text hygiene, schema drift checks, and release readiness checks. |
 
-No OpenSSF Best Practices Badge is claimed in this repository until the project
-exists on `bestpractices.dev` and the questionnaire is answered honestly from
-the worksheet. A future badge link must point to the real project page and must
-not be added as a placeholder.
+The live first-party JSON and SVG for
+[project 15800](https://www.bestpractices.dev/projects/15800) reported
+Passing at 100 percent on 2026-10-23 and identified this recon repository.
+README now embeds its official dynamic badge. This is an account-backed
+self-assessment, not an independent security audit or a security guarantee.
+The worksheet above remains local evidence and historical proposal state;
+the badge service owns the current answers and status. Future status can change.
+Any later badge must point to its actual reviewed project and must not be added as a placeholder.
 
 ## CODEOWNERS Decision
 

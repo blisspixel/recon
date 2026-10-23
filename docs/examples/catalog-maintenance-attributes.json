@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "rows": [
+    {
+      "domain": "alpha.test",
+      "basis": "Fictional fixture assignments; not observed company attributes.",
+      "geography": "unknown",
+      "language": "fictional non-English stratum",
+      "scale": "unknown",
+      "sector": "community",
+      "ownership": "independent/community",
+      "website_role": "community/content",
+      "provider_mix": "unknown",
+      "footprint": "sparse fixture",
+      "dependency_group": "fictional-shared-operator"
+    },
+    {
+      "domain": "beta.test",
+      "basis": "Fictional fixture assignments; not observed company attributes.",
+      "scale": "unknown",
+      "dependency_group": "fictional-shared-operator"
+    },
+    {
+      "domain": "gamma.test",
+      "basis": "Fictional institution fixture; geography and scale not inferred.",
+      "ownership": "education",
+      "website_role": "institution",
+      "dependency_group": null
+    }
+  ]
+}

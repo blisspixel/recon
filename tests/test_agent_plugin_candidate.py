@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import shutil
+import subprocess
 from pathlib import Path
 from typing import Any, cast
 
@@ -49,6 +50,19 @@ def test_committed_candidate_is_current_and_valid() -> None:
     # contract digest, which is pinned exactly and must never move silently.
     assert version == _project_version()
     assert digest == "403a5860dc547ab0fd8961023d196e0b72ec6524ed2c1cb7da4253899628eafe"
+
+
+def test_every_generated_skill_and_package_file_has_lf_checkout_policy() -> None:
+    paths = [path.relative_to(ROOT).as_posix() for path in generator.rendered_files()]
+    result = subprocess.run(  # noqa: S603 - generated repository paths, no shell execution
+        ["git", "check-attr", "eol", "--", *paths],  # noqa: S607 - repository-local attribute query
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert len(result.stdout.splitlines()) == len(paths)
+    assert all(line.endswith(": eol: lf") for line in result.stdout.splitlines())
 
 
 @pytest.mark.parametrize(

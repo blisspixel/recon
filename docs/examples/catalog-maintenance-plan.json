@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "id": "synthetic-demo-v1",
+  "question": "Can a fictional maintenance round preserve sparse evidence and selection caveats?",
+  "role": "development",
+  "round_plan": "catalog-maintenance-round.json",
+  "development_frame": null,
+  "exclusions": [],
+  "candidate_catalog_digest": null,
+  "attributes_file": "catalog-maintenance-attributes.json",
+  "expected_strata": ["community", "institution", "commerce"],
+  "sampling_notes": "Fictional convenience frame; unknown scale and geography remain unknown. Rank is not size.",
+  "budgets": {
+    "max_namespaces": 4,
+    "max_dns_queries": 100,
+    "concurrency": 2,
+    "namespace_timeout_seconds": 30,
+    "max_runtime_seconds": 600,
+    "max_attempts": 2,
+    "max_review_items": 8,
+    "max_proposals": 8
+  },
+  "layers": {"atomic": true, "composite": true, "ct": false}
+}

@@ -53,6 +53,7 @@ class DetectionMetadata:
     claim_digest: str = ""
     structural_digest: str = ""
     review_digest: str = ""
+    reference: str = ""
 
 
 @dataclass(frozen=True)
@@ -98,6 +99,7 @@ def _metadata(entry: dict[str, Any], rule: dict[str, Any], key: DetectionKey) ->
         claim_digest=_digest((context, claim)),
         structural_digest=_digest((context, structural)),
         review_digest=_digest((context, claim, rule.get("verified"))),
+        reference=rule.get("reference") if isinstance(rule.get("reference"), str) else "",
     )
 
 

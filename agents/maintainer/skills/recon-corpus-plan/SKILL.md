@@ -10,6 +10,8 @@ its validation harnesses; it is not part of the frozen portable plugin candidate
 Paths below are relative to that checkout, even if this skill is installed elsewhere.
 
 Read `docs/catalog-maintenance.md` and `docs/data-handling-policy.md` first.
+The neutral `recon-catalog-maintenance` entry point owns mode selection and
+the frozen-budget, consumed-holdout and monthly receipt wrapper.
 Use `validation/README.md` for the selected preparer's exact input contract;
 inspect its plan loader and `--help` before producing an executable plan.
 

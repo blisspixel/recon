@@ -9,6 +9,10 @@ remain unchanged. See [catalog strategy](catalog-strategy.md),
 
 ## Agent entry points
 
+Start with the harness-neutral
+[recon-catalog-maintenance](../agents/maintainer/skills/recon-catalog-maintenance/SKILL.md)
+entry point. It routes the six modes below to existing canonical helpers.
+
 These skills are source-checkout maintenance instructions, not additional tools
 in the public MCP server or changes to the frozen portable plugin evaluation:
 
@@ -16,7 +20,7 @@ in the public MCP server or changes to the frozen portable plugin evaluation:
 |---|---|---|
 | Select and freeze a corpus | [recon-corpus-plan](../agents/maintainer/skills/recon-corpus-plan/SKILL.md) | Private frame and manifest, aggregate declaration, or explicit missing inputs; no collection |
 | Collect or evaluate the frozen round | [recon-catalog-round](../agents/maintainer/skills/recon-catalog-round/SKILL.md) | Private retained observations, typed/stratified aggregates, completeness and decision ledger |
-| Refine individual rules | [recon-fingerprint-triage](../agents/claude-code/skills/recon-fingerprint-triage/SKILL.md) | Evidence-backed disposition, scoped rule patch and synthetic regressions |
+| Refine individual rules | [recon-fingerprint-triage](../agents/maintainer/skills/recon-fingerprint-triage/SKILL.md) | Evidence-backed disposition, scoped rule patch and synthetic regressions |
 
 A harness can load these files directly or install them using its own skill
 discovery mechanism. Paths inside them resolve against a recon checkout. They
@@ -27,6 +31,224 @@ Within an authorized implementation task, that review can be automated through
 source inspection, independently supported vendor grammar, and regression
 checks. It does not add a human approval checkpoint before local catalog edits.
 See the [maintainer acceptance rule](maintainer-loop-runbook.md#acceptance-rule).
+
+## Start offline, without private context
+
+Use a source checkout, Python 3.11-3.15 and the repository's pinned uv 0.13.5.
+The installed PyPI CLI does not include `validation/` or `agents/`. From the
+checkout root:
+
+```text
+uv sync --locked
+uv run python -m validation.catalog_maintenance demo
+```
+
+This makes no DNS, HTTP, MCP or paid model calls. It freezes the public
+[fictional plan](examples/catalog-maintenance-plan.json),
+[round contract](examples/catalog-maintenance-round.json) and
+[declared attributes](examples/catalog-maintenance-attributes.json) under
+`validation/runs-private/catalog-maintenance/`. Repeated invocation preserves
+the original artifacts. A changed example or implementation needs a fresh
+private `--root`; old receipts remain historical evidence.
+
+The example normalizes four supplied host rows into three namespaces, retains
+two fictional strata, reports a missing commerce stratum and unknown scale and
+geography, and counts one declared shared dependency group separately from
+namespace count. It does not estimate an independent sample size. Finite
+atomic and ordered-sequence controls exercise documented markers, deceptive
+hosts, missing hops, reversed order, duplicate hops and subject provenance.
+Cross-namespace graphs and CT are not evaluated. Existing dedicated suites
+still own full human/JSON/MCP provenance, graph permutation and bounded-work
+contracts; this small example does not replace them.
+
+Its worked failed run has one timeout terminal and two unfinished items. With
+no durable per-item starts, those two starts remain unknown, not unattempted.
+Typed classification rates stay null and an empty proposal queue establishes
+no catalog completeness. The existing 20-row public stratum minimum is kept;
+the fictional example withholds subgroup publication rather than adding rows
+to force eligibility.
+
+## Choose the mode and freeze its authority
+
+Documentation-only review, existing local artifact triage and planning are
+offline. Read first-party configuration guidance, or use the neutral triage
+skill and `validation.catalog_baseline` on retained local observations. For an
+existing gap artifact, `validation.triage_candidates --gaps <private-path>
+--output <private-path>` performs local filtering only. Recurrence and catalog
+agreement do not establish precision or authorize promotion.
+
+For new development or holdout work, copy the example documents into
+`validation/corpus-private/`, replace only with operator-supplied inputs and
+declare a question. The
+[maintenance schema](catalog-maintenance-plan.schema.json) wraps the existing
+round contract rather than replacing it. The attribute sub-schema is optional
+at runtime; missing labels remain unknown. Include a private planning matrix:
+
+| Dimension | Record and retain privately |
+| --- | --- |
+| Geography and language | Operator-declared basis, non-US/non-English coverage and unknowns; ccTLD, language and hosting location do not prove organizational geography |
+| Scale or rank | Defensible small/medium/large basis or unknown; rank bands describe popularity, not company size |
+| Sector and ownership | Commercial, nonprofit, public-sector, education or independent/community strata appropriate to the question |
+| Website role | Informational presence, commerce, product/SaaS, content/community, public-service or institution |
+| Provider mix and footprint | Diverse routing/hosting/email configurations and sparse/rich opportunities, without selecting only known catalog matches |
+| Dependencies and exclusions | Explicitly known shared units, discovery inputs, prior consumed holdouts, duplicated hosts and actual exclusion files |
+
+Use bounded quotas under one overall namespace budget, never an unbounded
+Cartesian product. State source vintage, eligibility and missing or small
+strata. A convenience/discovery frame is not a representative probability
+sample. Do not publish tiny or unlabeled subgroup rates, infer ownership from
+shared infrastructure, or silently count related namespaces as independent.
+
+Freeze before collecting:
+
+```text
+uv run python -m validation.catalog_maintenance plan --plan validation/corpus-private/maintenance-plan.json
+```
+
+Admission archives source bytes and the original round plan, retains vintage,
+normalizes/deduplicates through `prepare_catalog_round`, enforces actual
+exclusion/development-frame disjointness and freezes the catalog/execution
+digests. Existing local fingerprint, signal, motif and prior semantics receive
+additional private digests; operator configuration, DNS and limiter state are
+preserved. A local overlay is not the canonical built-in baseline. Changed
+context blocks new collection and withholds comparable interpretation.
+Interrupted preparation retains its reservation; reconcile it or declare a new
+ID without deleting evidence. This wrapper supports non-drift contracts with
+the existing runner's two-distinct-namespace recurrence floor. Drift keeps its
+separate prior-result comparison contract.
+
+Collection is a separate explicitly authorized action. The example below is a
+template for a plan the operator has authorized; an automated due-work wake
+does not provide that authority:
+
+```text
+uv run python -m validation.catalog_maintenance collect --admission validation/runs-private/catalog-maintenance/rounds/my-round/admission.json --attempt 1 --allow-network
+```
+
+The wrapper invokes the existing scan/batch path with frozen namespace,
+logical DNS-query, concurrency, per-namespace timeout, overall runtime and
+attempt budgets. A namespace can start once per attempt. DNS query reservations
+include retries that revisit the safe-resolver boundary; transport-internal
+packets and existing HTTP retry policies are not counted as DNS queries.
+Those policies remain execution-digest bound. Budgets apply per attempt, with
+an explicit maximum number of attempts. CT defaults off and must agree with the
+round plan; direct probes remain off. Ordinary DNS and MTA-STS traffic is
+target-visible. No user list is expanded through discovered related domains.
+These source-checkout controls add no ordinary CLI setup or flags.
+
+Durable namespace starts precede lookup IO. Query exhaustion stops the run
+instead of becoming an empty source observation; streamed results remain
+available for offline finalization. Admission, started-attempt and returned
+receipts are immutable. A repeated attempt never recollects. A declared retry
+uses the next numbered attempt and retains `retry_of`; reconcile an interrupted
+or still-running attempt before starting another. Never run two attempts of
+the same round concurrently.
+
+For a holdout, freeze the exact candidate catalog and a nonempty development
+frame, preserve disjointness and use the same private registry root. Consumption
+is reserved by namespace before collection or first offline evaluation.
+Renaming, reordering or taking a subset cannot recycle consumed names in that
+registry. Failed collection still consumes it; no holdout retry is accepted.
+The registry is local accounting, not a cross-machine secrecy or independence
+guarantee. Do not inspect holdout outcomes while developing rules.
+
+## Evaluate retained work and propose a patch
+
+Run `validation.scan --finalize-existing <private-run>` with the original
+corpus, manifest, collection choices and thresholds to finish an interrupted
+scan offline. Preserve the original results; do not overwrite them or replace
+failed namespaces. The wrapper's `resume` mode passes those frozen settings to
+that exact offline path and records finalization before a development retry:
+
+```text
+uv run python -m validation.catalog_maintenance resume --admission validation/runs-private/catalog-maintenance/rounds/my-round/admission.json --attempt 1 --input validation/runs-private/catalog-maintenance/rounds/my-round/attempt-01/retained-run
+```
+
+Stop any surviving collection process before resuming offline. A retry is
+refused until the previous attempt returned or has an offline finalization
+receipt. Then reduce the specific retained run:
+
+```text
+uv run python -m validation.catalog_maintenance evaluate --admission validation/runs-private/catalog-maintenance/rounds/my-round/admission.json --input validation/runs-private/catalog-maintenance/rounds/my-round/attempt-01/retained-run
+```
+
+Evaluation freezes each result location and content digest separately, so a
+new declared development attempt does not overwrite an earlier evaluation.
+Holdouts get one evaluation reservation. Records must belong to the frozen
+frame and fit its cap. Receipts distinguish admitted, terminal success,
+terminal error, unfinished, known-started lower bounds, unknown starts and
+proven unattempted items. An unverifiable modern start receipt withholds start
+accounting rather than inventing zeros. Source availability and classification
+denominators remain the typed reducer's job. Review atomic and composite scope
+separately: a requested layer is not proof it was successfully collected or
+tested. CT-disabled and structural-not-evaluated states remain explicit.
+
+Before a proposed PR, specify whether it changes a catalog rule, signal,
+relation or inference claim. Require current first-party support or a
+disclosure-safe basis, exact grammar/role, positive and counterexample fixtures,
+sparse and failed-source cases, duplication and appropriate permutation checks,
+bounds and retained namespace/provenance through human, JSON and MCP outputs.
+An atomic addition alone supplies no stronger composite or inference claim.
+Use the existing overlap, claim-disposition and full local/hosted gates; there
+is no automatic promotion from classification uplift.
+
+Inputs and all output artifacts are private by default. Before committing or
+uploading any reviewed public proposal, give an explicit tracked file list to
+`validation.catalog_maintenance check-publication`, then run the canonical
+validation-hygiene gate. Private roots, untracked files, path escapes and broad
+upload globs are refused. The existing gate also catches force-added private
+artifacts. File-list checks do not anonymize content or replace disclosure
+review; do not upload the private receipt directory. This workflow performs no
+upload or GitHub write itself.
+
+## Monthly due work and review receipts
+
+The versioned [public ledger](catalog-freshness-ledger.json) starts with the
+eight documented additions checked on 2026-10-23. It is a bounded review record,
+not a claim that every rule was reviewed that month. Private monthly receipts
+bind due rules to their exact claim/catalog digest, prior/new reference, actual
+source check/review date, disposition, next review and bounded proposal queue.
+The offline freshness auditor and weekly Provider drift smoke do not establish
+that a documentation review occurred.
+
+```text
+uv run python -m validation.catalog_maintenance due --period 2026-10 --review-limit 8 --proposal-limit 8
+uv run python -m validation.catalog_maintenance status --admission validation/runs-private/catalog-maintenance/freshness/2026-10/admission.json
+uv run python -m validation.catalog_maintenance review-template --admission validation/runs-private/catalog-maintenance/freshness/2026-10/admission.json --output validation/corpus-private/reference-reviews.json
+uv run python -m validation.catalog_maintenance review --admission validation/runs-private/catalog-maintenance/freshness/2026-10/admission.json --input validation/corpus-private/reference-reviews.json
+```
+
+The template starts explicitly unreviewed and deferred; edit it to record only
+checks actually performed. Submitting it unchanged produces a blocked receipt.
+Use the exact admitted rule IDs and the
+[reference review schema](catalog-reference-review.schema.json). A checked row
+needs actual source/review dates, supporting basis and a later `next_review`.
+Use `unchanged`, `narrowed`, `added`, `retired` or `deferred`; source status is
+`checked`, `unreachable` or `unreviewed`. Unknown sources cannot advance a
+verification date. A URL edit alone is not a source check. A changed semantic
+digest becomes due again even before its old next-review date.
+
+Repeated wakes reuse one bounded admission; other active cycles reserve their
+unfinished rule IDs. Immutable digest-named submissions can resume partial or
+unknown work without rewriting checked decisions. Distinct receipts report
+`completed`, `no_change`, `partial`, `blocked` and `skipped`; `status` also reports
+whether the cycle is overdue. Record an intentional skip with `skip --admission
+<private-path> --reason <explanation>`. No-change is successful completed review;
+an inaccessible source remains unresolved. Neither state mechanically stamps
+YAML `verified` values.
+
+For an authorized external proposal, `catalog_freshness.claim_proposal` reserves
+the queue item's content-bound identity and rule before a PR write. Different
+intents for a rule stay serialized while a claim is outstanding. Reconcile
+GitHub after interruption rather than creating a duplicate; record a checked
+merged/closed PR with `resolve_proposal`. Identical completed intents do not
+reopen. The next distinct checked intent can proceed. These helpers perform no
+remote writes. A proposed patch still needs existing semantic dispositions,
+synthetic fixtures and the full gate.
+
+A future monthly scheduler may invoke offline `due` and record its result. It
+may not silently collect, use paid models, upload inputs, push, open PRs or
+promote rules. No recurring job is installed or activated by this workflow.
 
 ## One round, with explicit boundaries
 

@@ -50,6 +50,8 @@ def test_strategic_gap_audit_names_real_remaining_gaps_without_fake_progress() -
         "Latency and degradation contract",
         "OpenSSF Best Practices Badge",
         "manual answer queue",
+        "Passing at 100 percent, checked 2026-10-23",
+        "self-assessment as an independent audit or security guarantee",
         "openssf-badge-readiness.md",
         "Reviewed PR signal",
         "Artifact archive and DOI",

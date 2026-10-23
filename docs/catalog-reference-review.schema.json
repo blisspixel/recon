@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/blisspixel/recon/blob/main/docs/catalog-reference-review.schema.json",
+  "title": "Bounded catalog reference review input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "reviews"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "reviews": {
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "rule_id",
+          "source_status",
+          "source_checked_on",
+          "reviewed_on",
+          "next_review",
+          "prior_reference",
+          "new_reference",
+          "disposition",
+          "basis"
+        ],
+        "properties": {
+          "rule_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1600
+          },
+          "source_status": {
+            "enum": [
+              "checked",
+              "unreachable",
+              "unreviewed"
+            ]
+          },
+          "source_checked_on": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "reviewed_on": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "next_review": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "prior_reference": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "new_reference": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "disposition": {
+            "enum": [
+              "unchanged",
+              "narrowed",
+              "added",
+              "retired",
+              "deferred"
+            ]
+          },
+          "basis": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 4000
+          }
+        }
+      }
+    }
+  }
+}

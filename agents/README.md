@@ -8,6 +8,14 @@ the client folders reuse the canonical guidance in
 the repository-root [`AGENTS.md`](../AGENTS.md) rather than carrying stale
 copies.
 
+## Maintain the catalog
+
+For contribution work, start with the harness-neutral
+[maintenance skill](maintainer/skills/recon-catalog-maintenance/SKILL.md).
+Its [runnable offline example and monthly receipt workflow](../docs/catalog-maintenance.md)
+reuse the existing planning, round and triage helpers. These require a source
+checkout; they add no runtime MCP tool or ordinary-lookup setup.
+
 ## Quickest path: `recon mcp install`
 
 For the MCP-server half of the setup, the canonical move is:
@@ -31,7 +39,7 @@ That handles **piece 1** of the setup (the MCP server). Per-client folders below
 
 | Agent | Folder | Repository content |
 |---|---|---|
-| **Agent Plugins candidate** | [`agent-plugin/`](agent-plugin/) | Complete current 23-tool portable packaging candidate, generated from the native skills and validated offline against the byte-pinned Published v1.0.0 schemas. The frozen v2.15 evaluation contract remains a historical 22-tool frame, and representative-client compatibility remains unclaimed. |
+| **Agent Plugins candidate** | [`agent-plugin/`](agent-plugin/) | Complete current 23-tool portable packaging candidate, generated from canonical skill sources and validated offline against the byte-pinned Published v1.0.0 schemas. The frozen v2.15 evaluation contract remains a historical 22-tool frame, and representative-client compatibility remains unclaimed. |
 | **Claude Code** | [`claude-code/`](claude-code/) | Source-checkout-only client plugin: MCP registration + skill + manifest. It is not a PyPI or GitHub Release asset. |
 | **Kiro** | [`kiro/`](kiro/) | MCP config + instructions for using the canonical SKILL.md as a Kiro skill. |
 | **Cursor** | [`cursor/`](cursor/) | MCP config + instructions for creating `.cursor/rules/recon.md` from `AGENTS.md`. |

@@ -178,6 +178,13 @@ review gates. Fixed-observation coverage uplift is a diagnostic, not precision
 or a complete service-selection counterfactual. These maintenance instructions
 do not open a new feature tranche or expand the frozen portable plugin frame.
 
+The harness-neutral maintenance entry point includes a runnable fictional
+offline round and private due/review receipts. Frozen collection budgets,
+durable starts and consumed-holdout accounting preserve partial and unavailable
+work. Monthly reference review is distinct from the weekly endpoint smoke;
+neither a scheduled wake nor an empty candidate queue proves catalog freshness
+or authorizes collection. See the changelog for release status.
+
 This is the loop that runs forever, because vendors add, rename, and retire the
 public patterns recon detects. It runs in two directions each month, and both
 carry a public reference or a disclosure-safe basis by construction, so a
@@ -1154,10 +1161,11 @@ v2.5.2:
    10,000-domain cap, a local one-off synthetic characterization created seven
    outer batch worker tasks instead of 10,000 eager outer tasks and reduced
    traced scheduling peak from 11,638,234 to
-   480,232 bytes. Next remove summary-mode discarded rendering, then bound
-   pairwise ecosystem overlap and peer-list materialization before increasing
-   concurrency. Test adversarial dense cohorts through the same cap and report
-   omitted counts rather than silently truncating evidence.
+   480,232 bytes. The current batch path also bounds indexed ecosystem overlap
+   and peer-list materialization, with known omission and unknown unfinished
+   enumeration diagnostics. Keep the sparse, dense and permutation fixtures
+   blocking before increasing concurrency. Summary-mode discarded rendering
+   remains separate profiling work.
 
 An optional Rust extension may enter an isolated prototype only when a stable,
 deterministic, coarse-grained stage remains above 250 ms p95 on a representative
@@ -1317,7 +1325,7 @@ Plugins package.
 
 The implemented candidate has root `plugin.json` and `mcp.json` documents
 carrying the matching canonical schemas, immediate skill children under
-`skills/`, and an explicit stdio transport. Generation from native sources and
+`skills/`, and an explicit stdio transport. Generation from canonical skill sources and
 independent offline validation are blocking in local and hosted CI. After a
 passing three-client and runtime preflight, exercise install, discovery,
 launch, failure reporting, and update behavior in the three frozen listed

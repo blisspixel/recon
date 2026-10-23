@@ -37,6 +37,8 @@ _AGENT_GUIDANCE_FILES: tuple[tuple[str, str], ...] = (
     ("agents/claude-code/skills/recon-fingerprint-triage/SKILL.md", "skill"),
     ("agents/maintainer/skills/recon-corpus-plan/SKILL.md", "maintainer_skill"),
     ("agents/maintainer/skills/recon-catalog-round/SKILL.md", "maintainer_skill"),
+    ("agents/maintainer/skills/recon-catalog-maintenance/SKILL.md", "maintainer_skill"),
+    ("agents/maintainer/skills/recon-fingerprint-triage/SKILL.md", "maintainer_skill"),
     ("agents/agent-plugin/skills/recon/SKILL.md", "portable_candidate_skill"),
     (
         "agents/agent-plugin/skills/recon-fingerprint-triage/SKILL.md",
