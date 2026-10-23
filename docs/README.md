@@ -120,6 +120,7 @@ probabilities of product use; see the statistical-assurance dossier below.
 | Topic | Read |
 |---|---|
 | Formal correlation model and robustness research program | [correlation.md](correlation.md) |
+| Shared-response identity deductions and source-withdrawal characterization | [shared-response-characterization.md](shared-response-characterization.md) |
 | Statistical-assurance dossier | [statistical-assurance.md](statistical-assurance.md) |
 | Bayesian CPT discipline | [bayesian-cpt-discipline.md](bayesian-cpt-discipline.md) |
 | Audit-ready claim to mechanism to test map | [assurance-case.md](assurance-case.md) |

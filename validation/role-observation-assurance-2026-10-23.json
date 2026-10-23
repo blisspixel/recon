@@ -1,0 +1,167 @@
+{
+  "engine_revision": "9bd94cdd4a52d7a84e9fb79e33b9d8d5e38c0774",
+  "limits": "Finite synthetic model sensitivity; not population precision, calibration, independent corroboration or a general robustness bound.",
+  "model_git_blob": "70d5f4571946b5db96dd8422237f4d027299a910",
+  "model_path": "src/recon_tool/data/bayesian_network.yaml",
+  "model_sha256": "adaaa9d7e669ec0e9f3c0e5700070080d21b0b9fca20af8fa94ea75c985e5d0a",
+  "model_version": 1,
+  "perturbation": {
+    "clip": [
+      0.001,
+      0.999
+    ],
+    "delta": [
+      -0.1,
+      0.1
+    ],
+    "one_entry_at_a_time": true,
+    "targets": 20
+  },
+  "prior_overrides": {},
+  "review_date": "2026-10-23",
+  "reviewed_scenario_inventory": {
+    "tests/test_bayesian_dag.py": "Existing dense fixture already uses current role signals; add preconditions before rendering.",
+    "tests/test_bayesian_evidence_groups.py": "Replace vacuous shipped-model grouping comparison with a purpose-built three-binding model: grouped mass5 versus naive mass7 and nonzero observed bindings; duplicate custom slugs retain one unit.",
+    "tests/test_bayesian_fuzz.py": "Repair duplicate and conflict stress inputs to activate current role bindings; generator-input positive case was already role-bound.",
+    "tests/test_bayesian_hypothesis.py": "Add current role signals to randomized evidence and require fired bindings; deterministic generated cases now contain at least one binding, retaining generic inventory slugs as nonbinding context. Existing example budgets unchanged.",
+    "tests/test_bayesian_inference.py": "Repair positive shipped-network inputs and conflict cases; test interval tightening at fixed mean rather than assert universal additional-evidence monotonicity.",
+    "tests/test_bayesian_sensitivity.py": "Replaced retired vendor-slug dense positives with adapter-backed role fixtures; assert direct bindings, effective units, sparse state and node movement before perturbations; retain calibration parameters and explicit empty prior overrides.",
+    "tests/test_bayesian_topology.py": "Existing numerical positives use current role signals; add explicit fired-binding checks and preserve DKIM as an intentional nonbinding policy control.",
+    "tests/test_bayesian_validation_rounds.py": "Repair named positive roles, disconnected-node controls, duplicate projection, selected interval and above-floor conflict cases; keep unknown inputs as intentional negatives.",
+    "validation/likelihood_sensitivity.py": "Reviewed unchanged: observations sample names from current model bindings and inference passes explicit empty prior overrides. Its independent diagnostic generator does not enforce all shipped group/declarative semantics, as already documented.",
+    "validation/threshold_sensitivity.py": "Reviewed outside role migration: this script sweeps renderer ceiling-trigger thresholds, not Bayesian evidence bindings."
+  },
+  "scenario_specification": "tests/bayesian_scenarios.py#shipped_scenarios",
+  "scenarios": [
+    {
+      "effective_mass": {
+        "aws_hosting": 4.0,
+        "cdn_fronting": 4.0,
+        "email_gateway_present": 4.0,
+        "email_security_modern_provider": 4.0,
+        "email_security_policy_enforcing": 7.0,
+        "federated_identity": 5.0,
+        "google_workspace_tenant": 4.0,
+        "m365_tenant": 5.0,
+        "okta_idp": 4.0
+      },
+      "fired_bindings": {
+        "email_security_policy_enforcing": [
+          "signal:dmarc_reject",
+          "signal:mta_sts_enforce",
+          "signal:spf_strict"
+        ],
+        "federated_identity": [
+          "signal:federated_sso_hub"
+        ],
+        "m365_tenant": [
+          "signal:m365_tenant_observed"
+        ]
+      },
+      "max_shift": 0.1076,
+      "name": "dense_m365_stack",
+      "signals": [
+        "dkim_present",
+        "dmarc_reject",
+        "federated_sso_hub",
+        "m365_tenant_observed",
+        "mta_sts_enforce",
+        "spf_strict"
+      ],
+      "slugs": [],
+      "sparse": {
+        "aws_hosting": true,
+        "cdn_fronting": true,
+        "email_gateway_present": true,
+        "email_security_modern_provider": true,
+        "email_security_policy_enforcing": false,
+        "federated_identity": false,
+        "google_workspace_tenant": true,
+        "m365_tenant": false,
+        "okta_idp": true
+      }
+    },
+    {
+      "effective_mass": {
+        "aws_hosting": 4.0,
+        "cdn_fronting": 4.0,
+        "email_gateway_present": 4.0,
+        "email_security_modern_provider": 4.0,
+        "email_security_policy_enforcing": 7.0,
+        "federated_identity": 4.0,
+        "google_workspace_tenant": 5.0,
+        "m365_tenant": 4.0,
+        "okta_idp": 4.0
+      },
+      "fired_bindings": {
+        "email_security_policy_enforcing": [
+          "signal:dmarc_reject",
+          "signal:mta_sts_enforce",
+          "signal:spf_strict"
+        ],
+        "google_workspace_tenant": [
+          "signal:google_workspace_tenant_observed"
+        ]
+      },
+      "max_shift": 0.1,
+      "name": "dense_gws_stack",
+      "signals": [
+        "dkim_present",
+        "dmarc_reject",
+        "google_workspace_tenant_observed",
+        "mta_sts_enforce",
+        "spf_strict"
+      ],
+      "slugs": [],
+      "sparse": {
+        "aws_hosting": true,
+        "cdn_fronting": true,
+        "email_gateway_present": true,
+        "email_security_modern_provider": true,
+        "email_security_policy_enforcing": false,
+        "federated_identity": true,
+        "google_workspace_tenant": false,
+        "m365_tenant": true,
+        "okta_idp": true
+      }
+    },
+    {
+      "effective_mass": {
+        "aws_hosting": 4.0,
+        "cdn_fronting": 4.0,
+        "email_gateway_present": 4.0,
+        "email_security_modern_provider": 4.0,
+        "email_security_policy_enforcing": 7.0,
+        "federated_identity": 4.0,
+        "google_workspace_tenant": 4.0,
+        "m365_tenant": 4.0,
+        "okta_idp": 4.0
+      },
+      "fired_bindings": {},
+      "max_shift": 0.1,
+      "name": "empty_observation",
+      "signals": [],
+      "slugs": [],
+      "sparse": {
+        "aws_hosting": true,
+        "cdn_fronting": true,
+        "email_gateway_present": true,
+        "email_security_modern_provider": true,
+        "email_security_policy_enforcing": false,
+        "federated_identity": true,
+        "google_workspace_tenant": true,
+        "m365_tenant": true,
+        "okta_idp": true
+      }
+    }
+  ],
+  "schema_version": 1,
+  "summary": {
+    "guard_maximum": 0.3,
+    "guard_upper_median": 0.1,
+    "maximum": 0.1076,
+    "p95_index_floor": 0.1,
+    "perturbation_results": 120,
+    "upper_median": 0.0179
+  }
+}

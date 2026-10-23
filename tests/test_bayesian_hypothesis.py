@@ -8,7 +8,7 @@ then checks invariants that must hold regardless of input shape:
   * the sparse flag tracks the n_eff floor
   * inference is deterministic given the same inputs
   * unknown evidence does not move any posterior
-  * adding more corroborating evidence narrows intervals
+  * named positive signals actually fire their current bindings
 """
 
 from __future__ import annotations
@@ -24,6 +24,7 @@ from recon_tool.bayesian import (
     infer,
     load_network,
 )
+from tests.bayesian_scenarios import assert_fired_signals
 
 
 def _toy_network(prior: float, lp: float, la: float) -> BayesianNetwork:
@@ -97,6 +98,12 @@ def test_no_observation_returns_prior(prior: float, lp: float, la: float) -> Non
     signals=st.lists(
         st.sampled_from(
             [
+                "m365_tenant_observed",
+                "google_workspace_tenant_observed",
+                "okta_idp_observed",
+                "email_gateway_mx_observed",
+                "cdn_cname_observed",
+                "aws_endpoint_cname_observed",
                 "federated_sso_hub",
                 "dmarc_reject",
                 "dmarc_quarantine",
@@ -123,6 +130,7 @@ def test_invariants_hold_across_random_evidence(slugs, signals, conflicts) -> No
         conflict_field_count=conflicts,
         priors_override={},
     )
+    assert_fired_signals(result, (signal for signal in signals if signal != "dkim_present"))
     for p in result.posteriors:
         assert 0.0 <= p.posterior <= 1.0
         assert 0.0 <= p.interval_low <= p.interval_high <= 1.0
@@ -138,12 +146,26 @@ def test_invariants_hold_across_random_evidence(slugs, signals, conflicts) -> No
         st.sampled_from(["microsoft365", "entra-id", "okta", "cloudflare", "aws"]),
         max_size=5,
     ),
+    signals=st.lists(
+        st.sampled_from(
+            [
+                "m365_tenant_observed",
+                "google_workspace_tenant_observed",
+                "cdn_cname_observed",
+                "aws_endpoint_cname_observed",
+            ]
+        ),
+        min_size=1,
+        max_size=5,
+    ),
 )
-def test_inference_is_deterministic(slugs) -> None:
+def test_inference_is_deterministic(slugs, signals) -> None:
     """Same input → same output, every time."""
     net = load_network()
-    r1 = infer(net, slugs, [], priors_override={})
-    r2 = infer(net, slugs, [], priors_override={})
+    r1 = infer(net, slugs, signals, priors_override={})
+    r2 = infer(net, slugs, signals, priors_override={})
+    assert_fired_signals(r1, signals)
+    assert_fired_signals(r2, signals)
     assert r1.entropy_reduction == r2.entropy_reduction
     assert r1.evidence_count == r2.evidence_count
     for p1, p2 in zip(r1.posteriors, r2.posteriors, strict=True):

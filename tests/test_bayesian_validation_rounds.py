@@ -13,11 +13,12 @@ import math
 
 import pytest
 
-from recon_tool.bayesian import infer, load_network
+from recon_tool.bayesian import BayesianNetwork, infer, load_network
+from tests.bayesian_scenarios import assert_fired_signals
 
 
 @pytest.fixture(scope="module")
-def network():
+def network() -> BayesianNetwork:
     return load_network()
 
 
@@ -28,20 +29,28 @@ def network():
     ("slugs", "signals"),
     [
         ([], []),
-        (["microsoft365"], []),
-        (["microsoft365", "entra-id", "exchange-online"], ["dmarc_reject"]),
-        (["okta"], ["federated_sso_hub"]),
-        (["cloudflare", "akamai", "fastly"], []),
-        (["aws", "aws-cloudfront", "aws-route53"], []),
+        ([], ["m365_tenant_observed"]),
+        ([], ["m365_tenant_observed", "dmarc_reject"]),
+        ([], ["okta_idp_observed", "federated_sso_hub"]),
+        ([], ["cdn_cname_observed"]),
+        ([], ["aws_endpoint_cname_observed"]),
         (
-            ["microsoft365", "entra-id", "okta", "cloudflare"],
-            ["federated_sso_hub", "dmarc_reject", "dkim_present", "spf_strict"],
+            [],
+            [
+                "m365_tenant_observed",
+                "okta_idp_observed",
+                "cdn_cname_observed",
+                "federated_sso_hub",
+                "dmarc_reject",
+                "spf_strict",
+            ],
         ),
         (["unknown-slug-not-in-network"], ["unknown-signal-not-in-network"]),
     ],
 )
 def test_posteriors_are_valid_probabilities(network, slugs, signals):
     result = infer(network, slugs, signals, priors_override={})
+    assert_fired_signals(result, (signal for signal in signals if signal != "unknown-signal-not-in-network"))
     for p in result.posteriors:
         assert 0.0 <= p.posterior <= 1.0, f"{p.name} posterior out of range: {p.posterior}"
         assert 0.0 <= p.interval_low <= p.interval_high <= 1.0, (
@@ -74,20 +83,24 @@ def test_empty_evidence_recovers_marginal_priors(network):
 # ── Invariant 3: monotonicity of evidence ────────────────────────────
 
 
-def test_more_corroborating_evidence_does_not_decrease_posterior(network):
-    """Adding a corroborating slug should never decrease P(node) for
-    that slug's bound node."""
-    result_one = infer(network, ["microsoft365"], [], priors_override={})
-    result_two = infer(network, ["microsoft365", "entra-id"], [], priors_override={})
+def test_duplicate_role_projections_do_not_amplify_posterior(network):
+    """Extra copies of one fired role are not independent corroboration."""
+    result_one = infer(network, [], ["m365_tenant_observed"], priors_override={})
+    result_two = infer(network, ["microsoft365", "entra-id"], ["m365_tenant_observed"] * 2, priors_override={})
+    assert_fired_signals(result_one, ["m365_tenant_observed"])
+    assert_fired_signals(result_two, ["m365_tenant_observed"])
     p1 = next(p for p in result_one.posteriors if p.name == "m365_tenant")
     p2 = next(p for p in result_two.posteriors if p.name == "m365_tenant")
-    assert p2.posterior >= p1.posterior - 1e-6
+    assert p1.n_eff == p2.n_eff == 5.0
+    assert p1.posterior > 0.3
+    assert p2.posterior == p1.posterior
 
 
 def test_unrelated_evidence_does_not_change_unrelated_posterior(network):
     """Cloudflare evidence should not move the M365 posterior."""
     baseline = infer(network, [], [], priors_override={})
-    cdn = infer(network, ["cloudflare"], [], priors_override={})
+    cdn = infer(network, [], ["cdn_cname_observed"], priors_override={})
+    assert_fired_signals(cdn, ["cdn_cname_observed"])
     m1 = next(p for p in baseline.posteriors if p.name == "m365_tenant")
     m2 = next(p for p in cdn.posteriors if p.name == "m365_tenant")
     assert abs(m1.posterior - m2.posterior) < 1e-3
@@ -106,12 +119,13 @@ def test_google_domains_dns_slug_does_not_move_identity_posteriors(network):
 # ── Invariant 4: interval width inversely correlates with n_eff ─────
 
 
-def test_interval_width_strictly_decreases_with_evidence(network):
-    """Adding evidence to a node should never widen its interval (as
-    long as there are no conflicts to dampen it)."""
+def test_selected_role_narrows_band_and_duplicate_does_not_add_mass(network):
+    """A scoped positive example, not universal interval monotonicity."""
     e0 = infer(network, [], [], priors_override={})
-    e1 = infer(network, ["microsoft365"], [], priors_override={})
-    e2 = infer(network, ["microsoft365", "entra-id"], [], priors_override={})
+    e1 = infer(network, [], ["m365_tenant_observed"], priors_override={})
+    e2 = infer(network, [], ["m365_tenant_observed"] * 2, priors_override={})
+    assert_fired_signals(e1, ["m365_tenant_observed"])
+    assert_fired_signals(e2, ["m365_tenant_observed"])
 
     def width(p):
         return p.interval_high - p.interval_low
@@ -120,21 +134,32 @@ def test_interval_width_strictly_decreases_with_evidence(network):
     w1 = width(next(p for p in e1.posteriors if p.name == "m365_tenant"))
     w2 = width(next(p for p in e2.posteriors if p.name == "m365_tenant"))
 
-    assert w2 <= w1 <= w0 + 1e-6, f"intervals not narrowing: w0={w0:.4f}, w1={w1:.4f}, w2={w2:.4f}"
+    assert w2 == w1
+    assert w1 < w0
+    assert next(p for p in e1.posteriors if p.name == "m365_tenant").n_eff == 5.0
 
 
 # ── Invariant 5: conflicts widen intervals ───────────────────────────
 
 
 def test_conflicts_widen_intervals(network):
-    no_conflict = infer(network, ["microsoft365"], [], conflict_field_count=0, priors_override={})
-    with_conflict = infer(network, ["microsoft365"], [], conflict_field_count=3, priors_override={})
+    no_conflict = infer(network, [], ["m365_tenant_observed"], conflict_field_count=0, priors_override={})
+    with_conflict = infer(network, [], ["m365_tenant_observed"], conflict_field_count=3, priors_override={})
+    assert_fired_signals(no_conflict, ["m365_tenant_observed"])
+    before = next(p for p in no_conflict.posteriors if p.name == "m365_tenant")
+    after = next(p for p in with_conflict.posteriors if p.name == "m365_tenant")
+    prior = network.get("m365_tenant").prior
+    assert prior is not None
+    assert before.posterior > prior
+    assert not before.sparse
+    assert before.n_eff > after.n_eff == 4.0
+    assert before.posterior == after.posterior
 
     def width(result, name):
         p = next(p for p in result.posteriors if p.name == name)
         return p.interval_high - p.interval_low
 
-    assert width(with_conflict, "m365_tenant") >= width(no_conflict, "m365_tenant")
+    assert width(with_conflict, "m365_tenant") > width(no_conflict, "m365_tenant")
 
 
 # ── Invariant 6: sparse flag set when no evidence ────────────────────
@@ -226,6 +251,7 @@ def test_override_on_child_node_is_ignored(network):
 )
 def test_dense_corroborating_evidence_reduces_total_entropy(network, slugs, signals):
     result = infer(network, slugs, signals, priors_override={})
+    assert_fired_signals(result, (signal for signal in signals if signal != "dkim_present"))
     assert result.entropy_reduction > 0
 
 

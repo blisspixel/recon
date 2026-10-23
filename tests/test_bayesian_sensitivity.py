@@ -3,12 +3,9 @@
 Quantifies how much each posterior moves under a ±0.10 perturbation
 of every CPT entry, holding evidence fixed. Two motivations:
 
-1. **Calibration robustness.** A reader of correlation.md asked "what
-   if your CPTs are wrong?" — this script gives a quantitative
-   answer: even a 10% error in any single entry produces at most a
-   bounded shift in any posterior, on the canonical evidence patterns
-   we care about. The bound is reported as part of the public
-   validation story.
+1. **Finite model sensitivity.** Record posterior shifts for single-entry
+   perturbations on named synthetic role-observation scenarios. This is not
+   calibration, a general robustness bound or a relative ten-percent error.
 2. **Regression guard.** The same numbers double as a regression
    guard: if a future PR changes the engine in a way that makes
    posteriors more sensitive to CPT noise, the bound moves and the
@@ -34,28 +31,12 @@ from recon_tool.bayesian import (
     infer,
     load_network,
 )
+from tests.bayesian_scenarios import assert_scenario_preconditions, shipped_scenarios
 
-# Evidence patterns we sensitivity-check on. Each is a representative
-# operator-facing scenario: a target with high-confidence M365 stack,
-# a target with high-confidence GWS, and an empty observation (the
-# pure-prior case).
-SCENARIOS: list[tuple[str, list[str], list[str]]] = [
-    (
-        "dense_m365_stack",
-        ["microsoft365", "entra-id", "okta"],
-        ["federated_sso_hub", "dmarc_reject", "dkim_present"],
-    ),
-    (
-        "dense_gws_stack",
-        ["google-workspace", "gmail"],
-        ["dmarc_reject", "dkim_present"],
-    ),
-    (
-        "empty_observation",
-        [],
-        [],
-    ),
-]
+# Positive scenarios come through the role adapter, never retired vendor-slug
+# bindings. Empty observation still has declarative nonfire semantics; it is
+# not an unconditional-prior case for every node.
+SCENARIOS = shipped_scenarios()
 
 
 def _perturbed_network(
@@ -77,7 +58,7 @@ def _perturbed_network(
             new_cpt = dict(n.cpt)
             new_cpt[cpt_key] = max(0.001, min(0.999, new_cpt[cpt_key] + delta))
             new_nodes.append(replace(n, cpt=new_cpt))
-    return BayesianNetwork(version=base.version, nodes=tuple(new_nodes))
+    return replace(base, nodes=tuple(new_nodes))
 
 
 def _max_posterior_shift(
@@ -123,28 +104,29 @@ class TestCPTSensitivity:
     documented bound on the canonical scenarios.
     """
 
-    # Documented bound: any single ±0.10 perturbation produces at most
-    # ~0.20 shift on any posterior. This is a tight bound; in practice
-    # the median shift is well under 0.05.
+    # Regression ceiling for this finite, declared scenario grid. It is not a
+    # general perturbation theorem or a calibration/coverage guarantee.
     MAX_TOLERATED_SHIFT = 0.30
 
     def test_perturbation_bound_holds(self, network: BayesianNetwork) -> None:
         targets = _enumerate_perturbations(network)
         rows: list[tuple[str, str, str | None, float, float]] = []
-        for scenario, slugs, signals in SCENARIOS:
+        for scenario in SCENARIOS:
+            assert_scenario_preconditions(network, scenario)
+            slugs, signals = scenario.inputs
             for node_name, cpt_key, is_prior in targets:
                 plus_net = _perturbed_network(network, node_name, cpt_key, is_prior, +0.10)
                 minus_net = _perturbed_network(network, node_name, cpt_key, is_prior, -0.10)
                 plus_shift = _max_posterior_shift(network, plus_net, slugs, signals)
                 minus_shift = _max_posterior_shift(network, minus_net, slugs, signals)
-                rows.append((scenario, node_name, cpt_key, plus_shift, minus_shift))
+                rows.append((scenario.name, node_name, cpt_key, plus_shift, minus_shift))
                 assert plus_shift <= self.MAX_TOLERATED_SHIFT, (
                     f"Perturbing {node_name}/{cpt_key} by +0.10 in scenario "
-                    f"{scenario!r} shifted posteriors by {plus_shift:.4f}"
+                    f"{scenario.name!r} shifted posteriors by {plus_shift:.4f}"
                 )
                 assert minus_shift <= self.MAX_TOLERATED_SHIFT, (
                     f"Perturbing {node_name}/{cpt_key} by -0.10 in scenario "
-                    f"{scenario!r} shifted posteriors by {minus_shift:.4f}"
+                    f"{scenario.name!r} shifted posteriors by {minus_shift:.4f}"
                 )
         _print_table(rows)
 
@@ -154,7 +136,9 @@ class TestCPTSensitivity:
         CPT entries have only marginal influence on most posteriors."""
         targets = _enumerate_perturbations(network)
         all_shifts: list[float] = []
-        for _scenario, slugs, signals in SCENARIOS:
+        for scenario in SCENARIOS:
+            assert_scenario_preconditions(network, scenario)
+            slugs, signals = scenario.inputs
             for node_name, cpt_key, is_prior in targets:
                 for delta in (+0.10, -0.10):
                     perturbed = _perturbed_network(network, node_name, cpt_key, is_prior, delta)
@@ -173,6 +157,13 @@ class TestSensitivityWithSyntheticEvidence:
     single root node and one binary observation, the posterior shift
     under prior perturbation is exactly $\\Delta\\hat{p}$ where the
     closed-form Bayes update applies."""
+
+    def test_perturbation_retains_the_declared_display_calibration(self) -> None:
+        from recon_tool.bayesian_models import CalibrationSettings
+
+        base = replace(load_network(), calibration=CalibrationSettings(9.0, 2.0, 3.0))
+        perturbed = _perturbed_network(base, "m365_tenant", None, True, 0.1)
+        assert perturbed.calibration == base.calibration
 
     def test_single_node_prior_perturbation_is_exact(self, tmp_path: Path) -> None:
         spec = {

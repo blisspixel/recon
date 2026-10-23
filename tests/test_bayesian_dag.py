@@ -13,6 +13,7 @@ from recon_tool.bayesian_dag import (
     render_dag_mermaid,
     render_dag_text,
 )
+from tests.bayesian_scenarios import assert_fired_signals
 
 
 @pytest.fixture
@@ -22,7 +23,7 @@ def network():
 
 @pytest.fixture
 def dense_inference(network):
-    return infer(
+    result = infer(
         network,
         observed_slugs=[],
         observed_signals=[
@@ -34,6 +35,8 @@ def dense_inference(network):
         ],
         priors_override={},
     )
+    assert_fired_signals(result, ["m365_tenant_observed", "okta_idp_observed", "federated_sso_hub", "dmarc_reject"])
+    return result
 
 
 @pytest.fixture
