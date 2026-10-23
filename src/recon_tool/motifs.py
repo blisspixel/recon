@@ -1,9 +1,10 @@
 """CNAME chain motif library.
 
 A motif is an ordered sequence of markers expected to appear in a CNAME
-chain. Each marker matches when ANY of its substrings appears in a
-hop's hostname. A motif fires only when every marker matches in chain
-order — intermediate hops between markers are allowed.
+chain. Built-in markers match hostname suffixes at DNS-label boundaries.
+Custom markers can explicitly select suffix matching or retain historical
+substring matching. Every marker must match in order; intermediate hops
+between markers are allowed.
 
 Motifs name observable proxy / CDN / origin shapes. They never claim
 ownership ("co-hosted on" is observable; "same owner" is not).
@@ -18,9 +19,11 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
+
+from recon_tool.validator import host_has_suffix, is_domain_shaped
 
 logger = logging.getLogger(__name__)
 
@@ -48,11 +51,11 @@ _VALID_CONFIDENCE = {"high", "medium", "low"}
 
 @dataclass(frozen=True)
 class _MotifMarker:
-    """A single position in a motif's chain. Matches a hop when any of
-    its substrings is contained in the hop's hostname."""
+    """A chain position with explicit hostname-suffix or substring semantics."""
 
     name: str
     patterns: tuple[str, ...]
+    match_mode: Literal["substring", "dns_suffix"] = "substring"
 
 
 @dataclass(frozen=True)
@@ -87,11 +90,37 @@ class ChainMotifMatch:
     chain: tuple[str, ...]
 
 
-def _parse_motif_marker(m_raw: Any) -> _MotifMarker | None:
-    """Validate one chain marker and return a _MotifMarker, or None to reject.
+def _hostname(value: str) -> str | None:
+    """Normalize one ASCII hostname, rejecting malformed or oversized labels."""
+    name = value.lower().removesuffix(".")
+    if name != name.strip() or name.endswith(".") or len(name) > 253 or not is_domain_shaped(name):
+        return None
+    return name if all(len(label) <= 63 for label in name.split(".")) else None
 
-    A None return rejects the whole motif (the chain must be fully valid).
-    """
+
+def _marker_patterns(raw: list[Any], *, dns_suffix: bool) -> tuple[str, ...] | None:
+    """Validate and cap patterns under the marker's declared grammar."""
+    patterns: list[str] = []
+    for p in raw:
+        if not isinstance(p, str):
+            if dns_suffix:
+                return None
+            continue
+        p_clean = p.strip().lower()
+        if dns_suffix:
+            normalized = _hostname(p_clean)
+            if normalized is None:
+                return None
+            p_clean = normalized
+        if p_clean:
+            patterns.append(p_clean)
+        if len(patterns) >= MAX_PATTERNS_PER_MARKER:
+            break
+    return tuple(patterns) if patterns else None
+
+
+def _parse_motif_marker(m_raw: Any) -> _MotifMarker | None:
+    """Validate one chain marker; rejection invalidates the complete motif."""
     if not isinstance(m_raw, dict):
         return None
     m_name = m_raw.get("name")
@@ -100,18 +129,17 @@ def _parse_motif_marker(m_raw: Any) -> _MotifMarker | None:
         return None
     if not isinstance(m_match, list) or not m_match:
         return None
-    patterns: list[str] = []
-    for p in m_match:
-        if not isinstance(p, str):
-            continue
-        p_clean = p.strip().lower()
-        if p_clean:
-            patterns.append(p_clean)
-        if len(patterns) >= MAX_PATTERNS_PER_MARKER:
-            break
+    mode = m_raw.get("match_mode", "substring")
+    if mode not in ("substring", "dns_suffix"):
+        return None
+    patterns = _marker_patterns(m_match, dns_suffix=mode == "dns_suffix")
     if not patterns:
         return None
-    return _MotifMarker(name=m_name, patterns=tuple(patterns))
+    return _MotifMarker(
+        name=m_name,
+        patterns=patterns,
+        match_mode="dns_suffix" if mode == "dns_suffix" else "substring",
+    )
 
 
 def _validate_motif(raw: Any, source: str) -> ChainMotif | None:
@@ -233,6 +261,14 @@ def load_motifs(reload: bool = False) -> tuple[ChainMotif, ...]:
     return _cache_state.motifs
 
 
+def _marker_matches(marker: _MotifMarker, hop: str) -> bool:
+    """Apply the declared grammar without guessing a custom marker's meaning."""
+    if marker.match_mode == "substring":
+        return any(pattern in hop.lower() for pattern in marker.patterns)
+    hostname = _hostname(hop)
+    return hostname is not None and any(host_has_suffix(hostname, pattern) for pattern in marker.patterns)
+
+
 def _match_motif(motif: ChainMotif, chain: list[str]) -> tuple[str, ...] | None:
     """Walk the chain, looking for an ordered subsequence that satisfies
     every marker in turn.
@@ -245,8 +281,7 @@ def _match_motif(motif: ChainMotif, chain: list[str]) -> tuple[str, ...] | None:
     for marker in motif.markers:
         found = False
         while chain_idx < len(chain):
-            hop_lower = chain[chain_idx].lower()
-            if any(p in hop_lower for p in marker.patterns):
+            if _marker_matches(marker, chain[chain_idx]):
                 matched_hops.append(chain[chain_idx])
                 chain_idx += 1
                 found = True

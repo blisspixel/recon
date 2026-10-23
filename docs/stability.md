@@ -218,6 +218,7 @@ guarantee is on each file's schema, not on the directory it resolves to.
 | `~/.recon/fingerprints.yaml` schema | Same. Custom entries are **additive only**; they cannot override built-ins. A `~/.recon/fingerprints/` directory is also accepted (v1.1+). |
 | `data/signals.yaml` schema | Stable. Fields: name, category, confidence, description, requires, metadata, contradicts, requires_signals, expected_counterparts, positive_when_absent. |
 | `~/.recon/signals.yaml` schema | Same. Additive only. |
+| `data/motifs.yaml` and custom `motifs.yaml` marker schema | `match_mode: dns_suffix` validates hostname grammar and matches DNS-label suffixes. Built-ins select this mode. `substring` and omitted mode preserve legacy custom fragments; unknown modes or invalid suffixes reject the motif. Matching is ordered and custom motifs remain additive only. |
 | `data/profiles/*.yaml` schema | Stable. Fields: name, description, category_boost, signal_boost, focus_categories, exclude_signals, prepend_note, expected_categories, expected_motifs. |
 | `~/.recon/profiles/*.yaml` schema | Same. Additive only. |
 | `~/.recon/cache/*.json` (TenantInfo cache) | Stable. Within the current cache version, entries lacking later additive fields remain readable and current writes include current fields. An explicit cache-version mismatch, wrong-shaped, corrupt, oversized, or numerically invalid file degrades to a clean miss. |

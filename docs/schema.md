@@ -406,6 +406,23 @@ first-class conflict coverage.
 
 `chain` is the matched subsequence of hops, not the full original CNAME chain. Each motif fires on observable structure only, never an ownership claim. The built-in motif catalog is [`src/recon_tool/data/motifs.yaml`](../src/recon_tool/data/motifs.yaml) in the source tree and can be extended via `~/.recon/motifs.yaml` (additive only).
 
+Every built-in marker declares `match_mode: dns_suffix`. Its patterns must be
+valid ASCII hostnames; a hop matches an exact name or a child at a DNS-label
+boundary. Case and one trailing root dot are ignored for matching, while the
+retained chain keeps the original hop. Deceptive names such as
+`cloudflare.net.attacker.invalid` and `notcloudflare.net`, malformed labels,
+wildcards and URL strings do not match a `cloudflare.net` marker. Ordered
+subsequences, intermediate hops and existing catalog/chain caps are unchanged.
+
+Custom markers accept `match_mode: dns_suffix` or `match_mode: substring`.
+Omitting the field retains historical substring semantics, including legitimate
+non-domain fragments such as `edge-`; recon does not guess a custom marker's
+intended grammar. Select `dns_suffix` for provider-domain attribution. An unknown
+mode or invalid suffix pattern rejects the custom motif. This corrects built-in
+provider attribution without silently changing existing custom fragment rules;
+it adds no lookup JSON fields and implies no ownership, live deployment or
+independent corroboration.
+
 ### `InfrastructureClusterReport` (v1.8+)
 
 ```json
@@ -833,7 +850,7 @@ service renderers, which retain the evidence context needed to support them.
 `null` can mean no detected change among comparable values or that the field
 was withheld; consult `incomplete_comparison.suppressed_fields` to distinguish
 those cases. A null `incomplete_comparison` means the current comparator
-recorded no degradation-triggered suppression. It does not prove complete
+recorded no missing-baseline or degradation-triggered suppression. It does not prove complete
 observation opportunity or equivalence of collection options, software,
 catalog, model, cache, time, or resolver vantage. A non-null diagnostic names
 the union in `degraded_sources`, the endpoint-specific
@@ -842,6 +859,15 @@ fields. Prior degradation can make an apparent addition unidentifiable; current
 degradation can make an apparent removal unidentifiable; a dependent scalar
 change requires the relevant opportunity at both endpoints. Exit codes for
 `recon delta` match the main CLI; see [Exit codes](#exit-codes).
+
+An unrecorded `services`, `slugs` or `insights` baseline is unknown, not an
+observed empty set. Both directions of the corresponding comparison are
+withheld and named in `suppressed_fields`; `insights` supplies the signal
+comparison. An explicitly recorded `[]` permits genuine additions. Missing or
+null baseline `confidence` and `domain_count` likewise suppress and name those
+scalar comparisons. Minimal historical exports remain readable and can still
+support comparisons for the fields they actually recorded. Suppression due
+solely to missing baseline fields leaves the degraded-source arrays empty.
 
 CT-only degradation leaves `changed_auth_type` and `changed_domain_count`
 comparable. It leaves `changed_confidence` comparable only when every degraded

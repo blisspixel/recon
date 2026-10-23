@@ -26,6 +26,17 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Fixed
+
+- Keep unrecorded historical delta sets distinct from explicitly empty arrays.
+  Withhold unsupported service, slug and signal changes and report missing
+  confidence/domain-count comparisons in the existing incomplete diagnostic.
+
+- Match built-in CNAME motif provider domains at validated DNS-label boundaries
+  so deceptive prefixes and appended domains cannot create provider-chain
+  observations. Preserve ordered matching, queried-host provenance and legacy
+  custom substring markers; custom domain markers can select `dns_suffix`.
+
 ## [2.22.0] - 2026-10-22
 
 Protect lower-trust collection on split-horizon networks and finish the build-tool CA remediation.
