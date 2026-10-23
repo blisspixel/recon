@@ -283,10 +283,23 @@ def _confidence_endpoint_available(
     return degraded_sources <= _CT_DEGRADATION_MARKERS and bool(ct_provider_used)
 
 
+def _unrecorded_comparisons(previous_json: dict[str, Any]) -> set[str]:
+    """Name unsupported historical comparisons before projection fills defaults."""
+    suppressed: set[str] = set()
+    for key, label in (("services", "services"), ("slugs", "slugs"), ("insights", "signals")):
+        if key not in previous_json:
+            suppressed.update({f"added_{label}", f"removed_{label}"})
+    for key in ("confidence", "domain_count"):
+        if previous_json.get(key) is None:
+            suppressed.add(f"changed_{key}")
+    return suppressed
+
+
 def _collection_deltas(
     previous_json: dict[str, Any],
     current: TenantInfo,
     *,
+    recorded_fields: frozenset[str],
     allow_additions: bool,
     allow_removals: bool,
 ) -> _CollectionDeltas:
@@ -294,20 +307,20 @@ def _collection_deltas(
     added_services_raw, removed_services_raw = _set_delta(
         set(_string_list_field(previous_json, "services")),
         set(current.services),
-        allow_additions=allow_additions,
-        allow_removals=allow_removals,
+        allow_additions=allow_additions and "services" in recorded_fields,
+        allow_removals=allow_removals and "services" in recorded_fields,
     )
     added_slugs, removed_slugs = _set_delta(
         set(_string_list_field(previous_json, "slugs")),
         set(current.slugs),
-        allow_additions=allow_additions,
-        allow_removals=allow_removals,
+        allow_additions=allow_additions and "slugs" in recorded_fields,
+        allow_removals=allow_removals and "slugs" in recorded_fields,
     )
     added_signals, removed_signals = _set_delta(
         _extract_signal_labels(_string_list_field(previous_json, "insights")),
         _extract_signal_labels(current.insights),
-        allow_additions=allow_additions,
-        allow_removals=allow_removals,
+        allow_additions=allow_additions and "insights" in recorded_fields,
+        allow_removals=allow_removals and "insights" in recorded_fields,
     )
     return _CollectionDeltas(
         added_services=added_services_raw,
@@ -349,7 +362,8 @@ def compute_delta(previous_json: dict[str, Any], current: TenantInfo) -> DeltaRe
 
     Uses set operations for services, slugs, and signals to correctly
     identify additions and removals regardless of ordering.
-    Missing fields in older JSON exports are treated as absent.
+    Unrecorded fields in older exports are unavailable comparisons, distinct
+    from explicitly recorded empty arrays or observed null scalar values.
     """
     _validate_previous_snapshot(previous_json)
     validate_snapshot_domain(previous_json, current.queried_domain)
@@ -379,6 +393,8 @@ def compute_delta(previous_json: dict[str, Any], current: TenantInfo) -> DeltaRe
         domain_count_comparison_available=domain_count_comparison_available,
         confidence_comparison_available=confidence_comparison_available,
     )
+    recorded_fields = frozenset(previous_json)
+    suppressed_fields.update(_unrecorded_comparisons(previous_json))
     observable_previous, previous_projection_complete, previous_info = _previous_collection_view(
         previous_json,
         previous_source_status,
@@ -389,6 +405,7 @@ def compute_delta(previous_json: dict[str, Any], current: TenantInfo) -> DeltaRe
     collection_deltas = _collection_deltas(
         observable_previous,
         observable_current,
+        recorded_fields=recorded_fields,
         allow_additions=not previous_degraded_sources,
         allow_removals=not current_degraded_sources and previous_projection_complete,
     )

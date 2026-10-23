@@ -69,7 +69,12 @@ def _append_incomplete_warning(text: Text, report: DeltaReport) -> None:
         return
     text.append("\n  ")
     text.append(f"{glyph('warn')} ", style=f"bold {WARNING}")
-    text.append("Warning: one or both snapshot collections were incomplete. ", style="bold")
+    warning = (
+        "Warning: one or both snapshot collections were incomplete. "
+        if limitation.degraded_sources
+        else "Warning: the previous snapshot did not record every comparison field. "
+    )
+    text.append(warning, style="bold")
     text.append("Unconfirmable additions, removals, and dependent changes were withheld.\n")
     previous_sources = limitation.previous_degraded_sources
     current_sources = limitation.current_degraded_sources

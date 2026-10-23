@@ -1,8 +1,8 @@
 # CNAME chain motif library (v1.7+)
 #
 # Each motif is an ordered sequence of "markers" expected to appear in a
-# CNAME chain. A marker matches when ANY of its substrings appears in a
-# hop's hostname. The motif fires only when every marker matches in
+# CNAME chain. Built-in markers match validated hostname suffixes at DNS
+# label boundaries. The motif fires only when every marker matches in
 # chain order; intermediate hops between markers are allowed.
 #
 # Motifs name observable proxy / CDN / origin shapes. They never claim
@@ -15,7 +15,8 @@
 #   confidence (required, "high" | "medium" | "low")
 #   chain (required, list of markers — at least 1, at most 4)
 #     name (required, str): stable identifier for this position
-#     match (required, list of substrings — at least 1)
+#     match_mode (optional): dns_suffix or substring (legacy custom default)
+#     match (required, list of patterns): domains for dns_suffix, fragments otherwise
 #
 # Constraints:
 #   - chain length capped at 4 markers (recon_tool/motifs.py)
@@ -33,10 +34,12 @@ motifs:
     confidence: medium
     chain:
       - name: cloudflare
+        match_mode: dns_suffix
         match:
           - cloudflare.com
           - cloudflare.net
       - name: aws
+        match_mode: dns_suffix
         match:
           - amazonaws.com
           - cloudfront.net
@@ -48,10 +51,12 @@ motifs:
     confidence: medium
     chain:
       - name: fastly
+        match_mode: dns_suffix
         match:
           - fastly.net
           - fastlylb.net
       - name: aws
+        match_mode: dns_suffix
         match:
           - amazonaws.com
           - cloudfront.net
@@ -63,12 +68,14 @@ motifs:
     confidence: medium
     chain:
       - name: akamai
+        match_mode: dns_suffix
         match:
           - edgesuite.net
           - edgekey.net
           - akamaiedge.net
           - akamaihd.net
       - name: aws
+        match_mode: dns_suffix
         match:
           - amazonaws.com
           - cloudfront.net
@@ -81,10 +88,12 @@ motifs:
     confidence: medium
     chain:
       - name: cloudflare
+        match_mode: dns_suffix
         match:
           - cloudflare.com
           - cloudflare.net
       - name: azure
+        match_mode: dns_suffix
         match:
           - azureedge.net
           - azurewebsites.net
@@ -99,10 +108,12 @@ motifs:
     confidence: medium
     chain:
       - name: fastly
+        match_mode: dns_suffix
         match:
           - fastly.net
           - fastlylb.net
       - name: azure
+        match_mode: dns_suffix
         match:
           - azureedge.net
           - azurewebsites.net
@@ -115,11 +126,13 @@ motifs:
     confidence: medium
     chain:
       - name: akamai
+        match_mode: dns_suffix
         match:
           - edgesuite.net
           - edgekey.net
           - akamaiedge.net
       - name: azure
+        match_mode: dns_suffix
         match:
           - azureedge.net
           - azurewebsites.net
@@ -133,10 +146,12 @@ motifs:
     confidence: medium
     chain:
       - name: cloudflare
+        match_mode: dns_suffix
         match:
           - cloudflare.com
           - cloudflare.net
       - name: gcp
+        match_mode: dns_suffix
         match:
           - googleusercontent.com
           - appspot.com
@@ -149,10 +164,12 @@ motifs:
     confidence: medium
     chain:
       - name: fastly
+        match_mode: dns_suffix
         match:
           - fastly.net
           - fastlylb.net
       - name: gcp
+        match_mode: dns_suffix
         match:
           - googleusercontent.com
           - appspot.com
@@ -165,10 +182,12 @@ motifs:
     confidence: medium
     chain:
       - name: cloudflare
+        match_mode: dns_suffix
         match:
           - cloudflare.com
           - cloudflare.net
       - name: fastly
+        match_mode: dns_suffix
         match:
           - fastly.net
           - fastlylb.net
@@ -179,10 +198,12 @@ motifs:
     confidence: medium
     chain:
       - name: fastly
+        match_mode: dns_suffix
         match:
           - fastly.net
           - fastlylb.net
       - name: cloudflare
+        match_mode: dns_suffix
         match:
           - cloudflare.com
           - cloudflare.net
@@ -202,9 +223,11 @@ motifs:
     confidence: medium
     chain:
       - name: traffic_manager
+        match_mode: dns_suffix
         match:
           - trafficmanager.net
       - name: azure_front_door
+        match_mode: dns_suffix
         match:
           - azurefd.net
           - tm-azurefd.net
@@ -215,10 +238,12 @@ motifs:
     confidence: medium
     chain:
       - name: azure_front_door
+        match_mode: dns_suffix
         match:
           - azurefd.net
           - tm-azurefd.net
       - name: msedge
+        match_mode: dns_suffix
         match:
           - t-msedge.net
           - fb-t-msedge.net
@@ -231,13 +256,16 @@ motifs:
     confidence: medium
     chain:
       - name: traffic_manager
+        match_mode: dns_suffix
         match:
           - trafficmanager.net
       - name: azure_front_door
+        match_mode: dns_suffix
         match:
           - azurefd.net
           - tm-azurefd.net
       - name: msedge
+        match_mode: dns_suffix
         match:
           - t-msedge.net
           - fb-t-msedge.net
@@ -250,11 +278,13 @@ motifs:
     confidence: medium
     chain:
       - name: akamai
+        match_mode: dns_suffix
         match:
           - edgesuite.net
           - edgekey.net
           - akamaiedge.net
       - name: msedge
+        match_mode: dns_suffix
         match:
           - t-msedge.net
           - bx-msedge.net
@@ -266,9 +296,11 @@ motifs:
     confidence: medium
     chain:
       - name: traffic_manager
+        match_mode: dns_suffix
         match:
           - trafficmanager.net
       - name: power_platform
+        match_mode: dns_suffix
         match:
           - powerapps.com
           - powerplatform.com
@@ -281,6 +313,7 @@ motifs:
     confidence: medium
     chain:
       - name: salesforce_edge
+        match_mode: dns_suffix
         match:
           - salesforce.com
           - force.com
@@ -293,6 +326,7 @@ motifs:
     confidence: medium
     chain:
       - name: adobe
+        match_mode: dns_suffix
         match:
           - adobe.com
           - adobedtm.com
@@ -306,11 +340,13 @@ motifs:
     confidence: medium
     chain:
       - name: akamai
+        match_mode: dns_suffix
         match:
           - edgesuite.net
           - edgekey.net
           - akamaiedge.net
       - name: adobe
+        match_mode: dns_suffix
         match:
           - adobe.com
           - omtrdc.net
@@ -322,6 +358,7 @@ motifs:
     confidence: medium
     chain:
       - name: oracle_cloud
+        match_mode: dns_suffix
         match:
           - oraclecloud.com
           - oraclecloud.net
@@ -337,10 +374,12 @@ motifs:
     confidence: medium
     chain:
       - name: zpa
+        match_mode: dns_suffix
         match:
           - zpa-app.net
           - zpa.net
       - name: aws
+        match_mode: dns_suffix
         match:
           - amazonaws.com
           - cloudfront.net
@@ -352,12 +391,15 @@ motifs:
     confidence: medium
     chain:
       - name: zpa
+        match_mode: dns_suffix
         match:
           - zpa-app.net
       - name: zpa_gov
+        match_mode: dns_suffix
         match:
           - zpagov.net
       - name: aws
+        match_mode: dns_suffix
         match:
           - amazonaws.com
           - cloudfront.net
@@ -368,9 +410,11 @@ motifs:
     confidence: medium
     chain:
       - name: msecnd
+        match_mode: dns_suffix
         match:
           - msecnd.net
       - name: zeta
+        match_mode: dns_suffix
         match:
           - zetacdn.net
 
@@ -380,8 +424,10 @@ motifs:
     confidence: medium
     chain:
       - name: episerver
+        match_mode: dns_suffix
         match:
           - episerver.net
       - name: optimizely
+        match_mode: dns_suffix
         match:
           - optimizely.com
