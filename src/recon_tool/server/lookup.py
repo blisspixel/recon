@@ -229,6 +229,8 @@ async def lookup_tenant(
             domain=validated,
         )
     else:
+        if refusal := server_app.collection_policy_refusal(validated):
+            raise ToolError(refusal)
         # Rate limit check - only for cache misses (actual network calls)
         if not rate_limit_try_acquire(validated):
             cached = cache_get(validated)

@@ -17,6 +17,8 @@ from recon_tool.mcp_client.sdk_compat import ToolError
 from recon_tool.models import ConfidenceLevel, EvidenceRecord, ReconLookupError, SourceResult, TenantInfo
 from recon_tool.server import _cache_set, _rate_limit_clear, build_review_bundle
 
+pytestmark = pytest.mark.usefixtures("approved_mcp_dns")
+
 runner = CliRunner()
 
 

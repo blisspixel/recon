@@ -60,11 +60,12 @@ def _expected_prefix_through_resources_list() -> list[str]:
             "server spawn",
             "server/discover",
             "server/discover metadata",
+            "DNS collection view",
             "tools/list",
             "tools/list metadata",
             "resources/list",
         ]
-    return ["server spawn", "initialize handshake", "tools/list", "resources/list"]
+    return ["server spawn", "initialize handshake", "DNS collection view", "tools/list", "resources/list"]
 
 
 class TestLiveHandshake:

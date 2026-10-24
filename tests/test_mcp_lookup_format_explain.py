@@ -20,6 +20,8 @@ from recon_tool.models import EvidenceRecord, ExplanationLineageStatus, Explanat
 from recon_tool.server import _cache_clear, _rate_limit, lookup_tenant
 from tests.test_cli_explain import SAMPLE_INFO, SAMPLE_RESULTS
 
+pytestmark = pytest.mark.usefixtures("approved_mcp_dns")
+
 
 @pytest.fixture(autouse=True)
 def _isolated_server_state() -> Iterator[None]:

@@ -30,6 +30,8 @@ from recon_tool.server import (
     find_hardening_gaps,
 )
 
+pytestmark = pytest.mark.usefixtures("approved_mcp_dns")
+
 RESOLVE_PATH = "recon_tool.server_app.resolve_tenant"
 
 SAMPLE_INFO = TenantInfo(

@@ -35,6 +35,7 @@ from recon_tool.cli.doctor_report import (
     summarize_checks,
 )
 from recon_tool.cli.shared import fmt_exc as _fmt_exc
+from recon_tool.cli.shared import render_diagnostic_status_row
 from recon_tool.cli.shared import render_status_row as _render_status_row
 from recon_tool.cli.shared import safe_diagnostic_markup as _safe_markup
 from recon_tool.exit_codes import (
@@ -296,7 +297,12 @@ def doctor_mcp() -> None:
 
     # 4. Enumerate tools through the public SDK surface and require the
     # canonical workflow anchors. Extra registered tools remain compatible.
+    from recon_tool.mcp_client.dns_readiness import DNS_CHECK_NAME, collection_policy_readiness
     from recon_tool.mcp_client.doctor import REQUIRED_RESOURCES, REQUIRED_TOOLS
+    from recon_tool.server.app import MCP_COLLECTION_POLICY
+
+    readiness = collection_policy_readiness(MCP_COLLECTION_POLICY)
+    checks.append(DoctorCheck(DNS_CHECK_NAME, readiness.status, readiness.detail, readiness.next))
 
     checks.append(_mcp_tool_registry_check(server_mcp, REQUIRED_TOOLS))
 
@@ -329,6 +335,8 @@ def _render_mcp_checks(checks: Sequence[DoctorCheck], *, summary: bool = False) 
     console = get_err_console()
     for check in checks:
         _render_status_row(console, check.status, check.name, check.detail)
+        if check.next:
+            render_diagnostic_status_row(console, mark="", style="dim", name="Next", detail=check.next)
     if summary:
         console.print()
         render_summary(console, summarize_checks(checks, mode="mcp"))

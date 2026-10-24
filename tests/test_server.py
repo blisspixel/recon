@@ -25,6 +25,8 @@ from recon_tool.models import (
 )
 from recon_tool.server import _cache_clear, _print_mcp_banner, _rate_limit, lookup_tenant
 
+pytestmark = pytest.mark.usefixtures("approved_mcp_dns")
+
 RESOLVE_PATH = "recon_tool.server_app.resolve_tenant"
 
 SAMPLE_INFO = TenantInfo(

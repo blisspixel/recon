@@ -85,6 +85,15 @@ Structured lookup provenance includes `resolution_vantage` (`caller-safe` or
 Older records can have null provenance. This isolates recon's collection; it
 does not confine an agent with independent unrestricted shell or network tools.
 
+Both MCP doctors report the DNS capability for the launch they check. An
+unapproved view is a `warn` row with the one-time `Next:` setup link; offline
+tools and local resources remain usable. Refused DNS-dependent calls do not
+reserve a rate-limit slot, so retries keep the same actionable setup message.
+The live doctor reads a bounded capability declaration from the checked
+server's discovery instructions, including mode, transport, and an opaque
+policy identity. Resolver addresses are not published. This reports startup
+authority, not resolver reachability or another client's environment.
+
 See the [security disposition](security-audit-resolutions.md#closed-in-v2220-cname-chain-walking-can-query-and-leak-internal-dns-names),
 [Cloudflare DoH documentation](https://developers.cloudflare.com/1.1.1.1/encryption/dns-over-https/make-api-requests/)
 and [Google DoH documentation](https://developers.google.com/speed/public-dns/docs/doh).
@@ -708,10 +717,16 @@ installed server; the third validates that the named client was told about it.
    user-profile or custom file used during installation. Add `--json` for the
    same rows as one JSON object on stdout with the same exit code.
 
-All three print the same status words, `ok`, `warn`, `fail`, and `info`, and a
-failure summary ends with a `Next:` step. A `recon` launcher missing from PATH
+All three print the same status words, `ok`, `warn`, `fail`, and `info`.
+MCP warning and failure rows include their `Next:` action when available;
+warnings keep exit 0 while distinguishing local protocol success from DNS
+collection readiness. A `recon` launcher missing from PATH
 is an `info` row in `recon doctor --mcp`, because the generated config falls
 back to the running interpreter.
+
+`chain_lookup` advertises an integer `depth` from 1 through 3 and rejects
+out-of-range or non-integer values before collection and rate-limit admission.
+It does not silently clamp a request to a different depth.
 
 If all three pass but tools still do not appear, continue with the client-side
 checks below.

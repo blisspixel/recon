@@ -2647,20 +2647,16 @@
       },
       "tests/test_mcp_graph_tools.py": {
         "reportMissingParameterType": {
-          "count": 19,
-          "digest": "a7ee7663e1b3e3fa17567b04f406f9b04ee8c554cf757df2a0b728aa75abc2ff"
+          "count": 17,
+          "digest": "95379f56103345bef01032acda559c2c07e129ec7108b860e1ebbe6f9ddf9892"
         },
         "reportUnknownArgumentType": {
           "count": 1,
           "digest": "550f21320c8e716296167faa74f471546c796f8cf1fd313a595e5d13c168b5c8"
         },
-        "reportUnknownMemberType": {
-          "count": 4,
-          "digest": "689de45a9c3654bfe1c68be7a2a9ee0745fb43422e002a4516aeda94dc66d715"
-        },
         "reportUnknownParameterType": {
-          "count": 19,
-          "digest": "e7ac924c61feb9ffba9c3909a7b77e4d45cfa808bf41a326ee5b3d14a7c68340"
+          "count": 17,
+          "digest": "55f73872e9fe60093d79ba2afa2670aaeb201470176cc07115bed5d5561b3cd2"
         }
       },
       "tests/test_mcp_install.py": {
@@ -3982,7 +3978,7 @@
         }
       }
     },
-    "files_analyzed": 621
+    "files_analyzed": 628
   },
   "audit_platform": "Linux",
   "configuration": {
@@ -4973,7 +4969,6 @@
     "tests/test_mcp_graph_tools.py": [
       "reportMissingParameterType",
       "reportUnknownArgumentType",
-      "reportUnknownMemberType",
       "reportUnknownParameterType"
     ],
     "tests/test_mcp_install.py": [
@@ -6956,7 +6951,6 @@
     "tests/test_mcp_graph_tools.py": {
       "reportMissingParameterType": "fixture-parameters",
       "reportUnknownArgumentType": "unknown-containers",
-      "reportUnknownMemberType": "unknown-containers",
       "reportUnknownParameterType": "fixture-parameters"
     },
     "tests/test_mcp_install.py": {

@@ -42,6 +42,10 @@ operator, corporate group, ownership, or control.
 - Adapt boxed gap, exposure, and delta reports to up to 100 columns with
   hanging continuation indents and whole identifiers. Keep the ASCII help
   example visible and link sparse-result guidance for installed users.
+- Report the checked MCP server's DNS capability in both doctors with an
+  actionable warning when no caller-safe view is approved. Refuse unavailable
+  collection before reserving rate limits, and advertise and enforce the
+  chain-depth range without silently changing caller requests.
 - Canonicalize merged evidence before interpretation so shuffled DNS answers
   do not create false capsule changes. Preserve literal `www` hosts with
   `--exact`, retain balanced CAA record quotes, and normalize CT issuer display

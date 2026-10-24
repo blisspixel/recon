@@ -44,6 +44,8 @@ from recon_tool.server import (
 )
 from recon_tool.server import test_hypothesis as mcp_test_hypothesis
 
+pytestmark = pytest.mark.usefixtures("approved_mcp_dns")
+
 SERVER_RESOLVE_PATH = "recon_tool.server_app.resolve_tenant"
 SERVER_RESOLVE_OR_CACHE = "recon_tool.server_app.resolve_or_cache"
 

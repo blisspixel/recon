@@ -207,6 +207,7 @@ _POSTURE_INFO = TenantInfo(
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("approved_mcp_dns")
 async def test_analyze_posture_non_string_profile_does_not_crash() -> None:
     """A truthy non-string profile (MCP args arrive unenforced) is ignored, not fatal.
 
