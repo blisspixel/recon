@@ -14,6 +14,9 @@ from typing import TYPE_CHECKING
 
 import typer
 
+from recon_tool.cli.doctor_report import DoctorCheck as SummaryCheck
+from recon_tool.cli.doctor_report import render_summary, summarize_checks
+from recon_tool.cli.shared import render_diagnostic_status_row
 from recon_tool.cli.shared import render_status_row as _render_status_row
 from recon_tool.cli.shared import safe_diagnostic_markup as _safe_markup
 from recon_tool.exit_codes import EXIT_ERROR, EXIT_INTERNAL, EXIT_VALIDATION
@@ -293,6 +296,8 @@ def mcp_doctor_command(
             console.print(f"  [bold]{_safe_markup(title)}[/bold]")
         for check in report.checks:
             _render_status_row(console, check.status, check.name, check.detail)
+            if check.next:
+                render_diagnostic_status_row(console, mark="", style="dim", name="Next", detail=check.next)
         console.print()
 
     console.print(f"  elapsed: {isolated.elapsed_seconds + generated.elapsed_seconds:.2f}s")
@@ -310,7 +315,11 @@ def mcp_doctor_command(
         raise typer.Exit(EXIT_INTERNAL)
 
     exercised = generated.launch.cwd if generated.launch is not None else None
-    console.print(f"  [{SUCCESS}]All checks passed.[/{SUCCESS}]")
+    summary_checks = [
+        SummaryCheck(check.name, check.status, check.detail, check.next)
+        for check in (*isolated.checks, *generated.checks)
+    ]
+    render_summary(console, summarize_checks(summary_checks, mode="mcp"))
     console.print(f"  Verified: canonical tool registrations and {len(REQUIRED_RESOURCES)} local JSON resource reads.")
     console.print(
         f"  Generated launch verified from {_safe_markup(exercised or 'the current directory')} only; "

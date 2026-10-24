@@ -2402,7 +2402,7 @@
         ],
         "name": "assess_exposure",
         "output_schema": {
-          "definition_count": 10,
+          "definition_count": 11,
           "properties": [
             "consistency_observations",
             "disclaimer",
@@ -2649,7 +2649,7 @@
         ],
         "name": "compare_postures",
         "output_schema": {
-          "definition_count": 7,
+          "definition_count": 8,
           "properties": [
             "differences",
             "disclaimer",
@@ -3419,7 +3419,7 @@
         ],
         "name": "simulate_hardening",
         "output_schema": {
-          "definition_count": 5,
+          "definition_count": 6,
           "properties": [
             "applied_fixes",
             "current_observability",

@@ -39,6 +39,7 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Literal, TextIO, cast
 
+from recon_tool.mcp_client.dns_readiness import DNS_CHECK_NAME, dns_readiness_from_instructions
 from recon_tool.mcp_client.sdk_compat import SDK_FAMILY, SDK_VERSION, model_wire_dict
 
 # Tools we expect any healthy build to surface. These are the public-facing
@@ -74,7 +75,7 @@ REQUIRED_RESOURCES: tuple[str, ...] = (
 _HANDSHAKE_TIMEOUT_S: float = 30.0
 
 
-CheckStatus = Literal["ok", "fail"]
+CheckStatus = Literal["ok", "warn", "fail", "info"]
 
 
 @dataclass(frozen=True)
@@ -84,6 +85,7 @@ class DoctorCheck:
     name: str
     status: CheckStatus
     detail: str
+    next: str | None = None
 
 
 LaunchScope = Literal["isolated", "generated"]
@@ -163,7 +165,8 @@ class DoctorReport:
 
     @property
     def ok(self) -> bool:
-        return all(c.status == "ok" for c in self.checks)
+        """Whether local protocol checks passed; inspect warnings for DNS readiness."""
+        return all(c.status != "fail" for c in self.checks)
 
 
 class _HandshakePhaseError(RuntimeError):
@@ -260,6 +263,7 @@ async def _discover_session(
             )
         with _protocol_phase("server/discover metadata", checks, progress):
             _append_cache_metadata_check(checks, "server/discover metadata", discovery_wire)
+        _append_dns_readiness_check(checks, discovery_wire)
         return
 
     with _protocol_phase("initialize handshake", checks, progress):
@@ -275,6 +279,7 @@ async def _discover_session(
                 f"server={server_name} protocol={protocol} sdk={SDK_VERSION}",
             )
         )
+        _append_dns_readiness_check(checks, init_wire)
 
 
 async def _list_session_tools(
@@ -606,6 +611,11 @@ def _validate_resource_payload(uri: str, payload: dict[str, object]) -> None:
         return
 
     raise ValueError(f"{uri} is not a canonical MCP resource")
+
+
+def _append_dns_readiness_check(checks: list[DoctorCheck], wire: dict[str, object]) -> None:
+    readiness = dns_readiness_from_instructions(wire.get("instructions"))
+    checks.append(DoctorCheck(DNS_CHECK_NAME, readiness.status, readiness.detail, readiness.next))
 
 
 def _append_cache_metadata_check(checks: list[DoctorCheck], name: str, wire: dict[str, object]) -> None:

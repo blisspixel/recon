@@ -14,10 +14,12 @@ import json
 import logging
 import time
 import uuid
-from typing import Any, cast
+from typing import Annotated, Any, cast
 
+from pydantic import Field
 from typing_extensions import TypedDict
 
+from recon_tool.chain import MAX_CHAIN_DEPTH
 from recon_tool.mcp_client.sdk_compat import ToolError, tool_annotations
 from recon_tool.models import ChainReport, InfrastructureEdge, ReconLookupError
 from recon_tool.network_policy import MCP_COLLECTION_POLICY, collection_scope
@@ -174,7 +176,9 @@ def _format_compact_chain_json(report: ChainReport, result_limit: int) -> str:
         open_world=True,
     ),
 )
-async def chain_lookup(domain: str, depth: int = 1, result_limit: int = 0) -> str:
+async def chain_lookup(
+    domain: str, depth: Annotated[int, Field(ge=1, le=MAX_CHAIN_DEPTH, strict=True)] = 1, result_limit: int = 0
+) -> str:
     """Follow all `related_domains` observations; this does not establish ownership or a corporate relationship.
 
     Recursively follows every ``related_domains`` observation returned by each
@@ -199,8 +203,8 @@ async def chain_lookup(domain: str, depth: int = 1, result_limit: int = 0) -> st
 
     if not isinstance(depth, int) or isinstance(depth, bool):  # pyright: ignore[reportUnnecessaryIsInstance]
         raise ToolError("depth must be an integer between 1 and 3")
-    # Clamp depth
-    depth = max(1, min(depth, 3))
+    if not 1 <= depth <= MAX_CHAIN_DEPTH:
+        raise ToolError(f"depth must be an integer between 1 and {MAX_CHAIN_DEPTH}")
     result_limit = _normalize_limit(result_limit, "result_limit")
 
     try:
@@ -208,6 +212,9 @@ async def chain_lookup(domain: str, depth: int = 1, result_limit: int = 0) -> st
     except ValueError as exc:
         log_validation_failed(request_id)
         raise ToolError(server_app.invalid_domain_message(exc)) from exc
+
+    if refusal := server_app.collection_policy_refusal(validated):
+        raise ToolError(refusal)
 
     # Rate limit: chain_lookup is the most expensive tool (up to
     # MAX_CHAIN_DOMAINS resolves per call), so an untrusted MCP caller

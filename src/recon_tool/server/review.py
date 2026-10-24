@@ -103,6 +103,8 @@ async def build_review_bundle(
         log_validation_failed(request_id)
         raise ToolError(server_app.invalid_domain_message(exc)) from exc
 
+    if refusal := server_app.collection_policy_refusal(validated):
+        raise ToolError(refusal)
     if not rate_limit_try_acquire(validated):
         raise ToolError(f"Rate limited: {validated} was collected recently. Try again in a few seconds.")
 

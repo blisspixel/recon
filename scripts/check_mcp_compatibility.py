@@ -547,6 +547,56 @@ async def _stdio_tool_results(session: Any) -> tuple[list[ProbeCheck], dict[str,
     return checks, success_wire, failure_wire
 
 
+async def _stdio_depth_contract(session: Any) -> ProbeCheck:
+    tools_wire = _wire_dict(await session.list_tools())
+    tools = {tool["name"]: tool for tool in tools_wire.get("tools", [])}
+    depth_schema = tools["chain_lookup"]["inputSchema"]["properties"]["depth"]
+    if depth_schema.get("minimum") != 1 or depth_schema.get("maximum") != 3:
+        raise ValueError("chain depth schema does not advertise the supported range 1-3")
+    for depth in (-1, 0, 4, 9):
+        wire = _wire_dict(await session.call_tool("chain_lookup", {"domain": "example.com", "depth": depth}))
+        content = wire.get("content", [])
+        text = " ".join(str(item.get("text", "")) for item in content if isinstance(item, dict))
+        if wire.get("isError") is not True or "depth" not in text.lower():
+            raise ValueError(f"out-of-range chain depth {depth} was not an explicit input error")
+        if "DNS-dependent lookup unavailable" in text or "Rate limited" in text:
+            raise ValueError("chain depth validation did not precede collection admission")
+    return ProbeCheck("recon_stdio_depth_bounds", "pass", "schema range 1-3; four invalid depths rejected")
+
+
+def _stdio_dns_readiness(discovery_wire: dict[str, Any]) -> ProbeCheck:
+    from recon_tool.mcp_client.dns_readiness import DNS_SETUP_NEXT, dns_readiness_from_instructions
+
+    readiness = dns_readiness_from_instructions(discovery_wire.get("instructions"))
+    if readiness.status == "warn" and readiness.next != DNS_SETUP_NEXT:
+        raise ValueError("server did not advertise a valid bound DNS capability")
+    return ProbeCheck("recon_stdio_dns_readiness", "pass", readiness.detail)
+
+
+async def _stdio_unavailable_dns(session: Any) -> ProbeCheck:
+    from recon_tool.mcp_client.dns_readiness import DNS_SETUP_GUIDE
+
+    calls = (
+        ("lookup_tenant", {}),
+        ("lookup_tenant", {}),
+        ("find_hardening_gaps", {}),
+        ("assess_exposure", {}),
+        ("simulate_hardening", {"fixes": ["DKIM"]}),
+        ("build_review_bundle", {}),
+        ("chain_lookup", {"depth": 1}),
+        ("lookup_tenant", {}),
+    )
+    for name, arguments in calls:
+        wire = _wire_dict(await session.call_tool(name, {"domain": "example.com", **arguments}))
+        text = " ".join(str(item.get("text", "")) for item in wire.get("content", []) if isinstance(item, dict))
+        if wire.get("isError") is not True or DNS_SETUP_GUIDE not in text or "Rate limited" in text:
+            raise ValueError(f"{name} did not preserve the unavailable-view setup refusal")
+    catalog = _wire_dict(await session.call_tool("get_fingerprints", {"limit": 1}))
+    if catalog.get("isError", False):
+        raise ValueError("offline catalog became unavailable after DNS refusals")
+    return ProbeCheck("recon_stdio_unavailable_dns", "pass", "eight setup refusals; offline catalog still usable")
+
+
 def _stdio_metadata_check(
     family: str,
     cacheable_wires: tuple[dict[str, Any], ...],
@@ -579,6 +629,9 @@ async def _probe_recon_stdio(family: str) -> list[ProbeCheck]:
     env = dict(os.environ)
     env["RECON_MCP_FORCE_STDIO"] = "1"
     env["PYTHONSAFEPATH"] = "1"
+    # Refusal probes are deliberately offline regardless of the host's saved
+    # approval. This is process configuration, never a caller-controlled mode.
+    env["RECON_DNS_VIEW"] = "unavailable"
     scratch = Path(env.get("RECON_AGENT_TMP", AGENT_ROOT))
     scratch.mkdir(parents=True, exist_ok=True)
     with (
@@ -596,17 +649,30 @@ async def _probe_recon_stdio(family: str) -> list[ProbeCheck]:
             ClientSession(*streams) as session,
         ):
             discovery_check, discovery_wire = await _stdio_discovery(session)
+            dns_readiness_check = _stdio_dns_readiness(discovery_wire)
             listings = await _stdio_listings(session, discovery_wire)
             prompt_check = await _stdio_prompt_get(session)
             resource_check, read_wires = await _stdio_resource_reads(session, listings.resource_uris)
             tool_checks, success_wire, failure_wire = await _stdio_tool_results(session)
+            depth_check = await _stdio_depth_contract(session)
+            unavailable_dns_check = await _stdio_unavailable_dns(session)
             metadata_check = _stdio_metadata_check(
                 family,
                 listings.result_wires,
                 read_wires,
                 (success_wire, failure_wire),
             )
-    return [discovery_check, listings.check, prompt_check, resource_check, *tool_checks, metadata_check]
+    return [
+        discovery_check,
+        dns_readiness_check,
+        listings.check,
+        prompt_check,
+        resource_check,
+        *tool_checks,
+        depth_check,
+        unavailable_dns_check,
+        metadata_check,
+    ]
 
 
 def _modern_request_meta(protocol_version: str = MODERN_PROTOCOL_VERSION) -> dict[str, Any]:

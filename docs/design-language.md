@@ -84,9 +84,12 @@ encode a qualification only in color, an icon, or an explanatory footnote.
   At 78 columns or more it is the established layout, so wide output does not
   change. Narrower, the sections are laid out again at the real width rather
   than laid out at 78 and re-wrapped, which is what left orphan words. Bordered
-  panels (explanations, source status, posture, exposure, gaps, delta, chain)
-  keep their 80-column box when the console has room and otherwise render flat,
-  as a bold heading over the same body, so a border never folds or crops text.
+  exposure, gaps, and delta reports (including `--compare`) use a box of
+  `min(console width, 100)` at 80 columns and above, with one hanging wrap at
+  the box's actual content width. Other bordered panels (explanations, source
+  status, posture, chain) retain their 80-column box. Below 80 columns, or when
+  a whole identifier cannot fit inside a responsive box, render flat as a bold
+  heading over the same body, so a border never folds or crops text.
 - Identifiers never break. A UUID, hostname, URL, email address or path that
   does not fit moves to its own line at the value indent and may run past the
   edge; panels are printed with `crop=False` so it is not cut. Other text wraps

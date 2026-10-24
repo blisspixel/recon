@@ -85,6 +85,15 @@ Structured lookup provenance includes `resolution_vantage` (`caller-safe` or
 Older records can have null provenance. This isolates recon's collection; it
 does not confine an agent with independent unrestricted shell or network tools.
 
+Both MCP doctors report the DNS capability for the launch they check. An
+unapproved view is a `warn` row with the one-time `Next:` setup link; offline
+tools and local resources remain usable. Refused DNS-dependent calls do not
+reserve a rate-limit slot, so retries keep the same actionable setup message.
+The live doctor reads a bounded capability declaration from the checked
+server's discovery instructions, including mode, transport, and an opaque
+policy identity. Resolver addresses are not published. This reports startup
+authority, not resolver reachability or another client's environment.
+
 See the [security disposition](security-audit-resolutions.md#closed-in-v2220-cname-chain-walking-can-query-and-leak-internal-dns-names),
 [Cloudflare DoH documentation](https://developers.cloudflare.com/1.1.1.1/encryption/dns-over-https/make-api-requests/)
 and [Google DoH documentation](https://developers.google.com/speed/public-dns/docs/doh).
@@ -254,9 +263,24 @@ awarded and unresolved points, and exact retained evidence. An
 `observed_value` may contribute points; `observed_empty` records a completed
 bounded opportunity; `unresolved` covers evidence that cannot establish the
 modeled state or absence; `unavailable` names a failed collection opportunity;
-and `hypothetical_value` appears only in simulation output. The index floor is
+and `hypothetical_value` appears only in simulation output. These five state
+values keep their existing meanings. An optional `applicability` proof block
+with `state: not_applicable` retains the published declaration that excludes a
+control from this namespace's applicable allocation. The control's original
+observation state and evidence remain visible separately. Its awarded and
+unresolved points are zero; its nominal component weight stays visible, while
+`model_maximum_points` excludes that weight. The index floor is
 the sum of awarded points. The ceiling adds unresolved and unavailable modeled
 capacity. Neither value is an overall security grade.
+
+A sole valid Null MX declaration excludes MTA-STS, TLS-RPT, and the email
+gateway component. DKIM and BIMI also become inapplicable only when the same
+available evidence includes an explicit `v=spf1 -all` policy and raw-bound,
+effectively enforcing DMARC. A strict SPF policy with permitted senders does
+not meet that condition. Mixed MX sets, failed sources, and ambiguous policies
+do not establish these exclusions. These are declarations, not delivery tests
+or proof about actual mail use. Simulations retain the original applicability
+basis, skip inapplicable fixes, and report no awarded points for them.
 
 For `find_hardening_gaps`, read `observation_state` before the prose.
 `observed_weak_configuration` and `observed_configuration_inconsistency` carry
@@ -693,10 +717,16 @@ installed server; the third validates that the named client was told about it.
    user-profile or custom file used during installation. Add `--json` for the
    same rows as one JSON object on stdout with the same exit code.
 
-All three print the same status words, `ok`, `warn`, `fail`, and `info`, and a
-failure summary ends with a `Next:` step. A `recon` launcher missing from PATH
+All three print the same status words, `ok`, `warn`, `fail`, and `info`.
+MCP warning and failure rows include their `Next:` action when available;
+warnings keep exit 0 while distinguishing local protocol success from DNS
+collection readiness. A `recon` launcher missing from PATH
 is an `info` row in `recon doctor --mcp`, because the generated config falls
 back to the running interpreter.
+
+`chain_lookup` advertises an integer `depth` from 1 through 3 and rejects
+out-of-range or non-integer values before collection and rate-limit admission.
+It does not silently clamp a request to a different depth.
 
 If all three pass but tools still do not appear, continue with the client-side
 checks below.

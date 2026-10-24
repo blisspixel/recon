@@ -11,6 +11,7 @@ from typing import Protocol
 
 from rich.cells import cell_len
 from rich.console import Console, ConsoleOptions, Group, RenderableType, RenderResult
+from rich.padding import Padding
 from rich.panel import Panel
 from rich.text import Text
 
@@ -18,9 +19,9 @@ from rich.text import Text
 # its established 78-column layout on any console at least that wide, so wide
 # output and its golden renders do not change. Below that, the panel is laid
 # out once at the console's real width instead of being laid out at 78 and
-# re-wrapped, which is what left orphan words. Bordered panels keep their
-# 80-column box when it fits and render flat below it, so a long identifier is
-# never folded or cropped by a border.
+# re-wrapped, which is what left orphan words. FittedPanel keeps an 80-column
+# box when it fits and renders flat below it. ResponsivePanel grows review
+# reports up to 100 columns and also turns flat for an oversized identifier.
 PANEL_WIDTH = 78
 BORDERED_PANEL_WIDTH = 80
 LABEL_FLOOR = 13
@@ -233,6 +234,28 @@ class FittedPanel(Panel):
         body.rstrip()
         yield wrap_indented_text(body, console, width)
         yield Text("")
+
+
+class ResponsivePanel(FittedPanel):
+    """Use up to 100 columns and one hanging wrap for boxed review reports."""
+
+    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
+        if options.max_width < BORDERED_PANEL_WIDTH or not isinstance(self.renderable, Text):
+            yield from super().__rich_console__(console, options)
+            return
+        panel = copy.copy(self)
+        panel.width = min(options.max_width, 100)
+        _, right, _, left = Padding.unpack(self.padding)
+        content_width = max(1, panel.width - left - right - 2)
+        body = wrap_indented_text(self.renderable, console, content_width)
+        if any(line.cell_len > content_width for line in body.split("\n")):
+            # An identifier that cannot fit inside the box must stay whole.
+            # The existing flat layout preserves it without border cropping.
+            panel.width = options.max_width + 1
+            yield from FittedPanel.__rich_console__(panel, console, options)
+            return
+        panel.renderable = body
+        yield from Panel.__rich_console__(panel, console, options)
 
 
 class SurfaceSummaryAttribution(Protocol):

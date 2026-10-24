@@ -14,7 +14,7 @@ import re
 import time
 import uuid
 from dataclasses import replace
-from typing import Literal, cast
+from typing import Literal, NotRequired, cast
 
 from typing_extensions import TypedDict
 
@@ -91,6 +91,13 @@ class ExposureMetadataDependencySummary(TypedDict):
     observed_value: ExposureMetadataValue
 
 
+class ExposureApplicabilitySummary(TypedDict):
+    state: Literal["not_applicable"]
+    metadata_dependencies: list[ExposureMetadataDependencySummary]
+    observation_scope: list[str]
+    evidence: list[EvidenceReferenceSummary]
+
+
 class ExposureIndexComponentSummary(TypedDict):
     component_id: str
     control: str
@@ -102,6 +109,7 @@ class ExposureIndexComponentSummary(TypedDict):
     metadata_dependencies: list[ExposureMetadataDependencySummary]
     observation_scope: list[str]
     evidence: list[EvidenceReferenceSummary]
+    applicability: NotRequired[ExposureApplicabilitySummary]
 
 
 class ObservabilitySummary(TypedDict):
@@ -758,9 +766,11 @@ async def simulate_hardening(domain: str, fixes: list[str]) -> HardeningSimulati
 
     info, _results = resolved
 
+    from recon_tool.email_applicability import mail_applicability
     from recon_tool.exposure import assess_exposure_from_info, find_gaps_from_info
 
-    current_assessment = assess_exposure_from_info(info)
+    applicability = mail_applicability(info)
+    current_assessment = assess_exposure_from_info(info, applicability=applicability)
     current_score = current_assessment.posture_score
 
     # Parse fixes and simulate by mutating a copy of TenantInfo fields
@@ -795,11 +805,12 @@ async def simulate_hardening(domain: str, fixes: list[str]) -> HardeningSimulati
     sim_assessment = assess_exposure_from_info(
         sim_info,
         hypothetical_components=frozenset(state.hypothetical_components),
+        applicability=applicability,
     )
     simulated_score = sim_assessment.posture_score
 
     # Compute remaining gaps on simulated info
-    sim_gap_report = find_gaps_from_info(sim_info)
+    sim_gap_report = find_gaps_from_info(sim_info, applicability=applicability)
     remaining_gaps: list[SimulatedGapSummary] = [
         {
             "category": gap.category,

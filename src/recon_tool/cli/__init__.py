@@ -252,7 +252,7 @@ def main(
         callback=ascii_callback,
         is_eager=True,
         help=(
-            "Print ASCII in place of Unicode glyphs ([##-] for dots, ok/x for marks). "
+            "Print ASCII in place of Unicode glyphs (#/- for dots, ok/x for marks). "
             "Automatic under TERM=dumb or a terminal that cannot show the glyphs. "
             "Accepted before or after the domain or command."
         ),

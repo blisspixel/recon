@@ -115,6 +115,14 @@ capacity from unavailable, intrinsically narrow, inconsistent, or otherwise insu
 component retains the generation rule, basis state, typed predicates, bounded
 scope, point weight, and record evidence. This ledger makes the arithmetic
 replayable; it does not convert the result into an overall security measure.
+Published no-mail declarations can make individual mail controls
+inapplicable. An optional `applicability` proof block records that decision
+separately from the existing control-observation state and evidence. Those
+components retain their nominal weight and declaration proof, receive no
+points or unresolved capacity, and are excluded from
+`model_maximum_points`. The 0-100 compatibility scale is not renormalized.
+The exact conditions and simulation behavior are documented in the
+[MCP index contract](mcp.md#available-tools).
 
 ### 1.2 Provenance is part of the result
 

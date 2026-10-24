@@ -12,6 +12,7 @@ from recon_tool.constants import (
     SVC_SPF_SOFTFAIL,
     SVC_SPF_STRICT,
 )
+from recon_tool.email_applicability import MailApplicability, mail_applicability
 from recon_tool.exposure_copy import evidence_refs
 from recon_tool.exposure_gaps import EMAIL_GATEWAY_SLUGS, mta_sts_mode_evidence, mta_sts_txt_evidence
 from recon_tool.exposure_models import (
@@ -28,6 +29,7 @@ from recon_tool.exposure_models import (
     SPF_COMPONENT_ID,
     TLS_RPT_COMPONENT_ID,
     EvidenceReference,
+    ExposureApplicabilityProof,
     ExposureIndex,
     ExposureIndexComponent,
     ExposureIndexState,
@@ -427,6 +429,7 @@ def compute_exposure_index(
     info: TenantInfo,
     *,
     hypothetical_components: frozenset[str] = frozenset(),
+    applicability: MailApplicability | None = None,
 ) -> ExposureIndex:
     """Build the complete weighted ledger from collection-observable evidence."""
     from recon_tool.collection_view import collection_claim_info
@@ -435,6 +438,7 @@ def compute_exposure_index(
     if unknown_hypotheticals:
         raise ValueError("unsupported hypothetical exposure component(s): " + ", ".join(sorted(unknown_hypotheticals)))
 
+    applicability = mail_applicability(info) if applicability is None else applicability
     observed_info = collection_claim_info(info)
     observed = ObservableEmailState.from_info(observed_info)
     hypothetical_info = (
@@ -473,6 +477,7 @@ def compute_exposure_index(
         _identity_component(identity_info, hypothetical_components),
         _gateway_component(gateway_info, gateway_observed, hypothetical_components),
     )
+    components = tuple(_apply_mail_applicability(component, applicability) for component in components)
     index = ExposureIndex(components)
     emitted_hypotheticals = frozenset(
         component.component_id for component in components if component.state == "hypothetical_value"
@@ -484,6 +489,28 @@ def compute_exposure_index(
             + ", ".join(sorted(missing))
         )
     return index
+
+
+def _apply_mail_applicability(
+    component: ExposureIndexComponent,
+    applicability: MailApplicability,
+) -> ExposureIndexComponent:
+    """Retain a zero-credit declaration proof outside the applicable allocation."""
+    records = applicability.evidence_for(component.control)
+    if not records:
+        return component
+    outbound = component.component_id in {DKIM_COMPONENT_ID, BIMI_COMPONENT_ID}
+    basis = "null_mx_spf_deny_all_enforcing_dmarc" if outbound else "sole_null_mx"
+    scope = ("dns:mx", "dns:apex_txt", "dns:dmarc") if outbound else ("dns:mx",)
+    return replace(
+        component,
+        awarded_points=0,
+        applicability=ExposureApplicabilityProof(
+            metadata_dependencies=(_dependency("mail_applicability", basis, basis),),
+            observation_scope=scope,
+            evidence=evidence_refs(records),
+        ),
+    )
 
 
 __all__ = ["compute_exposure_index"]

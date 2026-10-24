@@ -15,6 +15,7 @@ import logging
 import uuid
 from typing import Any
 
+from recon_tool.mcp_client.dns_readiness import advertised_dns_capability
 from recon_tool.mcp_client.sdk_compat import MCPApplication, ToolError, mcp_application_options
 from recon_tool.models import ReconLookupError, SourceResult, TenantInfo
 from recon_tool.network_policy import MCP_COLLECTION_POLICY, collection_scope
@@ -46,6 +47,15 @@ def require_collection_policy(domain: str) -> None:
             message="Caller-safe DNS is unavailable; configure an approved DNS view once in the MCP server settings",
             error_type="dns_view_unavailable",
         )
+
+
+def collection_policy_refusal(domain: str) -> str | None:
+    """Return an actionable startup refusal before reserving collection work."""
+    try:
+        require_collection_policy(domain)
+    except ReconLookupError as exc:
+        return lookup_failure_message(domain, exc)
+    return None
 
 
 def invalid_domain_message(error: ValueError) -> str:
@@ -237,6 +247,14 @@ current component model assigns at most 90 points. A low floor can mean
 `components` ledger. Each component names its generator, basis state, typed
 predicates, bounded scope, retained evidence, awarded points, and unresolved
 points. `unresolved` and `unavailable` capacity contributes to the ceiling;
+An optional `applicability` block with `state: not_applicable` retains a
+separate declaration proof; existing control states and evidence stay intact.
+That component awards no points and contributes no unresolved capacity.
+Its nominal weight is excluded from
+`model_maximum_points`; the compatibility scale remains 0-100. A sole Null MX
+excludes inbound transport controls and the gateway slot. DKIM and BIMI also
+require explicit deny-all SPF and effectively enforcing DMARC declarations.
+These are published policies, not a test of delivery or actual mail use.
 `hypothetical_value` is simulation-only and is not a live observation. Report
 the floor with its ceiling and evidence, never as a grade or overall ranking.
 
@@ -266,7 +284,7 @@ returns flat explanations for its observations, not an `explanation_dag`.
 
 mcp = MCPApplication(
     "recon-tool",
-    instructions=SERVER_INSTRUCTIONS,
+    instructions=SERVER_INSTRUCTIONS + "\n" + advertised_dns_capability(MCP_COLLECTION_POLICY),
     **mcp_application_options(),
 )
 
@@ -297,6 +315,8 @@ async def resolve_or_cache(domain: str) -> tuple[TenantInfo, list[SourceResult]]
         info, results = cached
         return info, list(results)
 
+    if refusal := collection_policy_refusal(validated):
+        return refusal
     if not rate_limit_try_acquire(validated):
         cached = cache_get(validated)
         if cached is not None:
@@ -338,6 +358,8 @@ async def _resolve_validated_domain_for_tool(validated: str, request_id: str) ->
         log_structured(logging.INFO, "cache_hit", request_id=request_id, domain=validated)
         return cached[0]
 
+    if refusal := collection_policy_refusal(validated):
+        raise ToolError(refusal)
     if not rate_limit_try_acquire(validated):
         cached = cache_get(validated)
         if cached is None:

@@ -17,26 +17,32 @@ from recon_tool.constants import (
     SVC_DKIM_GOOGLE,
     SVC_SPF_STRICT,
 )
+from recon_tool.email_applicability import MailApplicability, mail_applicability
 from recon_tool.email_security import observed_email_control_services
 from recon_tool.exposure_comparison import build_metrics
 from recon_tool.exposure_copy import EXPOSURE_DISCOURAGED_COPY_TERMS
 from recon_tool.exposure_copy import build_evidence_refs as _build_evidence_refs
 from recon_tool.exposure_copy import check_neutral_copy as _check_neutral_copy
 from recon_tool.exposure_copy import evidence_slugs as _evidence_slugs
+from recon_tool.exposure_hardening import compute_hardening_status as _compute_hardening_status
 from recon_tool.exposure_models import (
     ConsistencyObservation,
     EmailPosture,
     EvidenceReference,
     ExposureAssessment,
     GapReport,
-    HardeningControl,
     HardeningGap,
-    HardeningStatus,
     IdentityPosture,
     InfrastructureFootprint,
     PostureComparison,
     PostureDifference,
     RelativeAssessment,
+)
+from recon_tool.exposure_models import (
+    HardeningControl as HardeningControl,
+)
+from recon_tool.exposure_models import (
+    HardeningStatus as HardeningStatus,
 )
 from recon_tool.exposure_scoring import compute_exposure_index
 from recon_tool.models import TenantInfo
@@ -245,114 +251,6 @@ def _compute_consistency_observations(info: TenantInfo) -> tuple[ConsistencyObse
     return tuple(observations)
 
 
-def _compute_hardening_status(info: TenantInfo) -> HardeningStatus:
-    """Derive hardening control status from TenantInfo."""
-    observed = observability.ObservableEmailState.from_info(info)
-    services_set = observed_email_control_services(info.evidence)
-    slugs_set = set(info.slugs)
-    controls: list[HardeningControl] = []
-
-    # DMARC enforcement
-    dmarc_effective_policy = gap_detection.effective_email_dmarc_policy(info)
-    dmarc_available = observed.dmarc_available
-    if not dmarc_available:
-        detail = "source unavailable"
-    elif info.dmarc_policy is None:
-        detail = "not configured"
-    elif info.dmarc_policy == "none":
-        detail = "policy set to none"
-    elif dmarc_effective_policy is not None and dmarc_effective_policy != info.dmarc_policy:
-        detail = f"{info.dmarc_policy} (effective {dmarc_effective_policy})"
-    else:
-        detail = info.dmarc_policy
-    dmarc_present = dmarc_available and info.dmarc_policy is not None
-    controls.append(
-        HardeningControl(
-            name="DMARC",
-            present=dmarc_present,
-            detail=detail,
-            evidence=_build_evidence_refs(info, {"dmarc"} & slugs_set) if dmarc_present else (),
-        )
-    )
-
-    # DKIM
-    dkim_available = observed.dkim_available
-    dkim_present = dkim_available and bool(services_set & {SVC_DKIM, SVC_DKIM_EXCHANGE, SVC_DKIM_GOOGLE})
-    controls.append(
-        HardeningControl(
-            name="DKIM",
-            present=dkim_present,
-            detail=("configured" if dkim_present else "not observed at recon's bounded common-selector set")
-            if dkim_available
-            else "source unavailable",
-            evidence=(_build_evidence_refs(info, _evidence_slugs(info, frozenset({"DKIM"}))) if dkim_present else ()),
-        )
-    )
-
-    # MTA-STS. RFC 8461 defines mode "none" as "policy not in effect": the
-    # record was observed, but it may not be credited as a present control.
-    mta_available = observed.mta_sts_available
-    mta_declared_off = mta_available and info.mta_sts_mode == "none"
-    mta_present = mta_available and info.mta_sts_mode is not None and not mta_declared_off
-    if not mta_available:
-        mta_detail = "source unavailable"
-    elif mta_declared_off:
-        mta_detail = "policy published with mode none (not in effect)"
-    else:
-        mta_detail = info.mta_sts_mode or "not configured"
-    controls.append(
-        HardeningControl(
-            name="MTA-STS",
-            present=mta_present,
-            detail=mta_detail,
-            evidence=_build_evidence_refs(info, {"mta-sts", "mta-sts-enforce"} & slugs_set)
-            if mta_present or mta_declared_off
-            else (),
-        )
-    )
-
-    # BIMI
-    bimi_available = observed.bimi_available
-    bimi_present = bimi_available and SVC_BIMI in services_set
-    controls.append(
-        HardeningControl(
-            name="BIMI",
-            present=bimi_present,
-            detail=("configured" if bimi_present else "not configured") if bimi_available else "source unavailable",
-            evidence=_build_evidence_refs(info, {"bimi"} & slugs_set) if bimi_present else (),
-        )
-    )
-
-    # TLS-RPT
-    tls_rpt_available = observed.tls_rpt_available
-    tls_rpt_present = tls_rpt_available and "tls-rpt" in slugs_set
-    controls.append(
-        HardeningControl(
-            name="TLS-RPT",
-            present=tls_rpt_present,
-            detail=("configured" if tls_rpt_present else "not configured")
-            if tls_rpt_available
-            else "source unavailable",
-            evidence=_build_evidence_refs(info, {"tls-rpt"}) if tls_rpt_present else (),
-        )
-    )
-
-    # CAA records
-    caa_available = observed.caa_available
-    caa_evidence_slugs = _evidence_slugs(info, frozenset({"CAA"}))
-    caa_present = caa_available and bool(caa_evidence_slugs)
-    controls.append(
-        HardeningControl(
-            name="CAA",
-            present=caa_present,
-            detail=("configured" if caa_present else "not configured") if caa_available else "source unavailable",
-            evidence=_build_evidence_refs(info, caa_evidence_slugs) if caa_present else (),
-        )
-    )
-
-    return HardeningStatus(controls=tuple(controls))
-
-
 # ── Public API: assess_exposure_from_info ──────────────────────────────
 
 _ASSESSMENT_DISCLAIMER = (
@@ -366,6 +264,7 @@ def assess_exposure_from_info(
     info: TenantInfo,
     *,
     hypothetical_components: frozenset[str] = frozenset(),
+    applicability: MailApplicability | None = None,
 ) -> ExposureAssessment:
     """Assess a domain's publicly observable security posture.
 
@@ -373,14 +272,17 @@ def assess_exposure_from_info(
     """
     from recon_tool.collection_view import collection_claim_info
 
+    applicability = mail_applicability(info) if applicability is None else applicability
     source_info = info
     info = collection_claim_info(source_info)
     email = _compute_email_posture(info)
     identity = _compute_identity_posture(info)
     infra = _compute_infrastructure_footprint(info)
     consistency = _compute_consistency_observations(info)
-    hardening = _compute_hardening_status(info)
-    index = compute_exposure_index(source_info, hypothetical_components=hypothetical_components)
+    hardening = _compute_hardening_status(info, applicability=applicability)
+    index = compute_exposure_index(
+        source_info, hypothetical_components=hypothetical_components, applicability=applicability
+    )
 
     # Subsections overlap: DMARC is cited by the email posture and again by its
     # hardening control, CAA by infrastructure and its control. Concatenating made
@@ -412,7 +314,7 @@ def assess_exposure_from_info(
 # ── Gap detection helpers ──────────────────────────────────────────────
 
 
-def find_gaps_from_info(info: TenantInfo) -> GapReport:
+def find_gaps_from_info(info: TenantInfo, *, applicability: MailApplicability | None = None) -> GapReport:
     """Identify hardening opportunities in a domain's public configuration.
 
     Each detector gates its own named observation scopes against raw retained
@@ -420,9 +322,10 @@ def find_gaps_from_info(info: TenantInfo) -> GapReport:
     successful DNS half of a conditionally attempted MTA-STS HTTP request.
     Pure function: TenantInfo in, GapReport out. No I/O.
     """
+    applicability = mail_applicability(info) if applicability is None else applicability
     gaps: list[HardeningGap] = []
-    gaps.extend(gap_detection.detect_missing_controls(info))
-    gaps.extend(gap_detection.detect_weak_configs(info))
+    gaps.extend(gap_detection.detect_missing_controls(info, applicability=applicability))
+    gaps.extend(gap_detection.detect_weak_configs(info, applicability=applicability))
     gaps.extend(gap_detection.detect_inconsistencies(info))
     gap_detection.validate_gap_lineage(gaps, info.degraded_sources)
 
@@ -431,7 +334,9 @@ def find_gaps_from_info(info: TenantInfo) -> GapReport:
         domain=info.queried_domain,
         gaps=tuple(gaps),
         disclaimer=_check_neutral_copy(gap_detection.GAPS_DISCLAIMER),
-        unavailable_controls=observed.unavailable_control_names(),
+        unavailable_controls=tuple(
+            name for name in observed.unavailable_control_names() if not applicability.evidence_for(name)
+        ),
         degraded_sources=tuple(sorted(set(info.degraded_sources))),
     )
 
@@ -454,7 +359,9 @@ def _build_differences(info_a: TenantInfo, info_b: TenantInfo) -> tuple[PostureD
     diffs: list[PostureDifference] = []
 
     for ctrl_a, ctrl_b in zip(controls_a.controls, controls_b.controls, strict=True):
-        if "source unavailable" in {ctrl_a.detail, ctrl_b.detail}:
+        if "source unavailable" in {ctrl_a.detail, ctrl_b.detail} or any(
+            control.detail.startswith("not applicable:") for control in (ctrl_a, ctrl_b)
+        ):
             continue
         if ctrl_a.present != ctrl_b.present:
             if ctrl_a.name == "DKIM":

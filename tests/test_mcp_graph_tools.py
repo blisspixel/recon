@@ -1,5 +1,5 @@
 # Legacy typing exceptions are owned in docs/typing-exceptions.json.
-# pyright: reportMissingParameterType=none, reportUnknownArgumentType=none, reportUnknownMemberType=none
+# pyright: reportMissingParameterType=none, reportUnknownArgumentType=none
 # pyright: reportUnknownParameterType=none
 """Unit tests for the v1.8 MCP graph-export tools.
 
@@ -154,16 +154,8 @@ def stub_chain(monkeypatch: pytest.MonkeyPatch):
 
 
 class TestChainLookupDepthBound:
-    def test_mcp_depth_clamp_agrees_with_max_chain_depth(self, monkeypatch):
-        """Prevents the MCP tool outrunning the recursion cap the CLI enforces.
-
-        ``chain_lookup`` clamps with a hardcoded literal instead of importing
-        ``MAX_CHAIN_DEPTH``, so the two copies of the bound can drift apart
-        silently. MCP arguments are attacker-supplied, and depth also scales
-        the aggregate timeout, so an unclamped value buys an unbounded crawl.
-        The existing chain tests stub ``chain_resolve`` with an assertion that
-        depth is exactly 1, which never exercises an out-of-range request.
-        """
+    def test_mcp_depth_rejection_agrees_with_max_chain_depth(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Reject an out-of-range request before starting a traversal."""
         import recon_tool.chain as chain_module
         import recon_tool.server.graph as server_graph
 
@@ -176,12 +168,13 @@ class TestChainLookupDepthBound:
         monkeypatch.setattr(chain_module, "chain_resolve", _capture)
         monkeypatch.setattr(server_graph, "rate_limit_try_acquire", _allow_any_rate_limit)
 
-        asyncio.run(server.chain_lookup("example.com", depth=10_000))
+        with pytest.raises(ToolError, match="depth must be an integer"):
+            asyncio.run(server.chain_lookup("example.com", depth=chain_module.MAX_CHAIN_DEPTH + 1))
 
-        assert seen == [chain_module.MAX_CHAIN_DEPTH]
+        assert seen == []
 
-    def test_mcp_depth_floor_rejects_non_positive_depth(self, monkeypatch):
-        """A zero or negative depth must floor to one rather than skip the walk."""
+    def test_mcp_depth_floor_rejects_non_positive_depth(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """A negative request is an error rather than a silently altered walk."""
         import recon_tool.chain as chain_module
         import recon_tool.server.graph as server_graph
 
@@ -194,9 +187,10 @@ class TestChainLookupDepthBound:
         monkeypatch.setattr(chain_module, "chain_resolve", _capture)
         monkeypatch.setattr(server_graph, "rate_limit_try_acquire", _allow_any_rate_limit)
 
-        asyncio.run(server.chain_lookup("example.com", depth=-5))
+        with pytest.raises(ToolError, match="depth must be an integer"):
+            asyncio.run(server.chain_lookup("example.com", depth=-5))
 
-        assert seen == [1]
+        assert seen == []
 
     def test_depth_boolean_or_non_int_rejected(self):
         with pytest.raises(ToolError, match="depth must be an integer"):

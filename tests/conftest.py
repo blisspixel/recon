@@ -17,6 +17,7 @@ output when a user sets FORCE_COLOR.
 from __future__ import annotations
 
 import os
+from collections.abc import Iterator
 from unittest.mock import patch
 
 import pytest
@@ -74,6 +75,28 @@ def _isolate_terminal_env(monkeypatch: pytest.MonkeyPatch) -> None:
     """Drop inherited color and terminal-size variables before each test."""
     for name in _ISOLATED_TERMINAL_ENV:
         monkeypatch.delenv(name, raising=False)
+
+
+@pytest.fixture
+def approved_mcp_dns(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Make startup approval explicit for tests whose collection is stubbed.
+
+    This fixture is opt-in. Unavailable-view and real startup tests retain
+    their own policy so they exercise the actual refusal boundary.
+    """
+    from recon_tool.network_policy import CollectionPolicy
+    from recon_tool.server import app, graph, runtime
+
+    policy = CollectionPolicy("caller-safe", ("192.0.2.53",), "dns.example.org")
+    for module in (app, graph, runtime):
+        monkeypatch.setattr(module, "MCP_COLLECTION_POLICY", policy)
+    runtime.cache_clear()
+    runtime.rate_limit_clear()
+    try:
+        yield
+    finally:
+        runtime.cache_clear()
+        runtime.rate_limit_clear()
 
 
 @pytest.fixture
@@ -194,16 +217,19 @@ def _reset_global_console():
     CliRunner-based test will write into the orphaned StringIO and see
     empty result.stdout. Setting _console = None forces ``get_console()``
     to construct a fresh Console bound to whatever sys.stdout the current
-    test framework has captured.
+    test framework has captured. Reset the color override as well so eager
+    help and repeated CliRunner invocations cannot leak --no-color state.
     """
     from recon_tool.formatter import terminal as _terminal
     from recon_tool.formatter import theme as _theme
 
+    _terminal.set_color_override(None)
     _terminal._console = None
     _terminal._err_console = None
     _terminal._ascii_override = False
     _theme.set_ascii_active(False)
     yield
+    _terminal.set_color_override(None)
     _terminal._console = None
     _terminal._err_console = None
     _terminal._ascii_override = False
