@@ -206,8 +206,8 @@ def test_www_literal_cache_entries_do_not_alias_the_apex(isolated_cache: Path) -
     literal = CliRunner().invoke(app, ["cache", "show", "www.example.com", "--exact"])
     ordinary = CliRunner().invoke(app, ["cache", "show", "www.example.com"])
     assert literal.exit_code == ordinary.exit_code == 0
-    assert "www.example.com" in literal.output
-    assert "www.example.com" not in ordinary.output
+    assert next(line.strip() for line in literal.output.splitlines() if line.strip()) == "www.example.com"
+    assert next(line.strip() for line in ordinary.output.splitlines() if line.strip()) == "example.com"
     assert isolated_cache.is_dir()
 
 
