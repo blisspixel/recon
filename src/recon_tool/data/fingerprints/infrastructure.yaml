@@ -139,12 +139,20 @@ fingerprints:
       for deploying applications under a custom domain.
   - type: cname
     pattern: vercel-dns.com
-    reference: https://vercel.com/docs/projects/domains
+    reference: https://vercel.com/kb/guide/how-to-migrate-from-fastly-to-vercel-with-zero-downtime
+    verified: '2026-10-23'
     description: >-
-      CNAME pointing into vercel-dns.com. Indicates the
-      domain uses Vercel's hosted DNS, typically when the
-      domain was registered through Vercel or delegated to
-      Vercel's nameservers for custom-domain management.
+      CNAME routing into Vercel's legacy custom-domain target
+      family. Does not establish authoritative DNS delegation,
+      completed domain verification, or active hosting.
+  - type: subdomain_txt
+    pattern: '_vercel:^vc-domain-verify=\S+$'
+    reference: https://vercel.com/docs/domains/working-with-domains/claim-domain-ownership
+    verified: '2026-10-23'
+    description: >-
+      Nonempty Vercel domain-verification marker at _vercel.
+      Publication does not establish completed verification,
+      account ownership, DNS delegation, or active hosting.
 - name: Webflow
   slug: webflow
   category: DevTools & Infrastructure
@@ -197,11 +205,12 @@ fingerprints:
       administrative-binding semantics, finer-grained scope.
   - type: cname
     pattern: netlify.app
-    reference: https://docs.netlify.com/domains-https/custom-domains/
+    reference: https://docs.netlify.com/manage/domains/configure-domains/configure-external-dns/
+    verified: '2026-10-23'
     description: >-
-      CNAME pointing into netlify.app. Indicates the domain
-      hosts a Netlify-deployed site under a custom subdomain
-      that proxies to Netlify's edge.
+      CNAME routing to a Netlify site hostname. Does not
+      establish completed domain verification, account ownership,
+      or an active deployment.
 - name: Twilio
   slug: twilio
   category: DevTools & Infrastructure
@@ -292,12 +301,12 @@ fingerprints:
   detections:
   - type: cname
     pattern: onrender.com
-    reference: https://docs.render.com/custom-domains
+    reference: https://render.com/docs/configure-cloudflare-dns
+    verified: '2026-10-23'
     description: >-
-      CNAME pointing into onrender.com (Render is a unified
-      cloud-application platform comparable to Heroku and
-      Fly.io). Indicates the domain hosts at least one
-      service deployed on Render under a custom domain.
+      CNAME routing to a Render service hostname. Does not
+      establish completed domain verification, account ownership,
+      or an active deployment.
   - type: txt
     pattern: ^render-domain-verification=
     reference: https://docs.render.com/custom-domains
@@ -1087,27 +1096,28 @@ fingerprints:
   confidence: high
   detections:
   - type: cname
-    pattern: fly\.dev$|edgeapp\.net$
-    reference: https://fly.io/docs/networking/custom-domain/
+    pattern: fly.dev
+    reference: https://docs.fly.io/networking/custom-domain
+    verified: '2026-10-23'
     description: >-
-      CNAME terminating in fly.dev or edgeapp.net (Fly.io is
-      a globally-distributed application platform). The
-      fly.dev domain is the default-app hostname; edgeapp.net
-      is the legacy form. Indicates the domain hosts at
-      least one Fly.io-deployed service.
+      CNAME routing to a Fly.io app hostname. Does not establish
+      completed domain verification, account ownership, or an
+      active workload. Legacy edgeapp.net routing is not covered
+      by this rule.
 - name: Railway
   slug: railway
   category: Infrastructure
   confidence: high
   detections:
   - type: cname
-    pattern: railway\.app$
-    reference: https://docs.railway.app/deploy/exposing-your-app
+    pattern: up.railway.app
+    reference: https://docs.railway.com/networking/domains/working-with-domains
+    verified: '2026-10-23'
     description: >-
-      CNAME terminating in railway.app (Railway is a
-      developer-focused deployment platform comparable to
-      Render and Fly.io). Indicates the domain hosts at
-      least one Railway-deployed service.
+      CNAME routing to a Railway service hostname. Does not
+      establish publication of the separately required TXT
+      record, completed domain verification, account ownership,
+      or an active deployment.
 - name: VMware Cloud
   slug: vmware-cloud
   category: Infrastructure

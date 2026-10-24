@@ -10,7 +10,6 @@ negative or positive observation.
 
 from __future__ import annotations
 
-import re
 from collections.abc import Iterable
 from dataclasses import replace
 from typing import TYPE_CHECKING
@@ -27,10 +26,15 @@ from recon_tool.fingerprints import (
     match_txt_all,
 )
 from recon_tool.models import EvidenceRecord, SourceResult
-from recon_tool.regex_safety import compile_regex
 from recon_tool.source_status import ObservationChannel, SourceStatus
 from recon_tool.sources.dns_base import DetectionCtx
-from recon_tool.sources.dns_tables import is_spf_record, match_spf_targets, select_spf_record, spf_targets
+from recon_tool.sources.dns_tables import (
+    cname_pattern_matches,
+    is_spf_record,
+    match_spf_targets,
+    select_spf_record,
+    spf_targets,
+)
 from recon_tool.validator import host_has_suffix, is_domain_shaped
 
 if TYPE_CHECKING:
@@ -63,8 +67,7 @@ def _record_match(
     target = candidate.split()[-1].rstrip(".") if candidate.split() else ""
     for detection in sorted(detections, key=lambda item: -len(item.pattern)):
         if regex:
-            compiled = compile_regex(detection.pattern, re.IGNORECASE)
-            matched = compiled is not None and compiled.search(candidate) is not None
+            matched = cname_pattern_matches(candidate, detection.pattern)
         else:
             # Match the live detector: compare DNS labels, not raw text. A
             # substring test attributed a lookalike such as

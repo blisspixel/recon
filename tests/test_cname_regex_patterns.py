@@ -1,4 +1,4 @@
-"""Validate the 9 catalog cname patterns that carry regex metacharacters.
+"""Validate catalog CNAME rules with their canonical matcher.
 
 The cname loader has always validated `pattern` fields as regex (the
 ReDoS-shape audit runs `re.compile` at load time), but until v1.9.24
@@ -9,7 +9,7 @@ entry whose pattern carried those characters silently never fired.
 
 v1.9.24 switched the matcher to `re.search(..., re.IGNORECASE)`,
 consistent with the loader's validation contract. These tests pin
-each of the 9 affected patterns so a future loader / matcher change
+the supported patterns so a future loader / matcher change
 that reintroduces the substring behavior fails CI rather than
 silently disabling these vendors again.
 
@@ -20,23 +20,19 @@ and asserts the engine attributes it to the correct slug.
 
 from __future__ import annotations
 
-import re
-
 import pytest
 
 from recon_tool.fingerprints import get_cname_patterns
+from recon_tool.sources.dns_tables import cname_pattern_matches
 
 
 def _matching_slug(hostname: str) -> str | None:
-    """Run the same regex-matching the engine does after v1.9.24."""
+    """Use the live and replay matcher, preserving catalog precedence."""
     hostname_lower = hostname.lower()
     patterns_sorted = sorted(get_cname_patterns(), key=lambda d: -len(d.pattern))
     for det in patterns_sorted:
-        try:
-            if re.search(det.pattern, hostname_lower, re.IGNORECASE):
-                return det.slug
-        except re.error:
-            continue
+        if cname_pattern_matches(hostname_lower, det.pattern):
+            return det.slug
     return None
 
 
@@ -50,10 +46,8 @@ def _matching_slug(hostname: str) -> str | None:
         # fastly — both legacy fastly.net and fastlylb.net edge.
         ("d.sni.global.fastly.net", "fastly"),
         ("dualstack.k.shared.global.fastlylb.net", "fastly"),
-        # flyio — Fly.io custom domains terminate at fly.dev or
-        # edgeapp.net.
+        # Current documented Fly.io custom-domain target family.
         ("myapp.fly.dev", "flyio"),
-        ("myapp.edgeapp.net", "flyio"),
         # railway — Railway.app deployments
         ("myproject.up.railway.app", "railway"),
         # splunk — SignalFx (Splunk Observability Cloud) edge

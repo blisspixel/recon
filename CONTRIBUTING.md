@@ -58,6 +58,7 @@ refactor it against reserved synthetic sentinels.
 This doc answers:
 
 - [What kinds of contributions we're looking for](#what-were-looking-for)
+- [Help improve and review recon](#help-improve-and-review-recon)
 - [What's out of scope](#whats-out-of-scope)
 - [Local customization vs upstream contribution](#local-customization-vs-upstream-contribution)
 - [How to contribute a fingerprint](#adding-fingerprints)
@@ -150,6 +151,35 @@ contributions should be YAML additions, refinements, or dated freshness
 backfills; that is the intended scaling path for the tool. Code changes earn
 their place against the post-1.0 ethos: correctness, reliability,
 explainability, composability, then new features, in that order.
+
+---
+
+## Help improve and review recon
+
+Interested in public DNS, email, identity, or explaining what evidence can
+actually support? There is room to help make recon better. A small correction,
+a careful review, or a useful counterexample is a good first contribution. You
+do not need to be an expert or bring a private domain inventory.
+
+Useful starting points include:
+
+- Check a fingerprint against the vendor's current documentation.
+- Add synthetic lookalike, sparse-data, or provenance regression cases.
+- Improve a confusing explanation or review a proposed change's evidence.
+- Help keep dependency updates, releases, and contributor documentation current.
+
+For a bounded change, open a pull request against `main` with its supporting
+evidence and verification. If you would like to help regularly, including
+independent review or a future maintainer role, open a privacy-safe
+[idea issue](https://github.com/blisspixel/recon/issues/new/choose) describing
+your interests. The maintainer can help identify a manageable first task.
+
+recon currently has one maintainer. A sustained review role can grow from
+useful contributions; it does not require committing to ongoing maintenance
+at the outset. Independent human review would strengthen the project and allow
+the [solo-maintainer review exception](docs/supply-chain.md#solo-maintainer-review-exception)
+to be revisited when a qualified reviewer is available. No additional
+maintainer or reviewer has been appointed.
 
 ---
 
@@ -663,11 +693,9 @@ to `--json` + pipe to the right tool.
 
 ## Pull request etiquette
 
-Outside contributors and prospective reviewers are welcome. Start with a
-bounded bug fix, catalog correction, documentation improvement or test, and
-open a pull request against `main` with its evidence and verification. The
-maintainer reviews external pull requests. A sustained review role can grow
-from useful contributions; no additional maintainer is currently appointed.
+See [Help improve and review recon](#help-improve-and-review-recon) for starting
+points and ongoing review opportunities. The maintainer reviews external pull
+requests against their evidence and verification.
 
 - Keep PRs focused: one feature or fix per PR.
 - Fingerprint-only PRs are welcome and easy to review.

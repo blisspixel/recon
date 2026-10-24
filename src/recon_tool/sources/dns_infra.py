@@ -42,7 +42,10 @@ from recon_tool.sources.dns_tables import (
     ct_failure_outcome,
     is_public_dns_name,
 )
-from recon_tool.validator import caa_issuer_host, host_has_suffix, is_domain_shaped
+from recon_tool.sources.dns_tables import (
+    cname_pattern_matches as _cname_pattern_matches,
+)
+from recon_tool.validator import caa_issuer_host, host_has_suffix
 
 if TYPE_CHECKING:
     from recon_tool.ct_cache import CTCacheEntry
@@ -71,15 +74,6 @@ def _ns_pattern_matches(host: str, pattern: str) -> bool:
         label == normalized_pattern or label.startswith(f"{normalized_pattern}-")
         for label in host.lower().rstrip(".").split(".")
     )
-
-
-def _cname_pattern_matches(host: str, pattern: str) -> bool:
-    """Match whole-domain CNAME patterns by labels and regex patterns as regex."""
-    normalized_pattern = pattern.lower().rstrip(".")
-    if is_domain_shaped(normalized_pattern):
-        return host_has_suffix(host, normalized_pattern)
-    compiled = compile_regex(pattern, re.IGNORECASE)
-    return compiled is not None and compiled.search(host) is not None
 
 
 def _dns_target_host(record: str) -> str:
@@ -320,12 +314,8 @@ async def detect_cname_infra(ctx: dns_base.DetectionCtx, domain: str) -> None:
     #
     # CNAME patterns are regex-validated at load time (the loader compiles
     # them to catch ReDoS-shaped expressions), and
-    # nine catalog entries today carry real regex syntax (escaped dots,
-    # ``$`` anchors, alternation , see slugs langsmith, fastly, flyio,
-    # railway, splunk, cyberark, beyond-identity, workspace-one). The
-    # original substring matcher (``det.pattern in cl``) silently
-    # never-fired on those nine because no real hostname contains
-    # backslashes or ``$``. Regex search lights them up. Plain whole-domain
+    # some catalog entries carry real regex syntax (escaped dots,
+    # anchors and alternation). Regex search supports those rules. Plain whole-domain
     # patterns use DNS-label suffix matching so a target such as
     # ``vendor.com.evil.example`` cannot match ``vendor.com``. Cached replay
     # uses the same boundary.

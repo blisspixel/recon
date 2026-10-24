@@ -26,6 +26,20 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Added
+
+- Recognize Vercel's documented nonempty verification marker at `_vercel`.
+  Invite contributors interested in catalog validation, independent review,
+  and a possible future maintainer role through the contribution guide.
+
+### Fixed
+
+- Share CNAME DNS-label and regex matching between fresh detection and cached
+  replay so cached records cannot gain a provider claim from a lookalike.
+  Narrow Fly.io, Railway, and Netlify targets to their documented routing
+  boundaries, date ten reviewed rules, and distinguish routing and published
+  verification markers from completed verification or active deployments.
+
 ## [2.23.0] - 2026-10-23
 
 ### Added

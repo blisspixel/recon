@@ -7,6 +7,10 @@ system, or automatic promotion service. Runtime collection and claim boundaries
 remain unchanged. See [catalog strategy](catalog-strategy.md),
 [rule grammar](fingerprints.md), and [data handling](data-handling-policy.md).
 
+The [2026-10-23 hosting review](../validation/2026-10-23-hosting-rule-refinement.md)
+is a worked documentation and offline regression round, including deferred
+rules and the limits of its synthetic evidence.
+
 ## Agent entry points
 
 Start with the harness-neutral
