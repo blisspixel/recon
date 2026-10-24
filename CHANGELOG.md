@@ -26,6 +26,12 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.24.0] - 2026-10-24
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
 ### Added
 
 - Recognize Vercel's documented nonempty verification marker at `_vercel`.
