@@ -194,16 +194,19 @@ def _reset_global_console():
     CliRunner-based test will write into the orphaned StringIO and see
     empty result.stdout. Setting _console = None forces ``get_console()``
     to construct a fresh Console bound to whatever sys.stdout the current
-    test framework has captured.
+    test framework has captured. Reset the color override as well so eager
+    help and repeated CliRunner invocations cannot leak --no-color state.
     """
     from recon_tool.formatter import terminal as _terminal
     from recon_tool.formatter import theme as _theme
 
+    _terminal.set_color_override(None)
     _terminal._console = None
     _terminal._err_console = None
     _terminal._ascii_override = False
     _theme.set_ascii_active(False)
     yield
+    _terminal.set_color_override(None)
     _terminal._console = None
     _terminal._err_console = None
     _terminal._ascii_override = False
