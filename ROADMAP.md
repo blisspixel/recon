@@ -157,12 +157,12 @@ The default panel remains compact. Cryptographic verification and full SPF
 evaluation remain outside the product. Protocol currency does not imply that
 every agent harness or portable plugin client has been exercised.
 
-The [October maintenance review](docs/maintenance-review-2026-10-08.md) tracks
-the current dependency refresh and its synchronized build constraints, plus
-SPF record selection, TXT byte fidelity and bounded local MCP inputs. These
-changes follow the checked PR and release workflow; see the changelog for
-publication status. The upstream pip
-vendored-transport refresh remains blocked on a stable upstream release.
+The [October maintenance review](docs/maintenance-review-2026-10-08.md) records
+the 2026-10-08 dependency refresh and its synchronized build constraints, plus
+SPF record selection, TXT byte fidelity and bounded local MCP inputs. Those
+changes shipped through the checked PR and release workflow; see the changelog.
+The upstream pip vendored-transport refresh still awaits a stable upstream
+release; the audit mitigation stays in force.
 
 For correlation, prioritize the accuracy of the public observation and the
 honesty of its explanation: documented vendor patterns, synthetic positive and
