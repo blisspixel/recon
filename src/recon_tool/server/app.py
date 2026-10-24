@@ -44,7 +44,7 @@ def require_collection_policy(domain: str) -> None:
     if not MCP_COLLECTION_POLICY.available:
         raise ReconLookupError(
             domain=domain,
-            message="Caller-safe DNS is unavailable; configure an approved DNS view once in the MCP server settings",
+            message="Caller-safe DNS is disabled or misconfigured; fix or remove the MCP server's RECON_DNS_* settings",
             error_type="dns_view_unavailable",
         )
 
@@ -80,7 +80,8 @@ def lookup_failure_message(domain: str, error: ReconLookupError) -> str:
         return f"Lookup failed for {domain}: all passive sources returned errors. Try again."
     if error.error_type == "dns_view_unavailable":
         return (
-            "DNS-dependent lookup unavailable: approve a caller-safe DNS view once in the MCP server settings. "
+            "DNS-dependent lookup unavailable: the MCP server's DNS view is disabled or misconfigured; "
+            "fix or remove its RECON_DNS_* settings. "
             "See https://github.com/blisspixel/recon/blob/main/docs/mcp.md#dns-view-isolation."
         )
     return f"Lookup failed for {domain} ({error.error_type}). Try again."

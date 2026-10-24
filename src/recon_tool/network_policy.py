@@ -30,10 +30,14 @@ _PUBLIC_SERVICES = (
     (frozenset({"1.1.1.1", "1.0.0.1", "2606:4700:4700::1111", "2606:4700:4700::1001"}), "cloudflare-dns.com"),
     (frozenset({"8.8.8.8", "8.8.4.4", "2001:4860:4860::8888", "2001:4860:4860::8844"}), "dns.google"),
 )
+# Maintainer-approved encrypted default for hosts on any other resolver
+# (ADR-0019 amendment). IPv4 bootstraps avoid stalls on IPv4-only networks.
+DEFAULT_CALLER_SAFE_SERVERS = ("1.1.1.1", "1.0.0.1")
+DEFAULT_CALLER_SAFE_TLS_NAME = "cloudflare-dns.com"
 
 
 class DnsPolicyUnavailable(RuntimeError):
-    """The operator has not supplied a usable caller-safe DNS view."""
+    """The caller-safe DNS view is disabled or its saved settings are invalid."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,7 +52,11 @@ class CollectionPolicy:
 
     @classmethod
     def from_environment(cls, environment: Mapping[str, str], system_servers: tuple[str, ...] = ()) -> CollectionPolicy:
-        """Bind saved authority, or reuse a known configured public DNS service."""
+        """Bind saved authority, reuse a configured public service, or use the encrypted default.
+
+        ``RECON_DNS_VIEW=none`` disables DNS collection explicitly. Partial or
+        invalid saved settings stay unavailable rather than becoming the default.
+        """
         mode = environment.get("RECON_DNS_VIEW", "caller-safe")
         transport = environment.get("RECON_DNS_TRANSPORT", "https")
         if mode == "operator":
@@ -57,10 +65,11 @@ class CollectionPolicy:
             return cls("unavailable", available=False)
         if "RECON_DNS_SERVERS" not in environment and "RECON_DNS_TLS_NAME" not in environment:
             configured = frozenset(system_servers)
-            name = next((name for servers, name in _PUBLIC_SERVICES if configured and configured <= servers), None)
-            return (
-                cls(mode, system_servers, name, transport=transport) if name is not None else cls(mode, available=False)
+            reused = next(
+                ((system_servers, name) for servers, name in _PUBLIC_SERVICES if configured and configured <= servers),
+                (DEFAULT_CALLER_SAFE_SERVERS, DEFAULT_CALLER_SAFE_TLS_NAME),
             )
+            return cls(mode, *reused, transport=transport)
         raw_servers = environment.get("RECON_DNS_SERVERS", "").split(",")
         tls_name = environment.get("RECON_DNS_TLS_NAME", "").lower()
         try:

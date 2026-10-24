@@ -11,7 +11,7 @@ from recon_tool.network_policy import CollectionPolicy
 
 DNS_CAPABILITY_PREFIX = "recon.dns_view.v1: "
 DNS_SETUP_GUIDE = "https://github.com/blisspixel/recon/blob/main/docs/mcp.md#dns-view-isolation"
-DNS_SETUP_NEXT = f"Approve a caller-safe DNS view once in the MCP server settings: {DNS_SETUP_GUIDE}"
+DNS_SETUP_NEXT = f"Fix or remove the RECON_DNS_* settings in the MCP server configuration: {DNS_SETUP_GUIDE}"
 DNS_CHECK_NAME = "DNS collection view"
 
 
@@ -85,7 +85,7 @@ def dns_readiness_from_instructions(instructions: object) -> DnsReadiness:
     if not available:
         return DnsReadiness(
             "warn",
-            "no approved caller-safe DNS view; DNS-dependent tools are unavailable, "
+            "caller-safe DNS view disabled or misconfigured; DNS-dependent tools are unavailable, "
             "local tools and resources remain usable",
             DNS_SETUP_NEXT,
         )

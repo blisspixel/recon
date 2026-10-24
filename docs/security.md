@@ -140,11 +140,13 @@ a query observed in internal logs alone does not establish remote disclosure.
 - **Per-call bounds.** Five-hop maximum, 100-host surface cap, 30-concurrent-query cap, five-second per-query timeout.
 
 **Resolver-view boundary:** MCP automatically binds an immutable caller-safe
-policy at process startup, reusing saved approval or a recognized public DNS
-service already selected in host configuration. It does not substitute a new
-provider for an unapproved enterprise/stub view. Missing approval produces an
-explicit unavailable capability with one-time setup guidance; failures do not
-fall back to host DNS. The same policy covers all collector record types,
+policy at process startup, reusing saved settings or a recognized public DNS
+service already selected in host configuration. Otherwise it binds the
+maintainer-approved encrypted default, Cloudflare DNS-over-HTTPS; an
+enterprise or stub resolver is never used for MCP collection.
+`RECON_DNS_VIEW=none` or invalid settings produce an explicit unavailable
+capability with a setup link; failures do not fall back to host DNS or another
+provider. The same policy covers all collector record types,
 related enrichment, recursive chains and HTTP hostname resolution. Certificate
 verification, bootstrap-address selection and public HTTP socket admission
 remain separate checks. Process and persistent caches are bound to the policy

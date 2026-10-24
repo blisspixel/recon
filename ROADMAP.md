@@ -39,20 +39,26 @@ absent.
 
 State at 2026-10-24: v2.24.0 is tagged and matches on GitHub Release and PyPI.
 `main` is the only branch, CI on `main` is green, and there are no open issues
-or pull requests. No implementation work is in flight.
+or pull requests. `main` carries one unreleased behavior change: MCP DNS
+collection defaults to encrypted Cloudflare DNS-over-HTTPS when no saved or
+recognized public resolver applies (see the changelog's Unreleased section and
+the [ADR-0019 amendment](docs/adr/0019-mcp-dns-view-isolation.md)).
 
 When picking work back up:
 
 1. Sync `main`, run `uv run python scripts/check.py`, and triage any new issues
    before starting anything else.
-2. Recheck upstream blockers during the next dependency refresh: a PyYAML cp315
+2. If the Unreleased changelog section is still unpublished, prepare the next
+   minor release (v2.25.0) through the
+   [release process](docs/release-process.md).
+3. Recheck upstream blockers during the next dependency refresh: a PyYAML cp315
    wheel (6.0.3 still has none, so 3.15 builds from source) and a stable pip
    whose vendored urllib3 carries the proxy TLS and chunk-size fixes (see
    [the October review](docs/maintenance-review-2026-10-08.md); closed issue
    187 records the current mitigation).
-3. Run the monthly fingerprint-freshness loop through the catalog maintenance
+4. Run the monthly fingerprint-freshness loop through the catalog maintenance
    entry point shipped in v2.23.
-4. Otherwise continue the ordered work below. Black-box defects come first, and
+5. Otherwise continue the ordered work below. Black-box defects come first, and
    new surfaces still need a named operator handoff.
 
 ## Current release and next steps

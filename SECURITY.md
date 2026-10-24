@@ -132,9 +132,11 @@ auto-approves tools should still treat all tool output as untrusted data.
   workspaces for agent runs.
 - A public-looking DNS name can have private split-horizon answers without a
   compromised resolver. MCP binds a caller-safe DNS policy at startup and uses
-  it for DNS collection and HTTP destination resolution. An approved view is
-  reused automatically; absent or invalid approval is an explicit unavailable
-  capability with one-time server setup guidance. No tool or profile can switch
+  it for DNS collection and HTTP destination resolution. Saved settings or a
+  recognized public resolver in host configuration are reused; otherwise MCP
+  uses encrypted Cloudflare DNS-over-HTTPS by default, never host DNS.
+  `RECON_DNS_VIEW=none` or invalid settings produce an explicit unavailable
+  capability with a setup link. No tool or profile can switch
   this process to operator DNS. Advanced operator-view servers must serve only
   callers allowed to see that view, in a separate process and cache context.
 - High-volume external queries (DNS, CT, Microsoft/Google identity endpoints)
