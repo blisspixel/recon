@@ -175,7 +175,13 @@ uv run python -m validation.catalog_maintenance evaluate --admission validation/
 Evaluation freezes each result location and content digest separately, so a
 new declared development attempt does not overwrite an earlier evaluation.
 Holdouts get one evaluation reservation. Records must belong to the frozen
-frame and fit its cap. Receipts distinguish admitted, terminal success,
+frame and fit its cap. Supplied evaluation inputs are limited to 8 MiB per
+file, 64 MiB total, 1,024 candidate JSON/NDJSON files, 100,000 directory entries,
+32 directory levels and 100 JSON nesting levels. Stable regular-file reads
+reject symbolic links, growth and replacement. Hashing and decoding use the
+same bounded bytes; invalid or oversized inputs fail without an evaluation or
+holdout-consumption receipt. Split larger development cohorts into separately
+admitted rounds rather than truncating observations. Receipts distinguish admitted, terminal success,
 terminal error, unfinished, known-started lower bounds, unknown starts and
 proven unattempted items. An unverifiable modern start receipt withholds start
 accounting rather than inventing zeros. Source availability and classification

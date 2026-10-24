@@ -11,7 +11,7 @@ from typing import Any
 
 from scripts.check_validation_hygiene import PRIVATE_PREFIXES, find_violations
 from validation import catalog_freshness as freshness
-from validation.catalog_baseline import aggregate_records, digest_result_files, iter_result_records, result_files
+from validation.catalog_baseline import aggregate_records
 from validation.catalog_maintenance_round import (
     collect_admission,
     finalize_admission,
@@ -26,6 +26,7 @@ from validation.catalog_receipts import (
     write_private_blob,
     write_private_event,
 )
+from validation.catalog_result_input import load_evaluation_results
 from validation.prepare_catalog_round import REPO_ROOT, _private_file, canonical_json_digest, digest_bytes
 
 DEFAULT_ROOT = REPO_ROOT / "validation/runs-private/catalog-maintenance"
@@ -78,8 +79,7 @@ def evaluate(admission_path: Path, results_path: Path) -> dict[str, Any]:
     frame, frame_digest = read_frozen_frame(Path(prepared["frame"]["path"]), maximum)
     if frame_digest != prepared["frame"]["digest_sha256"]:
         raise ValueError("evaluation frame changed")
-    files = result_files(_private_file(results_path))
-    identity = digest_result_files(files)
+    identity, records = load_evaluation_results(_private_file(results_path), maximum_records=maximum, frame=frame)
     location = canonical_json_digest(str(results_path.resolve()))
     receipt_path = admission_path.parent / "evaluations" / location / "receipt.json"
     if receipt_path.exists():
@@ -89,11 +89,6 @@ def evaluate(admission_path: Path, results_path: Path) -> dict[str, Any]:
         return previous
     if admission["plan"]["role"] == "holdout":
         _consume_evaluation_holdout(admission_path, frame, identity)
-    records = []
-    for row in iter_result_records(results_path):
-        if len(records) >= maximum or row.get("queried_domain", row.get("domain")) not in frame:
-            raise ValueError("evaluation results exceed or differ from the admitted frame")
-        records.append(row)
     completion = completion_summary(
         results_path if results_path.is_dir() else results_path.parent, admitted=len(frame), records=records
     )

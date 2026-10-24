@@ -225,6 +225,14 @@ assistant's lack of time-sense:
 - **Security alerts interrupt normal roadmap work.** Inspect the advisory and
   dependency path, update the lock or constraint to the patched version, and run
   `pip-audit` before resuming feature or docs work.
+- **Automated dependency PRs are proposals.** The authorship contract in
+  [AGENTS.md](../AGENTS.md#attribution-and-authorship) also applies to dependency
+  changes. Review the advisory and upstream migration notes, reproduce the
+  resolver update on a fresh maintainer branch from current `main`, and commit
+  it with the maintainer's identity. Keep commit-metadata checks enabled. Link
+  the checked replacement before closing the original proposal; do not merge
+  or cherry-pick its automated commits. Security updates take this same path
+  immediately rather than waiting for the monthly schedule.
 - **Unstable dependency PRs are reproduced locally.** Apply the resolver update
   on top of current `main`, regenerate any derived requirement exports, run the
   failing gate with the new toolchain, then keep the smallest compatibility fix

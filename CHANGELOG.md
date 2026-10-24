@@ -42,6 +42,12 @@ operator, corporate group, ownership, or control.
 
 ### Fixed
 
+- Bound supplied maintenance evaluation files, aggregate bytes, directory work,
+  JSON nesting and record counts before reduction or holdout consumption. Hash
+  and decode the same admitted bytes and reject incomplete malformed inputs.
+- Refresh development-only filelock and virtualenv security floors and locks
+  for SQLite side-file handling, shell prompts and exclusive file creation.
+
 - Replace global and suite-wide typing relaxations with exact owned scopes and
   a blocking audit that restores their diagnostics. Check JSON containers and
   OIDC endpoint values, type rate-limit snapshots and shared fixtures, and
