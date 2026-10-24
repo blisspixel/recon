@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from recon_tool.cache_admission import ResultCacheAdmission, read_result_cache_entry
 from recon_tool.cache_contract import DEFAULT_TTL
 from recon_tool.cache_paths import resolve_cache_directory
-from recon_tool.cache_values import CacheInspection, CacheListing, select_cache_file_stems
+from recon_tool.cache_values import CacheInspection, CacheListing, CachePolicyMismatch, select_cache_file_stems
 
 logger = logging.getLogger("recon")
 
@@ -75,6 +75,8 @@ def inspect_result_cache(domain: str) -> CacheInspection[ResultCacheInfo]:
         )
     except FileNotFoundError:
         return CacheInspection()
+    except CachePolicyMismatch:
+        return CacheInspection(other_policy=True)
     except (OSError, OverflowError, TypeError, ValueError, json.JSONDecodeError, RecursionError):
         logger.debug("Result cache inspection failed for %s", domain, exc_info=True)
         return CacheInspection(failed=True)
@@ -96,18 +98,22 @@ def list_result_cache(*, limit: int | None = None) -> CacheListing[ResultCacheIn
         selection = select_cache_file_stems(directory, limit=limit)
         entries: list[ResultCacheInfo] = []
         failed = 0
+        other_policy = 0
         for stem in selection.stems:
             inspection = inspect_result_cache(stem)
             if inspection.entry is not None:
                 entries.append(inspection.entry)
             elif inspection.failed:
                 failed += 1
+            elif inspection.other_policy:
+                other_policy += 1
         return CacheListing(
             entries=tuple(entries),
             failed=failed,
             inspected=len(selection.stems),
             total=selection.total,
             temporary_files=selection.temporary_files,
+            other_policy=other_policy,
         )
     except OSError:
         logger.debug("Result cache listing failed", exc_info=True)

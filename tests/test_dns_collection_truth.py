@@ -18,8 +18,10 @@ from __future__ import annotations
 import asyncio
 import json
 from collections.abc import Callable, Iterator
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
+from unittest.mock import patch
 
 import dns.exception
 import dns.resolver
@@ -30,14 +32,16 @@ from typer.testing import CliRunner
 from recon_tool import http as recon_http
 from recon_tool import retry as recon_retry
 from recon_tool.cli import app
+from recon_tool.ct_cache import ct_cache_put
 from recon_tool.formatter.collection_status import (
     NAME_NXDOMAIN_STATEMENT,
     collection_note_parts,
     project_collection_status,
 )
-from recon_tool.models import ConfidenceLevel, ReconLookupError, TenantInfo
+from recon_tool.models import ConfidenceLevel, InfrastructureClusterReport, ReconLookupError, TenantInfo
 from recon_tool.resolver import resolve_tenant
-from recon_tool.sources import dns_base
+from recon_tool.sources import dns as dns_source
+from recon_tool.sources import dns_base, dns_infra
 from recon_tool.sources.dns import DNSSource
 
 runner = CliRunner()
@@ -336,6 +340,23 @@ class TestResolverPipeline:
 
 @pytest.mark.usefixtures("offline_http")
 class TestTotalFailureSurfaces:
+    @pytest.mark.parametrize("review", [False, True])
+    def test_empty_ct_cache_does_not_hide_failure_of_the_default_source_pool(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, review: bool
+    ) -> None:
+        monkeypatch.setenv("RECON_CONFIG_DIR", str(tmp_path))
+        ct_cache_put(
+            _APEX, [], None, "synthetic", infrastructure_clusters=InfrastructureClusterReport((), 0, "skipped", 0, 0)
+        )
+        _install_resolver(monkeypatch, _timeout_everywhere)
+        command = ["review", _APEX, "--json"] if review else [_APEX, "--no-cache"]
+        with patch.object(dns_source, "_detect_cert_intel", dns_infra.detect_cert_intel):
+            result = runner.invoke(app, command)
+        assert result.exit_code == 4, result.output
+        assert "1 matched" not in result.output
+        if review:
+            assert json.loads(result.stdout)["workflow"]["status"] == "failed"
+
     def test_lookup_exits_4_with_all_sources_failed(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _install_resolver(monkeypatch, _timeout_everywhere)
         result = runner.invoke(app, [_APEX, "--no-cache", "--no-ct"])

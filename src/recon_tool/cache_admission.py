@@ -15,9 +15,11 @@ from recon_tool.cache import tenant_info_from_dict
 from recon_tool.cache_contract import DEFAULT_TTL, MAX_RESULT_CACHE_FILE_BYTES, RESULT_CACHE_VERSION
 from recon_tool.cache_insights import validate_insight_claim_coverage
 from recon_tool.cache_paths import resolve_result_cache_path
+from recon_tool.cache_values import require_cache_policy
 from recon_tool.json_limits import is_json_object, load_bounded_json_file
 from recon_tool.models import TenantInfo
 from recon_tool.source_status import collection_incomplete
+from recon_tool.sources.cert_issuer import normalize_cert_summary
 from recon_tool.validator import validate_domain
 
 __all__ = [
@@ -108,12 +110,9 @@ def read_result_cache_entry(
         raise ValueError("Result cache payload must be a JSON object")
     if data.get("_cache_version") != RESULT_CACHE_VERSION:
         raise ValueError("Result cache version does not match the current format")
-    from recon_tool.network_policy import OPERATOR_POLICY, current_policy
-
-    # Legacy entries predate policy binding and are operator-view only.
-    policy_id = data.get("_resolution_policy_id", OPERATOR_POLICY.identity)
-    if policy_id != current_policy().identity:
-        raise ValueError("Result cache belongs to a different collection policy")
+    if data.get("queried_domain") != expected_domain:
+        raise ValueError("Result cache payload domain does not match its cache key")
+    require_cache_policy(data)
     info = tenant_info_from_dict(data)
     if info.queried_domain != expected_domain:
         raise ValueError("Result cache payload domain does not match its cache key")
@@ -123,6 +122,7 @@ def read_result_cache_entry(
         ttl=ttl,
         has_lineage="insight_claims" in data,
     )
+    info = dataclasses.replace(info, cert_summary=normalize_cert_summary(info.cert_summary))
     raw_cached_at = data.get("_cached_at")
     cached_at = raw_cached_at if isinstance(raw_cached_at, str) and raw_cached_at else None
     if cached_at is not None:

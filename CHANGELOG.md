@@ -34,6 +34,15 @@ operator, corporate group, ownership, or control.
 
 ### Fixed
 
+- Canonicalize merged evidence before interpretation so shuffled DNS answers
+  do not create false capsule changes. Preserve literal `www` hosts with
+  `--exact`, retain balanced CAA record quotes, and normalize CT issuer display
+  labels across provider and cache paths. Record normalizer version 2 while
+  keeping historical capsule artifacts intact.
+- Label caches bound to another DNS policy as non-reusable metadata rather
+  than inspection failures, while keeping their payloads inaccessible to the
+  current view. Reject empty CT metadata as an offline recovery contribution
+  so fully failed lookup and review workflows exit 4.
 - Share CNAME DNS-label and regex matching between fresh detection and cached
   replay so cached records cannot gain a provider claim from a lookalike.
   Narrow Fly.io, Railway, and Netlify targets to their documented routing

@@ -28,7 +28,8 @@ from recon_tool.rate_limit import (
     ct_rate_limiter_certspotter,
     ct_rate_limiter_crtsh,
 )
-from recon_tool.validator import is_safe_dns_name, strip_control_chars
+from recon_tool.sources.cert_issuer import issuer_display_name
+from recon_tool.validator import is_safe_dns_name
 
 # CT SAN values are attacker-controlled: anyone can log a certificate for
 # a domain they own, with arbitrary SAN strings, to a public CT log, and
@@ -529,7 +530,7 @@ def build_cert_summary(
         # for a self-logged cert) and render to the terminal under --verbose
         # and into markdown. Unlike SAN names they are not DNS names, so we
         # cannot charset-reject; strip control bytes and bound length.
-        issuer_name_counter[strip_control_chars(str(issuer_name))] += 1
+        issuer_name_counter[issuer_display_name(str(issuer_name))] += 1
         not_before_dates.append(not_before_dt)
 
     if cert_meta_count == 0 or not not_before_dates:

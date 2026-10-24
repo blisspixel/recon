@@ -32,7 +32,7 @@ from recon_tool.signals import signal_rule_names_from_observation
 from recon_tool.validator import strip_control_chars, validate_domain
 
 CAPSULE_SCHEMA_VERSION = "1.0"
-NORMALIZER_VERSION = "1"
+NORMALIZER_VERSION = "2"
 MAX_CAPSULE_BYTES = 10 * 1024 * 1024
 
 _DIGEST_RE = re.compile(r"^sha256:[0-9a-f]{64}$")

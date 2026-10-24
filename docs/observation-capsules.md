@@ -64,6 +64,14 @@ keeps the bounded normalized state and retained evidence that recon already
 uses. This minimizes content while preserving the source and interpretation
 boundary available in the current resolver.
 
+Normalizer version 2 sorts merged evidence before interpretation while
+preserving duplicate occurrences. Shuffling resolver answers therefore does
+not create a same-facts interpretation change. It also records the corrected
+literal `www` handling under `--exact`, retained CAA quotes, and issuer display
+normalization. Existing version 1 capsules remain valid and retain their
+recorded observations and snapshots; their recorded normalizer differs from
+the current context. Captured data is never silently rewritten.
+
 ## Replay
 
 ```bash

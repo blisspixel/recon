@@ -36,11 +36,14 @@ from recon_tool.cache_values import (
     CacheClearResult,
     CacheInspection,
     CacheListing,
+    CachePolicyMismatch,
     clear_cache_directory,
+    require_cache_policy,
     select_cache_file_stems,
 )
 from recon_tool.json_limits import load_bounded_json_file
 from recon_tool.models import CertSummary, InfrastructureClusterReport
+from recon_tool.sources.cert_issuer import normalize_cert_summary
 from recon_tool.validator import validate_domain
 
 __all__ = [
@@ -263,6 +266,8 @@ def _ct_cache_inspect(domain: str) -> CacheInspection[CTCacheInfo]:
         )
     except FileNotFoundError:
         return CacheInspection()
+    except CachePolicyMismatch:
+        return CacheInspection(other_policy=True)
     except (OSError, OverflowError, TypeError, ValueError, json.JSONDecodeError, RecursionError):
         logger.debug("CT cache inspection failed for %s", domain, exc_info=True)
         return CacheInspection(failed=True)
@@ -288,18 +293,22 @@ def _ct_cache_list_detailed(*, limit: int | None = None) -> CacheListing[CTCache
             return CacheListing(failed=1)
         selection = select_cache_file_stems(d, limit=limit)
         failed = 0
+        other_policy = 0
         for stem in selection.stems:
             inspection = _ct_cache_inspect(stem)
             if inspection.entry is not None:
                 entries.append(inspection.entry)
             elif inspection.failed:
                 failed += 1
+            elif inspection.other_policy:
+                other_policy += 1
         return CacheListing(
             entries=tuple(entries),
             failed=failed,
             inspected=len(selection.stems),
             total=selection.total,
             temporary_files=selection.temporary_files,
+            other_policy=other_policy,
         )
     except OSError:
         logger.debug("CT cache list failed", exc_info=True)
@@ -337,19 +346,16 @@ def _entry_to_dict(
 
 
 def _entry_from_dict(data: dict[str, Any], age_seconds: float, expected_domain: str) -> CTCacheEntry:
-    from recon_tool.network_policy import OPERATOR_POLICY, current_policy
-
-    if data.get("_resolution_policy_id", OPERATOR_POLICY.identity) != current_policy().identity:
-        raise ValueError("CT cache belongs to a different collection policy")
     if data.get("_cache_version") != _CT_CACHE_VERSION or data.get("domain") != expected_domain:
         raise ValueError("CT cache payload domain or version does not match its cache key")
+    require_cache_policy(data)
     provider_used = data.get("provider_used", "unknown")
     cached_at = data.get("cached_at", "unknown")
     if not isinstance(provider_used, str) or not isinstance(cached_at, str):
         raise ValueError("CT cache provider_used and cached_at must be strings")
     return CTCacheEntry(
         subdomains=cache_string_tuple(data.get("subdomains", []), "subdomains"),
-        cert_summary=cert_summary_from_cache_dict(data),
+        cert_summary=normalize_cert_summary(cert_summary_from_cache_dict(data)),
         provider_used=provider_used,
         cached_at=cached_at,
         age_days=int(age_seconds / 86400),
