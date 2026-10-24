@@ -44,6 +44,16 @@ pre-commit install --hook-type commit-msg
 
 recon is a Python 3.11-3.15 CLI and local stdio MCP server for public-metadata domain intelligence. The resolver and detection engine are feature-complete. Default work is catalog quality, claim and renderer truth, and contract-preserving fixes. Do not add collectors, scores, or inference machinery without a named operator handoff the existing surfaces cannot solve. A domain is a query coordinate, not an organization. Output is hedged observation, not a verdict.
 
+**Start and end tidy.** The maintainer works across several agent harnesses, and sessions often end mid-task (quota, context limit, crash), so a session may inherit another harness's leftovers. Finish or resolve existing work before starting a parallel attempt.
+
+- Before choosing work, run `git fetch --prune`, then `git worktree list`, `git branch -a`, `git stash list`, `gh pr list` and `gh issue list`, and check whether `main` CI is green.
+- For each local branch or worktree, check its pull request state as well as `git cherry main <branch>` (squash merges hide merged work from ancestry), and compare its files against `main`.
+- Finish unmerged work that is still wanted through a pull request. Remove a worktree or branch only once its work is merged, contained in `main`, pushed, or archived (`git bundle` and uncommitted diffs under `.agent/`). Never pass `--force` to remove one; report anything uncertain instead. Run `git worktree prune` for entries whose directories are gone.
+- If it is unclear whether leftover work should be finished, kept or removed, stop and ask instead of guessing. Otherwise deal with leftovers in the session that finds them.
+- Commit and push at meaningful checkpoints, and before stopping leave a short handoff note in the pull request or commit message: what is done and what is next.
+- Scratch scripts, logs and generated output go only in designated test locations or gitignored `.agent/`; remove scratch artifacts before finishing.
+- End a session with one green `main`, no stray worktrees or branches, issues closed with closeout comments or left open with a stated next step, and ROADMAP.md's "Resume here" section current.
+
 **Orient and bound.** Read the README, roadmap, relevant ADRs, recent changes, and touched source/tests before choosing work. Resolve stale prose against source, configuration, lockfiles, and Git history. Record a bounded objective and acceptance evidence for work spanning sessions. Use current primary documentation for version-sensitive decisions; preserve the established stack and pinned tooling unless a demonstrated need justifies changing them.
 
 Consult manifests, CI and existing verification scripts before documenting commands. Keep planned, implemented, tested, shipped and deployed behavior distinct. A local structural index can help find callers and tests; check its revision and working-tree freshness, then inspect source before editing. An index or previous session summary is navigation, not evidence.
@@ -57,6 +67,8 @@ uv run python scripts/check.py          # lint, strict pyright, coverage-gated t
 uv run python scripts/check.py --fast   # skip tests; not enough to push
 uv run pytest tests/test_foo.py         # focused tests stay serial
 ```
+
+The pre-commit hooks are `language: system` and import `recon_tool`, so commit with the project environment on `PATH` (`source .venv/bin/activate`, or `uv run git commit`). A bare shell fails the typing-policy hook with `ModuleNotFoundError`.
 
 `scripts/check.py` is local parity with the blocking CI core. `--fast` is for iteration. Green CI is the floor. Do not make a gate pass by weakening it (broader ignores, lowered coverage, deleted assertions, tests changed to accept wrong behavior). Branch coverage floor is 90.2 percent. Pyright defaults to `typeCheckingMode = strict` in `pyproject.toml`, with exact legacy file/line exceptions and a blocking unmasked diagnostic audit documented in [the effective typing policy](docs/typing-policy.md); do not add global suppressions or refresh exception identities without reviewing the actual diagnostics. Mutation testing and the MCP dual-SDK matrix are separate CI jobs, not this local wrapper.
 
