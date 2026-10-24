@@ -35,6 +35,29 @@ distribution-only bundle while
 still requiring SBOM structure validation. Later releases fail if provenance is
 absent.
 
+## Resume here
+
+State at 2026-10-24: v2.24.0 is tagged and matches on GitHub Release and PyPI.
+`main` is the only branch, CI on `main` is green, and there are no open issues
+or pull requests. No implementation work is in flight.
+
+When picking work back up:
+
+1. Sync `main`, run `uv run python scripts/check.py`, and triage any new issues
+   before starting anything else.
+2. Node 26 reaches LTS on 2026-10-28. Confirm the typecheck and release jobs
+   still resolve the intended Node 26 line, then drop the "before its LTS date"
+   wording here and in [docs/roadmap.md](docs/roadmap.md).
+3. Recheck upstream blockers during the next dependency refresh: a PyYAML cp315
+   wheel (6.0.3 still has none, so 3.15 builds from source) and a stable pip
+   whose vendored urllib3 carries the proxy TLS and chunk-size fixes (see
+   [the October review](docs/maintenance-review-2026-10-08.md); closed issue
+   187 records the current mitigation).
+4. Run the monthly fingerprint-freshness loop through the catalog maintenance
+   entry point shipped in v2.23.
+5. Otherwise continue the ordered work below. Black-box defects come first, and
+   new surfaces still need a named operator handoff.
+
 ## Current release and next steps
 
 v2.17.12 shipped the stable engine's bounded audience-composition tranche for
@@ -88,6 +111,16 @@ The v2.21.2 maintenance batch adopts Node 26 GA for typecheck and release jobs
 without waiting for its 2026-10-28 LTS designation. Python 3.15.1 is the latest
 GA default; 3.11 through 3.15 remain the tested compatibility range. Drop PyYAML
 source builds once a cp315 wheel ships.
+
+v2.22 isolated lower-trust MCP collection from split-horizon DNS and finished
+the build-toolchain CA remediation. v2.23 published the harness-neutral catalog
+maintenance entry point, bounded maintenance and batch correlation inputs,
+replaced suite-wide typing relaxations with exact scopes, and repaired
+Bayesian assurance scenarios without changing model parameters. v2.24 closed
+the next black-box issue batch (issues 284 through 291): Null MX applicability,
+wide boxed reports, MCP DNS capability and chain-depth bounds, evidence
+canonicalization, literal `www` hosts, cache policy labels, offline exit codes,
+and shared CNAME matching between fresh and cached detection.
 
 `main` is the single integration and release branch. Short-lived implementation
 and release-preparation branches merge through required checks and are deleted
