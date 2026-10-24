@@ -3996,7 +3996,8 @@
       "validation/corpus_aggregator.py",
       "validation/drift_check.py",
       "validation/quality_arm_identifiability.py",
-      "scripts/check_typing_policy.py"
+      "scripts/check_typing_policy.py",
+      "validation/catalog_result_input.py"
     ],
     "pythonVersion": "3.11",
     "reportMissingModuleSource": "error",

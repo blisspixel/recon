@@ -153,8 +153,11 @@ dev = [
     "pre-commit>=3.0",
     # pre-commit creates hook environments with virtualenv. Keep its activation,
     # configuration, launcher and seed-wheel fixes current, including the
-    # embedded pip CA-bundle refresh in 21.14.12.
-    "virtualenv>=21.14.12",
+    # prompt and exclusive-write fixes in 21.14.13.
+    "virtualenv>=21.14.13",
+    # Shared development-tool dependency; reject the ReadWriteLock SQLite
+    # side-file issue (CVE-2026-112940), fixed upstream in 4.2.1.
+    "filelock>=4.2.1",
     # Security floor on development tooling: pip-api pulls in pip, and pip
     # before 26.2 has PYSEC-2026-3721 / CVE-2026-13346. pip is excluded from
     # the published runtime graph. 26.2.2 also refreshes its bundled certifi.
@@ -280,7 +283,7 @@ venvPath = "."
 # pytest puts the repo root on sys.path; mirror that for pyright, plus src/ so
 # `import recon_tool` resolves to the source under the src layout.
 extraPaths = [".", "src"]
-include = ["src/recon_tool", "tests", "validation/corpus_aggregator.py", "validation/drift_check.py", "validation/quality_arm_identifiability.py", "scripts/check_typing_policy.py"]
+include = ["src/recon_tool", "tests", "validation/corpus_aggregator.py", "validation/drift_check.py", "validation/quality_arm_identifiability.py", "scripts/check_typing_policy.py", "validation/catalog_result_input.py"]
 # All strict diagnostic families apply by default, including to tests.
 # Exact legacy exceptions and their ownership are documented and ratcheted in
 # docs/typing-policy.md and docs/typing-exceptions.json.

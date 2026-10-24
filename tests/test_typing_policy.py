@@ -23,6 +23,7 @@ def _empty_root(root: Path) -> dict[str, object]:
         "validation/drift_check.py",
         "validation/quality_arm_identifiability.py",
         "scripts/check_typing_policy.py",
+        "validation/catalog_result_input.py",
     ]
     for name in includes:
         path = root / name

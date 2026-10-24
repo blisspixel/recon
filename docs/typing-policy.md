@@ -1,7 +1,7 @@
 # Effective typing policy
 
-Pyright 1.1.414 defaults to `strict` for `src/recon_tool`, `tests` and the three
-validation modules and the new policy checker explicitly listed in
+Pyright 1.1.414 defaults to `strict` for `src/recon_tool`, `tests` and the
+selected validation modules and policy checker explicitly listed in
 `pyproject.toml`. The target language
 version is Python 3.11. The policy is not a claim of unsuppressed strictness:
 legacy file controls and line-specific exceptions remain in the exact owned
@@ -17,8 +17,9 @@ families to errors, and runs the pinned checker without executing copied code.
 The audit uses the Linux static platform of hosted typecheck; the ordinary
 checker still uses the native platform, and runtime CI covers supported OSes.
 The real checkout is never rewritten. An exact analyzed-file count rejects
-empty or narrowed audits. Import-only validation modules retain their controls;
-this work does not expand the configured validation scope.
+empty or narrowed audits. Import-only validation modules retain their controls.
+The supplied-result admission module is explicitly included with every
+diagnostic family enabled and no file or line exceptions.
 
 The audit compares content-bound diagnostic identities per exact path and
 family. A new error, a same-count replacement, or a repaired error requires

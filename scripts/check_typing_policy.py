@@ -35,11 +35,13 @@ _INCLUDES = [
     "validation/drift_check.py",
     "validation/quality_arm_identifiability.py",
     "scripts/check_typing_policy.py",
+    "validation/catalog_result_input.py",
 ]
 _CONTROL = re.compile(r"(report\w+)\s*=\s*(?:none|false|warning|information)", re.IGNORECASE)
 _DIRECTIVE = re.compile(r"^\s*#\s*pyright\s*:\s*(.*)")
 _INLINE = re.compile(r"#\s*(?:pyright:\s*ignore|type:\s*ignore)(?:\[([^\]]+)\])?")
 _PROTECTED = (
+    "validation/catalog_result_input.py",
     "src/recon_tool/json_limits.py",
     "src/recon_tool/cache_admission.py",
     "src/recon_tool/fingerprint_artifact.py",

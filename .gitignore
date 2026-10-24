@@ -64,6 +64,7 @@ docs/accuracy.md
 !/validation/catalog_freshness.py
 !/validation/catalog_maintenance.py
 !/validation/catalog_maintenance_round.py
+!/validation/catalog_result_input.py
 !/validation/catalog_baseline.py
 # Frozen, aggregate-only agent-portability preregistration and its network-free
 # validator. Client transcripts, hidden reasoning, and run records remain under
