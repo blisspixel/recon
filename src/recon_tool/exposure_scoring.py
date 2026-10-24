@@ -29,6 +29,7 @@ from recon_tool.exposure_models import (
     SPF_COMPONENT_ID,
     TLS_RPT_COMPONENT_ID,
     EvidenceReference,
+    ExposureApplicabilityProof,
     ExposureIndex,
     ExposureIndexComponent,
     ExposureIndexState,
@@ -501,13 +502,12 @@ def _apply_mail_applicability(
     outbound = component.component_id in {DKIM_COMPONENT_ID, BIMI_COMPONENT_ID}
     basis = "null_mx_spf_deny_all_enforcing_dmarc" if outbound else "sole_null_mx"
     scope = ("dns:mx", "dns:apex_txt", "dns:dmarc") if outbound else ("dns:mx",)
-    return _component(
-        component.component_id,
-        "not_applicable",
-        0,
-        _ComponentProof(
-            dependencies=(_dependency("mail_applicability", basis, basis),),
-            scope=scope,
+    return replace(
+        component,
+        awarded_points=0,
+        applicability=ExposureApplicabilityProof(
+            metadata_dependencies=(_dependency("mail_applicability", basis, basis),),
+            observation_scope=scope,
             evidence=evidence_refs(records),
         ),
     )

@@ -237,8 +237,10 @@ current component model assigns at most 90 points. A low floor can mean
 `components` ledger. Each component names its generator, basis state, typed
 predicates, bounded scope, retained evidence, awarded points, and unresolved
 points. `unresolved` and `unavailable` capacity contributes to the ceiling;
-`not_applicable` retains declaration proof, awards no points, and contributes
-no unresolved capacity. Its nominal weight is excluded from
+An optional `applicability` block with `state: not_applicable` retains a
+separate declaration proof; existing control states and evidence stay intact.
+That component awards no points and contributes no unresolved capacity.
+Its nominal weight is excluded from
 `model_maximum_points`; the compatibility scale remains 0-100. A sole Null MX
 excludes inbound transport controls and the gateway slot. DKIM and BIMI also
 require explicit deny-all SPF and effectively enforcing DMARC declarations.

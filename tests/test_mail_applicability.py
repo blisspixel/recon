@@ -5,18 +5,25 @@ from __future__ import annotations
 import json
 from dataclasses import replace
 from datetime import UTC, datetime
+from pathlib import Path
+from typing import cast
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from jsonschema import Draft202012Validator
+from jsonschema.protocols import Validator
 from typer.testing import CliRunner
 
 from recon_tool.cli import app
 from recon_tool.email_applicability import mail_applicability
 from recon_tool.exposure import assess_exposure_from_info, compare_postures_from_infos, find_gaps_from_info
 from recon_tool.exposure_models import EXPOSURE_COMPONENT_SPECS, ExposureIndex
+from recon_tool.formatter.exposure import format_exposure_dict
+from recon_tool.mcp_client.sdk_compat import call_tool_parts
 from recon_tool.merger import merge_results
 from recon_tool.models import EvidenceRecord, SourceResult, TenantInfo
 from recon_tool.review_bundle import ReviewCollectionContext, build_review_bundle
+from recon_tool.server.app import mcp
 from recon_tool.server.posture import assess_exposure, find_hardening_gaps, simulate_hardening
 from recon_tool.sources import dns_base, dns_email
 from recon_tool.sources.dns_tables import is_null_mx_set
@@ -44,7 +51,7 @@ def _inapplicable(info: TenantInfo) -> set[str]:
     return {
         component.control
         for component in assess_exposure_from_info(info).index_components
-        if component.state == "not_applicable"
+        if component.applicability is not None
     }
 
 
@@ -135,6 +142,12 @@ def test_failed_sources_cannot_supply_applicability_proof(marker: str, expected:
     unavailable = set(find_gaps_from_info(info).unavailable_controls)
     assert unavailable.isdisjoint(expected)
     assert info.degraded_sources == (marker,)
+    if marker in {"dns:dkim", "dns:mta_sts"}:
+        control = "DKIM" if marker == "dns:dkim" else "MTA-STS"
+        component = next(item for item in assess_exposure_from_info(info).index_components if item.control == control)
+        assert component.state == "unavailable"
+        assert component.evidence == ()
+        assert component.applicability is not None
 
 
 def test_inapplicable_components_retain_proof_without_credit_or_unresolved_capacity() -> None:
@@ -150,12 +163,14 @@ def test_inapplicable_components_retain_proof_without_credit_or_unresolved_capac
     for component in index.components:
         if component.control not in _INBOUND | _OUTBOUND:
             continue
-        assert component.state == "not_applicable"
+        proof = component.applicability
+        assert proof is not None
+        assert proof.state == "not_applicable"
         assert component.awarded_points == component.unconfirmable_points == 0
-        assert component.evidence
-        assert component.metadata_dependencies[0].field == "mail_applicability"
-        assert "dns:mx" in component.observation_scope
-        assert any(item.raw_value == "0 ." for item in component.evidence)
+        assert proof.evidence
+        assert proof.metadata_dependencies[0].field == "mail_applicability"
+        assert "dns:mx" in proof.observation_scope
+        assert any(item.raw_value == "0 ." for item in proof.evidence)
     assert info.evidence == (_NULL_MX, _SPF, _DMARC)
     assert all(
         "not applicable:" in ctrl.detail
@@ -164,8 +179,24 @@ def test_inapplicable_components_retain_proof_without_credit_or_unresolved_capac
     )
     with pytest.raises(ValueError, match="cannot award points"):
         replace(index.components[1], awarded_points=1)
+    proof = index.components[1].applicability
+    assert proof is not None
     with pytest.raises(ValueError, match="requires retained evidence"):
-        replace(index.components[1], evidence=())
+        replace(proof, evidence=())
+
+
+@pytest.mark.parametrize("marker", [None, "dns:dkim", "dns:mta_sts", "dns:mx"])
+def test_applicability_is_additive_to_the_released_mcp_output_schema(marker: str | None) -> None:
+    # Captured from the v2.23.0 TypedDict declarations using MCP 2.3.0.
+    # Their source is identical at 114aaa670c2eea8e0e9f06ea0f0dbb069fe2de58
+    # and c05089d51f74aca1906f798586352c6192caa3a7. Keep this fixture frozen.
+    schema = json.loads((Path(__file__).parent / "fixtures" / "exposure-output-schema-2.23.0.json").read_text())
+    info = replace(_info(), degraded_sources=(marker,) if marker is not None else ())
+    payload = format_exposure_dict(assess_exposure_from_info(info))
+    validator = cast(Validator, Draft202012Validator(schema))
+    validator.validate(payload)
+    states = {component["state"] for component in payload["observability"]["components"]}
+    assert states <= {"observed_value", "observed_empty", "unresolved", "unavailable", "hypothetical_value"}
 
 
 def test_retained_sender_residue_is_not_erased_or_credited_as_applicable() -> None:
@@ -177,7 +208,10 @@ def test_retained_sender_residue_is_not_erased_or_credited_as_applicable() -> No
     assert control.detail.startswith("not applicable:")
     assert any(item.raw_value == dkim.raw_value for item in control.evidence)
     assert _inapplicable(info) == _INBOUND | _OUTBOUND
-    assert next(item for item in assessment.index_components if item.control == "DKIM").awarded_points == 0
+    component = next(item for item in assessment.index_components if item.control == "DKIM")
+    assert component.state == "observed_value"
+    assert component.awarded_points == 0
+    assert any(item.raw_value == dkim.raw_value for item in component.evidence)
 
 
 @pytest.mark.parametrize("mode", ["none", "testing", "enforce"])
@@ -194,10 +228,8 @@ def test_null_mx_suppresses_both_missing_and_weak_transport_prompts(mode: str) -
         ),
     )
     assert not any("mta-sts" in gap.generator_rule_id for gap in find_gaps_from_info(info).gaps)
-    assert (
-        next(item for item in assess_exposure_from_info(info).index_components if item.control == "MTA-STS").state
-        == "not_applicable"
-    )
+    component = next(item for item in assess_exposure_from_info(info).index_components if item.control == "MTA-STS")
+    assert component.applicability is not None
 
 
 def test_missing_or_conflicting_dmarc_never_establishes_sender_inapplicability() -> None:
@@ -239,6 +271,8 @@ async def test_mcp_gap_and_exposure_tools_share_the_declaration_decision() -> No
     with patch("recon_tool.server.app.resolve_single_for_tool", new=AsyncMock(return_value=_info())):
         exposure = await assess_exposure("example.com")
         gaps = await find_hardening_gaps("example.com")
+        _content, dispatched = call_tool_parts(await mcp.call_tool("assess_exposure", {"domain": "example.com"}))
+    assert dispatched == exposure
     assert exposure["observability"]["model_maximum_points"] == 45
     assert [gap["generator_rule_id"] for gap in gaps["gaps"]] == ["guidance.infrastructure.caa.missing.v1"]
 
@@ -266,7 +300,9 @@ async def test_simulation_preserves_original_applicability_and_allows_other_fixe
     components = {item["control"]: item for item in result["simulated_observability"]["components"]}
     assert components["DKIM"]["state"] == "hypothetical_value"
     assert components["DKIM"]["awarded_points"] == 15
-    assert components["MTA-STS"]["state"] == "not_applicable"
+    applicability = components["MTA-STS"].get("applicability")
+    assert applicability is not None
+    assert applicability["state"] == "not_applicable"
 
 
 def test_review_candidates_and_comparisons_share_applicability() -> None:

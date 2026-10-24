@@ -14,7 +14,7 @@ import re
 import time
 import uuid
 from dataclasses import replace
-from typing import Literal, cast
+from typing import Literal, NotRequired, cast
 
 from typing_extensions import TypedDict
 
@@ -91,6 +91,13 @@ class ExposureMetadataDependencySummary(TypedDict):
     observed_value: ExposureMetadataValue
 
 
+class ExposureApplicabilitySummary(TypedDict):
+    state: Literal["not_applicable"]
+    metadata_dependencies: list[ExposureMetadataDependencySummary]
+    observation_scope: list[str]
+    evidence: list[EvidenceReferenceSummary]
+
+
 class ExposureIndexComponentSummary(TypedDict):
     component_id: str
     control: str
@@ -102,6 +109,7 @@ class ExposureIndexComponentSummary(TypedDict):
     metadata_dependencies: list[ExposureMetadataDependencySummary]
     observation_scope: list[str]
     evidence: list[EvidenceReferenceSummary]
+    applicability: NotRequired[ExposureApplicabilitySummary]
 
 
 class ObservabilitySummary(TypedDict):

@@ -1,0 +1,542 @@
+{
+  "$defs": {
+    "ConsistencyObservationSummary": {
+      "properties": {
+        "category": {
+          "title": "Category",
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/EvidenceReferenceSummary"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "observation": {
+          "title": "Observation",
+          "type": "string"
+        }
+      },
+      "required": [
+        "observation",
+        "category",
+        "evidence"
+      ],
+      "title": "ConsistencyObservationSummary",
+      "type": "object"
+    },
+    "EmailPostureSummary": {
+      "properties": {
+        "bimi_configured": {
+          "title": "Bimi Configured",
+          "type": "boolean"
+        },
+        "dkim_configured": {
+          "title": "Dkim Configured",
+          "type": "boolean"
+        },
+        "dmarc_policy": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Dmarc Policy"
+        },
+        "email_gateway": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Email Gateway"
+        },
+        "email_security_score": {
+          "title": "Email Security Score",
+          "type": "integer"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/EvidenceReferenceSummary"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "mta_sts_mode": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Mta Sts Mode"
+        },
+        "spf_strict": {
+          "title": "Spf Strict",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "dmarc_policy",
+        "dkim_configured",
+        "spf_strict",
+        "mta_sts_mode",
+        "email_gateway",
+        "bimi_configured",
+        "email_security_score",
+        "evidence"
+      ],
+      "title": "EmailPostureSummary",
+      "type": "object"
+    },
+    "EvidenceReferenceSummary": {
+      "properties": {
+        "raw_value": {
+          "title": "Raw Value",
+          "type": "string"
+        },
+        "rule_name": {
+          "title": "Rule Name",
+          "type": "string"
+        },
+        "slug": {
+          "title": "Slug",
+          "type": "string"
+        },
+        "source_type": {
+          "title": "Source Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_type",
+        "raw_value",
+        "rule_name",
+        "slug"
+      ],
+      "title": "EvidenceReferenceSummary",
+      "type": "object"
+    },
+    "ExposureIndexComponentSummary": {
+      "properties": {
+        "awarded_points": {
+          "title": "Awarded Points",
+          "type": "integer"
+        },
+        "component_id": {
+          "title": "Component Id",
+          "type": "string"
+        },
+        "control": {
+          "title": "Control",
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/EvidenceReferenceSummary"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "generator_rule_id": {
+          "title": "Generator Rule Id",
+          "type": "string"
+        },
+        "maximum_points": {
+          "title": "Maximum Points",
+          "type": "integer"
+        },
+        "metadata_dependencies": {
+          "items": {
+            "$ref": "#/$defs/ExposureMetadataDependencySummary"
+          },
+          "title": "Metadata Dependencies",
+          "type": "array"
+        },
+        "observation_scope": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Observation Scope",
+          "type": "array"
+        },
+        "state": {
+          "enum": [
+            "observed_value",
+            "observed_empty",
+            "unresolved",
+            "unavailable",
+            "hypothetical_value"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "unconfirmable_points": {
+          "title": "Unconfirmable Points",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "component_id",
+        "control",
+        "state",
+        "awarded_points",
+        "maximum_points",
+        "unconfirmable_points",
+        "generator_rule_id",
+        "metadata_dependencies",
+        "observation_scope",
+        "evidence"
+      ],
+      "title": "ExposureIndexComponentSummary",
+      "type": "object"
+    },
+    "ExposureMetadataDependencySummary": {
+      "properties": {
+        "expected_value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Expected Value"
+        },
+        "field": {
+          "title": "Field",
+          "type": "string"
+        },
+        "observed_value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Observed Value"
+        },
+        "operator": {
+          "enum": [
+            "eq",
+            "neq",
+            "is_none"
+          ],
+          "title": "Operator",
+          "type": "string"
+        }
+      },
+      "required": [
+        "field",
+        "operator",
+        "expected_value",
+        "observed_value"
+      ],
+      "title": "ExposureMetadataDependencySummary",
+      "type": "object"
+    },
+    "HardeningControlSummary": {
+      "properties": {
+        "detail": {
+          "title": "Detail",
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/EvidenceReferenceSummary"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "present": {
+          "title": "Present",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "present",
+        "detail",
+        "evidence"
+      ],
+      "title": "HardeningControlSummary",
+      "type": "object"
+    },
+    "HardeningStatusSummary": {
+      "properties": {
+        "controls": {
+          "items": {
+            "$ref": "#/$defs/HardeningControlSummary"
+          },
+          "title": "Controls",
+          "type": "array"
+        }
+      },
+      "required": [
+        "controls"
+      ],
+      "title": "HardeningStatusSummary",
+      "type": "object"
+    },
+    "IdentityPostureSummary": {
+      "properties": {
+        "auth_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Auth Type"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/EvidenceReferenceSummary"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "google_auth_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Google Auth Type"
+        },
+        "google_idp_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Google Idp Name"
+        },
+        "identity_provider": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Identity Provider"
+        }
+      },
+      "required": [
+        "auth_type",
+        "identity_provider",
+        "google_auth_type",
+        "google_idp_name",
+        "evidence"
+      ],
+      "title": "IdentityPostureSummary",
+      "type": "object"
+    },
+    "InfrastructureFootprintSummary": {
+      "properties": {
+        "cdn_waf": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Cdn Waf",
+          "type": "array"
+        },
+        "certificate_authorities": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Certificate Authorities",
+          "type": "array"
+        },
+        "cloud_providers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Cloud Providers",
+          "type": "array"
+        },
+        "dns_provider": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Dns Provider"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/EvidenceReferenceSummary"
+          },
+          "title": "Evidence",
+          "type": "array"
+        }
+      },
+      "required": [
+        "cloud_providers",
+        "dns_provider",
+        "cdn_waf",
+        "certificate_authorities",
+        "evidence"
+      ],
+      "title": "InfrastructureFootprintSummary",
+      "type": "object"
+    },
+    "ObservabilitySummary": {
+      "properties": {
+        "components": {
+          "items": {
+            "$ref": "#/$defs/ExposureIndexComponentSummary"
+          },
+          "title": "Components",
+          "type": "array"
+        },
+        "model_maximum_points": {
+          "title": "Model Maximum Points",
+          "type": "integer"
+        },
+        "note": {
+          "title": "Note",
+          "type": "string"
+        },
+        "score_ceiling": {
+          "title": "Score Ceiling",
+          "type": "integer"
+        },
+        "score_floor": {
+          "title": "Score Floor",
+          "type": "integer"
+        },
+        "score_is_lower_bound": {
+          "title": "Score Is Lower Bound",
+          "type": "boolean"
+        },
+        "unavailable_controls": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Unavailable Controls",
+          "type": "array"
+        },
+        "unconfirmable_absent_points": {
+          "title": "Unconfirmable Absent Points",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "score_floor",
+        "score_is_lower_bound",
+        "unconfirmable_absent_points",
+        "score_ceiling",
+        "model_maximum_points",
+        "unavailable_controls",
+        "components",
+        "note"
+      ],
+      "title": "ObservabilitySummary",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "consistency_observations": {
+      "items": {
+        "$ref": "#/$defs/ConsistencyObservationSummary"
+      },
+      "title": "Consistency Observations",
+      "type": "array"
+    },
+    "disclaimer": {
+      "title": "Disclaimer",
+      "type": "string"
+    },
+    "domain": {
+      "title": "Domain",
+      "type": "string"
+    },
+    "email_posture": {
+      "$ref": "#/$defs/EmailPostureSummary"
+    },
+    "evidence": {
+      "items": {
+        "$ref": "#/$defs/EvidenceReferenceSummary"
+      },
+      "title": "Evidence",
+      "type": "array"
+    },
+    "hardening_status": {
+      "$ref": "#/$defs/HardeningStatusSummary"
+    },
+    "identity_posture": {
+      "$ref": "#/$defs/IdentityPostureSummary"
+    },
+    "infrastructure_footprint": {
+      "$ref": "#/$defs/InfrastructureFootprintSummary"
+    },
+    "observability": {
+      "$ref": "#/$defs/ObservabilitySummary"
+    },
+    "posture_score": {
+      "title": "Posture Score",
+      "type": "integer"
+    },
+    "posture_score_label": {
+      "title": "Posture Score Label",
+      "type": "string"
+    }
+  },
+  "required": [
+    "domain",
+    "posture_score",
+    "posture_score_label",
+    "observability",
+    "email_posture",
+    "identity_posture",
+    "infrastructure_footprint",
+    "consistency_observations",
+    "hardening_status",
+    "disclaimer",
+    "evidence"
+  ],
+  "title": "ExposureAssessmentResult",
+  "type": "object"
+}

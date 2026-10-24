@@ -19,9 +19,9 @@ from rich.text import Text
 # its established 78-column layout on any console at least that wide, so wide
 # output and its golden renders do not change. Below that, the panel is laid
 # out once at the console's real width instead of being laid out at 78 and
-# re-wrapped, which is what left orphan words. Bordered panels keep their
-# 80-column box when it fits and render flat below it, so a long identifier is
-# never folded or cropped by a border.
+# re-wrapped, which is what left orphan words. FittedPanel keeps an 80-column
+# box when it fits and renders flat below it. ResponsivePanel grows review
+# reports up to 100 columns and also turns flat for an oversized identifier.
 PANEL_WIDTH = 78
 BORDERED_PANEL_WIDTH = 80
 LABEL_FLOOR = 13

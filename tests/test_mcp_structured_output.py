@@ -18,11 +18,13 @@ from __future__ import annotations
 
 import asyncio
 import json
+from typing import cast
 
 import pytest
 
 pytest.importorskip("mcp")
 
+from recon_tool.json_limits import is_json_object
 from recon_tool.mcp_client.sdk_compat import call_tool_parts, tool_schemas
 from recon_tool.server import get_fingerprints, get_signals, mcp
 
@@ -51,6 +53,30 @@ STRUCTURED_TOOLS = frozenset(
         "get_posteriors",
     }
 )
+
+
+def test_exposure_applicability_schema_is_additive_and_precise() -> None:
+    schema = _tool_output_schema("assess_exposure")
+    definitions = schema["$defs"]
+    assert is_json_object(definitions)
+    component = definitions["ExposureIndexComponentSummary"]
+    assert is_json_object(component)
+    required = component["required"]
+    assert isinstance(required, list)
+    assert "applicability" not in cast(list[object], required)
+    properties = component["properties"]
+    assert is_json_object(properties)
+    reference = properties["applicability"]
+    assert is_json_object(reference)
+    assert reference["$ref"] == "#/$defs/ExposureApplicabilitySummary"
+    applicability = definitions["ExposureApplicabilitySummary"]
+    assert is_json_object(applicability)
+    proof_properties = applicability["properties"]
+    assert is_json_object(proof_properties)
+    state_properties = proof_properties["state"]
+    assert is_json_object(state_properties)
+    assert state_properties["const"] == "not_applicable"
+    assert applicability["required"] == ["state", "metadata_dependencies", "observation_scope", "evidence"]
 
 
 def test_structured_tools_advertise_output_schema() -> None:
@@ -417,7 +443,6 @@ def test_exposure_report_output_schemas_are_precise() -> None:
         "unresolved",
         "unavailable",
         "hypothetical_value",
-        "not_applicable",
     ]
     assert component["properties"]["evidence"]["items"]["$ref"] == "#/$defs/EvidenceReferenceSummary"
 

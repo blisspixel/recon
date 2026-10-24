@@ -16,7 +16,7 @@ from rich.panel import Panel
 from rich.text import Text
 
 from recon_tool.exposure import ExposureAssessment, GapReport
-from recon_tool.exposure_models import ExposureIndex
+from recon_tool.exposure_models import ExposureIndex, ExposureIndexComponent, ExposureMetadataDependency
 from recon_tool.formatter.layout import BORDERED_PANEL_WIDTH, ResponsivePanel
 from recon_tool.formatter.theme import ERROR, GAP_SEVERITY_ROLE, MUTED, SUCCESS, WARNING, glyph
 
@@ -32,6 +32,32 @@ def _evidence_list(refs: tuple[Any, ...]) -> list[dict[str, str]]:
         }
         for reference in refs
     ]
+
+
+def _metadata_dependencies(dependencies: tuple[ExposureMetadataDependency, ...]) -> list[dict[str, Any]]:
+    return [
+        {
+            "field": item.field,
+            "operator": item.operator,
+            "expected_value": item.expected_value,
+            "observed_value": item.observed_value,
+        }
+        for item in dependencies
+    ]
+
+
+def _applicability_dict(component: ExposureIndexComponent) -> dict[str, Any]:
+    proof = component.applicability
+    if proof is None:
+        return {}
+    return {
+        "applicability": {
+            "state": proof.state,
+            "metadata_dependencies": _metadata_dependencies(proof.metadata_dependencies),
+            "observation_scope": list(proof.observation_scope),
+            "evidence": _evidence_list(proof.evidence),
+        }
+    }
 
 
 def format_index_observability(
@@ -62,7 +88,7 @@ def format_index_observability(
         + " Generic vendor indicators receive no active-control credit. This is not an overall security grade "
         "or certification."
     )
-    if any(component.state == "not_applicable" for component in index.components):
+    if any(component.applicability is not None for component in index.components):
         note += (
             " Not-applicable components retain declaration proof and nominal weights but contribute "
             "no points or unresolved capacity; model_maximum_points excludes their weights."
@@ -83,17 +109,10 @@ def format_index_observability(
                 "maximum_points": component.maximum_points,
                 "unconfirmable_points": component.unconfirmable_points,
                 "generator_rule_id": component.generator_rule_id,
-                "metadata_dependencies": [
-                    {
-                        "field": item.field,
-                        "operator": item.operator,
-                        "expected_value": item.expected_value,
-                        "observed_value": item.observed_value,
-                    }
-                    for item in component.metadata_dependencies
-                ],
+                "metadata_dependencies": _metadata_dependencies(component.metadata_dependencies),
                 "observation_scope": list(component.observation_scope),
                 "evidence": _evidence_list(component.evidence),
+                **_applicability_dict(component),
             }
             for component in index.components
         ],
@@ -251,14 +270,10 @@ def _append_index_summary(
         f"    Index basis: {', '.join(credited) if credited else 'no credited public controls'}\n",
         style="dim",
     )
-    unresolved = [
-        component.control
-        for component in assessment.index_components
-        if component.state in {"unavailable", "unresolved"}
-    ]
+    unresolved = [component.control for component in assessment.index_components if component.unconfirmable_points]
     if unresolved:
         text.append(f"    Unresolved capacity: {', '.join(unresolved)}\n", style="dim")
-    not_applicable = [component.control for component in index.components if component.state == "not_applicable"]
+    not_applicable = [component.control for component in index.components if component.applicability is not None]
     if not_applicable:
         text.append(f"    Outside applicable allocation: {', '.join(not_applicable)}\n", style="dim")
 

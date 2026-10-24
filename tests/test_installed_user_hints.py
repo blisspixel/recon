@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from rich.console import Console
 from rich.markdown import Markdown
+from rich.text import Text
 from typer.testing import CliRunner
 
 from recon_tool.cli import app
@@ -20,11 +21,13 @@ _GUIDE = "https://github.com/blisspixel/recon/blob/main/docs/weak-areas.md"
 
 
 @pytest.mark.parametrize("width", [40, 80, 100, 120])
-def test_ascii_help_example_survives_rich_markup(width: int, monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize("color_flag", ["--color", "--no-color"])
+def test_ascii_help_example_survives_rich_markup(width: int, color_flag: str, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("COLUMNS", str(width))
-    result = CliRunner().invoke(app, ["--help", "--no-color"])
+    result = CliRunner().invoke(app, [color_flag, "--help"])
     assert result.exit_code == 0
-    assert "#/- for dots" in " ".join(result.output.replace("\N{BOX DRAWINGS LIGHT VERTICAL}", "").split())
+    visible = Text.from_ansi(result.output).plain
+    assert "#/- for dots" in " ".join(visible.replace("\N{BOX DRAWINGS LIGHT VERTICAL}", "").split())
 
 
 @pytest.mark.parametrize("structured", [False, True])

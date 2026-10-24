@@ -18,9 +18,10 @@ from recon_tool.exposure import assess_exposure_from_info, find_gaps_from_info
 from recon_tool.formatter.delta import render_delta_panel
 from recon_tool.formatter.exposure import render_exposure_panel, render_gaps_panel
 from recon_tool.formatter.serialize import format_tenant_json
+from recon_tool.formatter.terminal import get_console
 from recon_tool.models import DeltaReport, TenantInfo
 
-_WIDTHS = (40, 80, 100, 120)
+_WIDTHS = (40, 79, 80, 99, 100, 120)
 
 
 def _info() -> TenantInfo:
@@ -134,6 +135,9 @@ def test_cli_no_color_and_ascii_reports_wrap_once(
     assert result.exit_code == 0, result.output
     assert result.output.isascii()
     assert "\x1b" not in result.output
-    assert all(cell_len(line) <= min(width, 100) for line in result.output.splitlines())
-    if width >= 80:
-        assert max(map(cell_len, result.output.splitlines())) == min(width, 100)
+    # Legacy Windows consoles can reserve the last COLUMNS cell. The box
+    # follows the actual console width, which is the operator's usable space.
+    actual_width = get_console().width
+    assert all(cell_len(line) <= min(actual_width, 100) for line in result.output.splitlines())
+    if actual_width >= 80:
+        assert max(map(cell_len, result.output.splitlines())) == min(actual_width, 100)

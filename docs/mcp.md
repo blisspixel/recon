@@ -254,11 +254,13 @@ awarded and unresolved points, and exact retained evidence. An
 `observed_value` may contribute points; `observed_empty` records a completed
 bounded opportunity; `unresolved` covers evidence that cannot establish the
 modeled state or absence; `unavailable` names a failed collection opportunity;
-and `hypothetical_value` appears only in simulation output. `not_applicable`
-retains the published declaration that excludes a control from this namespace's
-applicable allocation. Its awarded and unresolved points are zero; its nominal
-component weight stays visible, while `model_maximum_points` excludes that
-weight. The index floor is
+and `hypothetical_value` appears only in simulation output. These five state
+values keep their existing meanings. An optional `applicability` proof block
+with `state: not_applicable` retains the published declaration that excludes a
+control from this namespace's applicable allocation. The control's original
+observation state and evidence remain visible separately. Its awarded and
+unresolved points are zero; its nominal component weight stays visible, while
+`model_maximum_points` excludes that weight. The index floor is
 the sum of awarded points. The ceiling adds unresolved and unavailable modeled
 capacity. Neither value is an overall security grade.
 

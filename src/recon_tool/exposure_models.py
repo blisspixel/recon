@@ -25,7 +25,6 @@ ExposureIndexState: TypeAlias = Literal[
     "unresolved",
     "unavailable",
     "hypothetical_value",
-    "not_applicable",
 ]
 ExposureMetadataValue: TypeAlias = str | int | bool | None
 ExposureMetadataOperator: TypeAlias = Literal["eq", "neq", "is_none"]
@@ -61,7 +60,6 @@ _EXPOSURE_INDEX_STATES = frozenset(
         "unresolved",
         "unavailable",
         "hypothetical_value",
-        "not_applicable",
     }
 )
 _EXPOSURE_METADATA_FIELDS = frozenset(
@@ -160,6 +158,29 @@ def exposure_metadata_predicate_satisfied(dependency: ExposureMetadataDependency
 
 
 @dataclass(frozen=True)
+class ExposureApplicabilityProof:
+    """An optional declaration proof, separate from the control's observation state."""
+
+    metadata_dependencies: tuple[ExposureMetadataDependency, ...]
+    observation_scope: tuple[str, ...]
+    evidence: tuple[EvidenceReference, ...]
+
+    @property
+    def state(self) -> Literal["not_applicable"]:
+        return "not_applicable"
+
+    def __post_init__(self) -> None:
+        if not self.metadata_dependencies or not all(
+            exposure_metadata_predicate_satisfied(item) for item in self.metadata_dependencies
+        ):
+            raise ValueError("exposure applicability requires satisfied metadata dependencies")
+        if not self.observation_scope or any(not scope for scope in self.observation_scope):
+            raise ValueError("exposure applicability requires non-empty observation scopes")
+        if not self.evidence:
+            raise ValueError("not-applicable exposure proof requires retained evidence")
+
+
+@dataclass(frozen=True)
 class ExposureIndexComponent:
     """One weighted index rule with its exact generation-time proof state."""
 
@@ -172,6 +193,7 @@ class ExposureIndexComponent:
     metadata_dependencies: tuple[ExposureMetadataDependency, ...]
     observation_scope: tuple[str, ...]
     evidence: tuple[EvidenceReference, ...]
+    applicability: ExposureApplicabilityProof | None = None
 
     def __post_init__(self) -> None:
         if not self.component_id or self.generator_rule_id != self.component_id:
@@ -180,21 +202,27 @@ class ExposureIndexComponent:
             raise ValueError(f"unsupported exposure-index state: {self.state}")
         if self.maximum_points <= 0 or not 0 <= self.awarded_points <= self.maximum_points:
             raise ValueError("exposure-index points must satisfy 0 <= awarded <= positive maximum")
+        if self.applicability is not None and self.awarded_points:
+            raise ValueError("not-applicable exposure-index component cannot award points")
         if not self.metadata_dependencies:
             raise ValueError("exposure-index component requires at least one metadata dependency")
         if not all(exposure_metadata_predicate_satisfied(item) for item in self.metadata_dependencies):
             raise ValueError("exposure-index component contains an unsatisfied metadata dependency")
         if not self.observation_scope or any(not scope for scope in self.observation_scope):
             raise ValueError("exposure-index component requires non-empty observation scopes")
+        self._validate_evidence_state()
+
+    def _validate_evidence_state(self) -> None:
+        """Keep control-observation evidence consistent independently of applicability."""
         if self.awarded_points > 0 and not self.evidence:
             raise ValueError("positive exposure-index credit requires retained evidence")
-        if self.state in {"observed_value", "hypothetical_value", "not_applicable"} and not self.evidence:
+        if self.state in {"observed_value", "hypothetical_value"} and not self.evidence:
             raise ValueError(f"{self.state} exposure-index component requires retained evidence")
         if self.state == "unavailable" and self.awarded_points:
             raise ValueError("unavailable exposure-index component cannot award points")
         if self.state == "unavailable" and self.evidence:
             raise ValueError("unavailable exposure-index component cannot retain evidence")
-        if self.state in {"observed_empty", "unresolved", "not_applicable"} and self.awarded_points:
+        if self.state in {"observed_empty", "unresolved"} and self.awarded_points:
             raise ValueError(f"{self.state} exposure-index component cannot award points")
         if self.state == "observed_empty" and self.evidence:
             raise ValueError("observed-empty exposure-index component cannot retain positive evidence")
@@ -202,7 +230,7 @@ class ExposureIndexComponent:
     @property
     def unconfirmable_points(self) -> int:
         """Return capacity not fixed by an exact current component value."""
-        if self.state in {"unavailable", "unresolved"}:
+        if self.applicability is None and self.state in {"unavailable", "unresolved"}:
             return self.maximum_points - self.awarded_points
         return 0
 
@@ -247,7 +275,7 @@ class ExposureIndex:
     @property
     def model_maximum_points(self) -> int:
         """Return the maximum points assigned by the current component model."""
-        return sum(component.maximum_points for component in self.components if component.state != "not_applicable")
+        return sum(component.maximum_points for component in self.components if component.applicability is None)
 
     @property
     def unavailable_controls(self) -> tuple[str, ...]:
@@ -255,7 +283,7 @@ class ExposureIndex:
         return tuple(
             _EXPOSURE_UNAVAILABLE_LABELS.get(component.component_id, component.control)
             for component in self.components
-            if component.state == "unavailable"
+            if component.state == "unavailable" and component.applicability is None
         )
 
 

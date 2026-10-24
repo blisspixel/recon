@@ -271,7 +271,7 @@ def simulate_fixes(
             if component.state == "observed_value" and component.awarded_points == component.maximum_points
         },
         not_applicable_components={
-            component.component_id for component in current_components if component.state == "not_applicable"
+            component.component_id for component in current_components if component.applicability is not None
         },
         component_points={component.component_id: component.awarded_points for component in current_components},
     )
