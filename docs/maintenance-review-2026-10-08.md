@@ -6,6 +6,12 @@ bug and security review round. This record captures local validation before
 release preparation; the changelog records the v2.19.12 release batch.
 The review made no target-domain collection or paid provider calls.
 
+> **Status, 2026-10-24:** this is a dated record. Issue 197 closed on
+> 2026-10-08 with the synchronized dependency refresh. Issue 187 closed on
+> 2026-10-10 with the mitigation described below kept in force; the upstream pip
+> vendored urllib3 refresh is rechecked at each dependency refresh. Current next
+> steps live in [ROADMAP.md](../ROADMAP.md#resume-here).
+
 ## Documentation review
 
 The README's installation commands, compact output, cache caveats and local MCP

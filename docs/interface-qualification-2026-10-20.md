@@ -5,6 +5,10 @@ and [#239](https://github.com/blisspixel/recon/issues/239), starting from
 `34f565c2`. It uses synthetic `alpha.invalid` observations and local collection
 fixtures. No evaluated-target data or external-domain inventory is included.
 
+> **Status, 2026-10-24:** this is a dated record. Issue 240 closed on
+> 2026-10-20; the v2.21.2 maintenance batch moved typecheck and release jobs to
+> Node 26, which now track each new 26.x release through `check-latest`.
+
 ## Environment and corrections
 
 Arch Linux with Omarchy 4.0.6-1, Quickshell 0.3.2.r7.g2b4501a-1, Qt 6.12.0,
