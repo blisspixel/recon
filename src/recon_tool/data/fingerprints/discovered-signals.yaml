@@ -1716,9 +1716,14 @@ fingerprints:
   confidence: high
   detections:
   - type: cname_target
-    pattern: netlify.com
+    pattern: ^apex-loadbalancer\.netlify\.com\.?$
+    reference: https://docs.netlify.com/manage/domains/configure-domains/configure-external-dns/
+    verified: '2026-10-23'
     description: >-
-      Netlify-hosted custom domain CNAME target (`netlify.com`).
+      Netlify's documented apex load-balancer target, when
+      retained in a CNAME chain. Flattened ALIAS, ANAME, and
+      A records may hide this target. Does not establish
+      completed domain verification or active hosting.
 - name: Microsoft 365
   slug: microsoft365
   category: Email & Communication

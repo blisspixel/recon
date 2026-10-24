@@ -482,6 +482,15 @@ def ct_failure_outcome(failures: dict[str, int]) -> str:
     return "cache_miss"
 
 
+def cname_pattern_matches(host: str, pattern: str) -> bool:
+    """Match whole-domain CNAME patterns by labels and regex patterns as regex."""
+    normalized_pattern = pattern.lower().rstrip(".")
+    if is_domain_shaped(normalized_pattern):
+        return host_has_suffix(host, normalized_pattern)
+    compiled = compile_regex(pattern, re.IGNORECASE)
+    return compiled is not None and compiled.search(host) is not None
+
+
 def cname_target_pattern_matches(hostname: str, pattern: str) -> bool:
     """Match a CNAME-chain hop against a suffix, fragment, or safe regex."""
     host = hostname.lower().strip().rstrip(".")

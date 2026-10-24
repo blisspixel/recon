@@ -112,6 +112,188 @@
       "reviewed_on": "2026-10-23",
       "source_checked_on": "2026-10-23",
       "reason": "First-party documentation checked 2026-10-23: https://docs.convex.dev/production/abuse-protection. Related-host custom-domain routing only; exact target, no active-use or plan claim."
+    },
+    {
+      "rule": {
+        "source": "discovered-signals.yaml",
+        "slug": "netlify",
+        "detection_type": "cname_target",
+        "pattern": "^apex-loadbalancer\\.netlify\\.com\\.?$"
+      },
+      "before": null,
+      "after": "750c82560dc009b08b5e82d62d03d99199869e0ce0b284aee15eb90481a12e38",
+      "disposition": "semantic",
+      "reviewed_on": "2026-10-23",
+      "source_checked_on": "2026-10-23",
+      "reason": "Primary configuration guidance checked 2026-10-23. https://docs.netlify.com/manage/domains/configure-domains/configure-external-dns/ Published routing or owner-qualified nonempty verification marker only. Does not establish active deployment, account ownership, completed verification or authoritative DNS delegation. Offline positive, lookalike, missing/failed-source, duplicate and provenance regressions cover the applicable paths. No private target collection."
+    },
+    {
+      "rule": {
+        "source": "discovered-signals.yaml",
+        "slug": "netlify",
+        "detection_type": "cname_target",
+        "pattern": "netlify.com"
+      },
+      "before": "d50f399af2f4149846f6b4be3b586d3511dd91dd2f7b59f5988d862fe37daa35",
+      "after": null,
+      "disposition": "semantic",
+      "reviewed_on": "2026-10-23",
+      "source_checked_on": "2026-10-23",
+      "reason": "Primary configuration guidance checked 2026-10-23. Retire corporate-wide netlify.com hosting attribution; https://docs.netlify.com/manage/domains/configure-domains/configure-external-dns/ documents the exact apex-loadbalancer.netlify.com target. Preserve unmatched corporate hosts."
+    },
+    {
+      "rule": {
+        "source": "infrastructure.yaml",
+        "slug": "flyio",
+        "detection_type": "cname",
+        "pattern": "fly.dev"
+      },
+      "before": null,
+      "after": "6a7b4d084bd504032139c2182020cc5112208a926b8a46399afe1c224280ddde",
+      "disposition": "semantic",
+      "reviewed_on": "2026-10-23",
+      "source_checked_on": "2026-10-23",
+      "reason": "Primary configuration guidance checked 2026-10-23. https://docs.fly.io/networking/custom-domain Published routing or owner-qualified nonempty verification marker only. Does not establish active deployment, account ownership, completed verification or authoritative DNS delegation. Offline positive, lookalike, missing/failed-source, duplicate and provenance regressions cover the applicable paths. No private target collection."
+    },
+    {
+      "rule": {
+        "source": "infrastructure.yaml",
+        "slug": "flyio",
+        "detection_type": "cname",
+        "pattern": "fly\\.dev$|edgeapp\\.net$"
+      },
+      "before": "92f5d95b8a0b105fbafee7b41853b78850ca86d36d853573774946fdb521c3f9",
+      "after": null,
+      "disposition": "semantic",
+      "reviewed_on": "2026-10-23",
+      "source_checked_on": "2026-10-23",
+      "reason": "Primary configuration guidance checked 2026-10-23. Retire the unbounded regex, including unsupported legacy edgeapp.net attribution; current https://docs.fly.io/networking/custom-domain documents fly.dev. Replace with DNS-label suffix grammar and preserve unmatched observations."
+    },
+    {
+      "rule": {
+        "source": "infrastructure.yaml",
+        "slug": "netlify",
+        "detection_type": "cname",
+        "pattern": "netlify.app"
+      },
+      "before": "6fb329d0990bea78f00845ce77c4895dce91a3b24f14a4918cd17928326deed1",
+      "after": "457b4de0fc4836ee8154c9112bbff95a41a73d446c6e062e354e740dc31ed670",
+      "disposition": "semantic",
+      "reviewed_on": "2026-10-23",
+      "source_checked_on": "2026-10-23",
+      "reason": "Primary configuration guidance checked 2026-10-23. https://docs.netlify.com/manage/domains/configure-domains/configure-external-dns/ Published routing or owner-qualified nonempty verification marker only. Does not establish active deployment, account ownership, completed verification or authoritative DNS delegation. Offline positive, lookalike, missing/failed-source, duplicate and provenance regressions cover the applicable paths. No private target collection."
+    },
+    {
+      "rule": {
+        "source": "infrastructure.yaml",
+        "slug": "railway",
+        "detection_type": "cname",
+        "pattern": "railway\\.app$"
+      },
+      "before": "a55a480b7c8ed6aeaa50ccb2853bcffaf7a95222b05263051230d5da452a6298",
+      "after": null,
+      "disposition": "semantic",
+      "reviewed_on": "2026-10-23",
+      "source_checked_on": "2026-10-23",
+      "reason": "Primary configuration guidance checked 2026-10-23. Retire the unbounded railway.app regex; https://docs.railway.com/networking/domains/working-with-domains documents up.railway.app and separately required TXT. Replace with the documented routing suffix."
+    },
+    {
+      "rule": {
+        "source": "infrastructure.yaml",
+        "slug": "railway",
+        "detection_type": "cname",
+        "pattern": "up.railway.app"
+      },
+      "before": null,
+      "after": "ac3e0a1a2b5425772663d7bafce235a5cdb5a6a6407f21e21e9bcfa463212c46",
+      "disposition": "semantic",
+      "reviewed_on": "2026-10-23",
+      "source_checked_on": "2026-10-23",
+      "reason": "Primary configuration guidance checked 2026-10-23. https://docs.railway.com/networking/domains/working-with-domains Published routing or owner-qualified nonempty verification marker only. Does not establish active deployment, account ownership, completed verification or authoritative DNS delegation. Offline positive, lookalike, missing/failed-source, duplicate and provenance regressions cover the applicable paths. No private target collection."
+    },
+    {
+      "rule": {
+        "source": "infrastructure.yaml",
+        "slug": "render",
+        "detection_type": "cname",
+        "pattern": "onrender.com"
+      },
+      "before": "5ece8dbce470273e36d7b0083d643c6517d3116e08efe9303a4d5a876a2246f7",
+      "after": "c6918c3adaffd416f6b902d77eab0a5980997aa2d75e7f99c046448fcd60dbdd",
+      "disposition": "semantic",
+      "reviewed_on": "2026-10-23",
+      "source_checked_on": "2026-10-23",
+      "reason": "Primary configuration guidance checked 2026-10-23. https://render.com/docs/configure-cloudflare-dns Published routing or owner-qualified nonempty verification marker only. Does not establish active deployment, account ownership, completed verification or authoritative DNS delegation. Offline positive, lookalike, missing/failed-source, duplicate and provenance regressions cover the applicable paths. No private target collection."
+    },
+    {
+      "rule": {
+        "source": "infrastructure.yaml",
+        "slug": "vercel",
+        "detection_type": "cname",
+        "pattern": "vercel-dns.com"
+      },
+      "before": "86050118c9d0474d959d5516cdfcb1c4d564e3ebbd9bc02fe4388f56e2b85692",
+      "after": "2c5ce77dcae1a3396814508a6ad15834f86a330750c2e638f7b98b26cdc80e9b",
+      "disposition": "semantic",
+      "reviewed_on": "2026-10-23",
+      "source_checked_on": "2026-10-23",
+      "reason": "Primary configuration guidance checked 2026-10-23. https://vercel.com/kb/guide/how-to-migrate-from-fastly-to-vercel-with-zero-downtime Published routing or owner-qualified nonempty verification marker only. Does not establish active deployment, account ownership, completed verification or authoritative DNS delegation. Offline positive, lookalike, missing/failed-source, duplicate and provenance regressions cover the applicable paths. No private target collection."
+    },
+    {
+      "rule": {
+        "source": "infrastructure.yaml",
+        "slug": "vercel",
+        "detection_type": "subdomain_txt",
+        "pattern": "_vercel:^vc-domain-verify=\\S+$"
+      },
+      "before": null,
+      "after": "6de2d79be9336de1023cdbe48f3a6bef933bccb2605797484d919da105a350e6",
+      "disposition": "semantic",
+      "reviewed_on": "2026-10-23",
+      "source_checked_on": "2026-10-23",
+      "reason": "Primary configuration guidance checked 2026-10-23. https://vercel.com/docs/domains/working-with-domains/claim-domain-ownership Published routing or owner-qualified nonempty verification marker only. Does not establish active deployment, account ownership, completed verification or authoritative DNS delegation. Offline positive, lookalike, missing/failed-source, duplicate and provenance regressions cover the applicable paths. No private target collection."
+    },
+    {
+      "rule": {
+        "source": "surface.yaml",
+        "slug": "flyio",
+        "detection_type": "cname_target",
+        "pattern": "fly.dev"
+      },
+      "before": "08edc75e5a54899dfd0e9abcf64e51cb8a63d88178180f778fbe839937a37afa",
+      "after": "f1999df26086aa5750ab6d5c537f446e4a9d666e8ada552606992fbcfca05b72",
+      "disposition": "semantic",
+      "reviewed_on": "2026-10-23",
+      "source_checked_on": "2026-10-23",
+      "reason": "Primary configuration guidance checked 2026-10-23. https://docs.fly.io/networking/custom-domain Published routing or owner-qualified nonempty verification marker only. Does not establish active deployment, account ownership, completed verification or authoritative DNS delegation. Offline positive, lookalike, missing/failed-source, duplicate and provenance regressions cover the applicable paths. No private target collection."
+    },
+    {
+      "rule": {
+        "source": "surface.yaml",
+        "slug": "netlify",
+        "detection_type": "cname_target",
+        "pattern": "netlify.app"
+      },
+      "before": "eef0c55abac1e004599152be13dd114ac37d180432b181d1bc083622a8b303f7",
+      "after": "d93e4e127bc32b6bd6361ddabb9b1598d5841c2b86d1f82f955ee5b30f59293f",
+      "disposition": "semantic",
+      "reviewed_on": "2026-10-23",
+      "source_checked_on": "2026-10-23",
+      "reason": "Primary configuration guidance checked 2026-10-23. https://docs.netlify.com/manage/domains/configure-domains/configure-external-dns/ Published routing or owner-qualified nonempty verification marker only. Does not establish active deployment, account ownership, completed verification or authoritative DNS delegation. Offline positive, lookalike, missing/failed-source, duplicate and provenance regressions cover the applicable paths. No private target collection."
+    },
+    {
+      "rule": {
+        "source": "surface.yaml",
+        "slug": "railway",
+        "detection_type": "cname_target",
+        "pattern": "up.railway.app"
+      },
+      "before": "f1b65cd1301648b0f935ded0e87e7e7a7bb4b7744dcc794dc2e83096b49156ee",
+      "after": "2efe4aa9c1aac5505627132a234e9e861b6d9fe3b49b2b653a287f95d9cdfb21",
+      "disposition": "semantic",
+      "reviewed_on": "2026-10-23",
+      "source_checked_on": "2026-10-23",
+      "reason": "Primary configuration guidance checked 2026-10-23. https://docs.railway.com/networking/domains/working-with-domains Published routing or owner-qualified nonempty verification marker only. Does not establish active deployment, account ownership, completed verification or authoritative DNS delegation. Offline positive, lookalike, missing/failed-source, duplicate and provenance regressions cover the applicable paths. No private target collection."
     }
   ]
 }

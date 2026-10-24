@@ -2124,13 +2124,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: fly.dev
-    reference: https://fly.io/docs/networking/custom-domain/
+    reference: https://docs.fly.io/networking/custom-domain
+    verified: '2026-10-23'
     tier: application
     description: >-
-      Fly.io app-platform-endpoint CNAME for hosted workloads on
-      Fly's global edge. Indicates the org runs at least one
-      workload on Fly. Does not distinguish Fly's Free, Hobby, and
-      Launch tiers; the chain is shared.
+      CNAME routing to a Fly.io app hostname. Does not establish
+      completed domain verification, account ownership, or an
+      active workload.
 
 - name: Beehiiv
   slug: beehiiv
@@ -2545,12 +2545,13 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: netlify.app
-    reference: https://docs.netlify.com/domains-https/custom-domains/
+    reference: https://docs.netlify.com/manage/domains/configure-domains/configure-external-dns/
+    verified: '2026-10-23'
     tier: application
     description: >-
-      Subdomain CNAMEs into netlify.app (Netlify's default
-      hosted-site hostname). Indicates the domain delegates
-      a branded subdomain to a Netlify-deployed site.
+      CNAME routing to a Netlify site hostname. Does not
+      establish completed domain verification, account ownership,
+      or an active deployment.
 
 - name: Squarespace
   slug: squarespace
@@ -3792,8 +3793,13 @@ fingerprints:
   - type: cname_target
     pattern: up.railway.app
     tier: infrastructure
-    description: Railway deployment endpoint; service URLs CNAME to ``<service>.up.railway.app``.
-    reference: https://docs.railway.app/guides/public-networking
+    reference: https://docs.railway.com/networking/domains/working-with-domains
+    verified: '2026-10-23'
+    description: >-
+      CNAME routing to a Railway service hostname. Does not
+      establish publication of the separately required TXT
+      record, completed domain verification, account ownership,
+      or an active deployment.
 
 - name: Replit
   slug: replit
