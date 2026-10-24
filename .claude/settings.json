@@ -4,5 +4,19 @@
     "commit": "",
     "pr": "",
     "sessionUrl": false
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'Repository state at session start (report only):'; git worktree list; git branch -vv; gh pr list --state open --limit 20 || echo 'gh pr list unavailable'",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
   }
 }

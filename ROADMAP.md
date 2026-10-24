@@ -45,17 +45,14 @@ When picking work back up:
 
 1. Sync `main`, run `uv run python scripts/check.py`, and triage any new issues
    before starting anything else.
-2. Node 26 reaches LTS on 2026-10-28. Confirm the typecheck and release jobs
-   still resolve the intended Node 26 line, then drop the "before its LTS date"
-   wording here and in [docs/roadmap.md](docs/roadmap.md).
-3. Recheck upstream blockers during the next dependency refresh: a PyYAML cp315
+2. Recheck upstream blockers during the next dependency refresh: a PyYAML cp315
    wheel (6.0.3 still has none, so 3.15 builds from source) and a stable pip
    whose vendored urllib3 carries the proxy TLS and chunk-size fixes (see
    [the October review](docs/maintenance-review-2026-10-08.md); closed issue
    187 records the current mitigation).
-4. Run the monthly fingerprint-freshness loop through the catalog maintenance
+3. Run the monthly fingerprint-freshness loop through the catalog maintenance
    entry point shipped in v2.23.
-5. Otherwise continue the ordered work below. Black-box defects come first, and
+4. Otherwise continue the ordered work below. Black-box defects come first, and
    new surfaces still need a named operator handoff.
 
 ## Current release and next steps
@@ -107,8 +104,9 @@ The [Linux interface qualification](docs/interface-qualification-2026-10-20.md)
 exercises the source ladder and native panel on a running desktop. It identifies
 and corrects idle ladder redraws, palette singleton shadowing, and input
 selection that did not follow the accent; publication is tracked in the changelog.
-The v2.21.2 maintenance batch adopts Node 26 GA for typecheck and release jobs
-without waiting for its 2026-10-28 LTS designation. Python 3.15.1 is the latest
+Typecheck and release jobs run Node 26 with `check-latest`, so they pick up
+each new 26.x release, including the 2026-10-21 security release (26.12.1) and
+the LTS line from 2026-10-28, without a pin change. Python 3.15.1 is the latest
 GA default; 3.11 through 3.15 remain the tested compatibility range. Drop PyYAML
 source builds once a cp315 wheel ships.
 
