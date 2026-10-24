@@ -662,6 +662,26 @@ The remaining Scorecard limits are intentional or process-bound:
 - Contributors is low until outside contributors from distinct organizations
   participate naturally.
 
+### Solo-maintainer review exception
+
+On 2026-10-23 the maintainer accepted the independent-review risks represented
+by [Branch-Protection alert 1](https://github.com/blisspixel/recon/security/code-scanning/1)
+and [Code-Review alert 59](https://github.com/blisspixel/recon/security/code-scanning/59)
+for the current solo-maintainer workflow. This is a governance exception,
+not independent human review or a claim that the reported risks were removed.
+Automated checks do not count as another human reviewer, and the original
+Scorecard checks, historical results and scores remain visible.
+
+The enforced controls remain mandatory pull requests, strict CI/Gitleaks/CodeQL checks
+on the current PR revision, no bypass actors, protected linear history, resolved
+review threads and dismissal of stale approvals. Alert disposition records
+retain the decision and verification basis. Revisit this exception when another
+qualified human reviewer becomes available, after an ownership or contribution
+model change, or after an incident involving unauthorized changes. Then require
+actual independent approvals, CODEOWNERS review and approval after the last
+push without adding a bypass. Historical review coverage improves only through
+changes reviewed by another human.
+
 ## Deferred, with reasons
 
 - **Full SLSA Level 3 provenance** via the `slsa-framework/slsa-github-generator`
