@@ -36,6 +36,7 @@ class SimulationState:
     hypothetical_components: set[str]
     observed_components: set[str]
     satisfied_components: set[str]
+    not_applicable_components: set[str]
     component_points: dict[str, int]
 
 
@@ -142,7 +143,7 @@ def _apply_dmarc_fix(fix: str, state: SimulationState) -> str | None:
 
 def _apply_mta_sts_fix(fix: str, state: SimulationState) -> str | None:
     """Apply an MTA-STS fix, returning its description or null for a no-op."""
-    if MTA_STS_COMPONENT_ID in state.satisfied_components:
+    if MTA_STS_COMPONENT_ID in state.satisfied_components | state.not_applicable_components:
         return None
     if "enforce" not in fix and state.mta_sts is not None:
         return None
@@ -173,7 +174,7 @@ def _apply_one_fix(fix: str, state: SimulationState) -> str | None:
     if "dmarc" in fix:
         return _apply_dmarc_fix(fix, state)
     if "dkim" in fix:
-        if DKIM_COMPONENT_ID in state.satisfied_components:
+        if DKIM_COMPONENT_ID in state.satisfied_components | state.not_applicable_components:
             return None
         state.services.add("DKIM")
         state.slugs.add("dkim")
@@ -184,7 +185,7 @@ def _apply_one_fix(fix: str, state: SimulationState) -> str | None:
     if "mta-sts" in fix:
         return _apply_mta_sts_fix(fix, state)
     if "bimi" in fix:
-        if BIMI_COMPONENT_ID in state.satisfied_components:
+        if BIMI_COMPONENT_ID in state.satisfied_components | state.not_applicable_components:
             return None
         state.services.add("BIMI")
         state.slugs.add("bimi")
@@ -206,7 +207,7 @@ def _apply_one_fix(fix: str, state: SimulationState) -> str | None:
         )
         return "SPF set to strict (-all)"
     if "tls-rpt" in fix or "tlsrpt" in fix:
-        if TLS_RPT_COMPONENT_ID in state.satisfied_components:
+        if TLS_RPT_COMPONENT_ID in state.satisfied_components | state.not_applicable_components:
             return None
         state.services.add("TLS-RPT")
         state.slugs.add("tls-rpt")
@@ -268,6 +269,9 @@ def simulate_fixes(
             component.component_id
             for component in current_components
             if component.state == "observed_value" and component.awarded_points == component.maximum_points
+        },
+        not_applicable_components={
+            component.component_id for component in current_components if component.state == "not_applicable"
         },
         component_points={component.component_id: component.awarded_points for component in current_components},
     )

@@ -254,9 +254,22 @@ awarded and unresolved points, and exact retained evidence. An
 `observed_value` may contribute points; `observed_empty` records a completed
 bounded opportunity; `unresolved` covers evidence that cannot establish the
 modeled state or absence; `unavailable` names a failed collection opportunity;
-and `hypothetical_value` appears only in simulation output. The index floor is
+and `hypothetical_value` appears only in simulation output. `not_applicable`
+retains the published declaration that excludes a control from this namespace's
+applicable allocation. Its awarded and unresolved points are zero; its nominal
+component weight stays visible, while `model_maximum_points` excludes that
+weight. The index floor is
 the sum of awarded points. The ceiling adds unresolved and unavailable modeled
 capacity. Neither value is an overall security grade.
+
+A sole valid Null MX declaration excludes MTA-STS, TLS-RPT, and the email
+gateway component. DKIM and BIMI also become inapplicable only when the same
+available evidence includes an explicit `v=spf1 -all` policy and raw-bound,
+effectively enforcing DMARC. A strict SPF policy with permitted senders does
+not meet that condition. Mixed MX sets, failed sources, and ambiguous policies
+do not establish these exclusions. These are declarations, not delivery tests
+or proof about actual mail use. Simulations retain the original applicability
+basis, skip inapplicable fixes, and report no awarded points for them.
 
 For `find_hardening_gaps`, read `observation_state` before the prose.
 `observed_weak_configuration` and `observed_configuration_inconsistency` carry

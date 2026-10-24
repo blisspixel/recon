@@ -108,6 +108,11 @@ def is_dkim_key_record(record: str) -> bool:
         return False
 
 
+def is_null_mx_set(records: Iterable[str]) -> bool:
+    """Recognize the sole zero-preference root MX declaration (RFC 7505)."""
+    return {tuple(record.split()) for record in records} == {("0", ".")}
+
+
 def is_spf_record(value: str) -> bool:
     """Recognize the complete version token (RFC 7208 section 4.5)."""
     lowered = value.lower()

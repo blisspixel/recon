@@ -23,6 +23,7 @@ from recon_tool.constants import (
     SVC_SPF_SOFTFAIL,
     SVC_SPF_STRICT,
 )
+from recon_tool.email_applicability import MailApplicability, mail_applicability
 from recon_tool.email_security import observed_email_control_services
 from recon_tool.exposure_copy import build_evidence_refs as _build_evidence_refs
 from recon_tool.exposure_copy import check_neutral_copy as _check_neutral_copy
@@ -206,8 +207,9 @@ def validate_gap_lineage(gaps: list[HardeningGap], degraded_sources: tuple[str, 
             raise ValueError(f"hardening gap {gap.generator_rule_id!r} has no retained supporting evidence")
 
 
-def detect_missing_controls(info: TenantInfo) -> list[HardeningGap]:
+def detect_missing_controls(info: TenantInfo, *, applicability: MailApplicability | None = None) -> list[HardeningGap]:
     """Detect absent security controls."""
+    applicability = mail_applicability(info) if applicability is None else applicability
     observed = observability.ObservableEmailState.from_info(info)
     services_set = observed_email_control_services(info.evidence)
     gaps: list[HardeningGap] = []
@@ -330,7 +332,7 @@ def detect_missing_controls(info: TenantInfo) -> list[HardeningGap]:
 
     # Missing DKIM
     dkim_present = bool(services_set & {SVC_DKIM, SVC_DKIM_EXCHANGE, SVC_DKIM_GOOGLE})
-    if observed.dkim_available and not dkim_present:
+    if observed.dkim_available and not dkim_present and not applicability.outbound_not_applicable:
         gaps.append(
             _gap(
                 rule_id="guidance.email.dkim.common-selectors-not-observed.v1",
@@ -356,8 +358,10 @@ def detect_missing_controls(info: TenantInfo) -> list[HardeningGap]:
     mta_sts_policy_evidence = tuple(
         record for record in info.evidence if record.source_type.upper() == "MTA_STS_POLICY"
     )
-    dns_mta_sts_available = hardening_scopes_available(("dns:mta_sts",), info.degraded_sources)
-    mta_sts_policy_scopes_available = hardening_scopes_available(
+    dns_mta_sts_available = not applicability.inbound_not_applicable and hardening_scopes_available(
+        ("dns:mta_sts",), info.degraded_sources
+    )
+    mta_sts_policy_scopes_available = not applicability.inbound_not_applicable and hardening_scopes_available(
         ("dns:mta_sts", "http:mta_sts_policy"), info.degraded_sources
     )
     if dns_mta_sts_available and info.mta_sts_mode is None and not mta_sts_txt_refs:
@@ -425,7 +429,7 @@ def detect_missing_controls(info: TenantInfo) -> list[HardeningGap]:
         record.source_type.upper() == "TXT" and record.rule_name == _TLS_RPT_RULE_NAME and record.slug == "tls-rpt"
         for record in info.evidence
     )
-    if observed.tls_rpt_available and not tls_rpt_present:
+    if observed.tls_rpt_available and not tls_rpt_present and not applicability.inbound_not_applicable:
         gaps.append(
             _gap(
                 rule_id="guidance.email.tls-rpt.missing.v1",
@@ -460,8 +464,9 @@ def detect_missing_controls(info: TenantInfo) -> list[HardeningGap]:
     return gaps
 
 
-def detect_weak_configs(info: TenantInfo) -> list[HardeningGap]:
+def detect_weak_configs(info: TenantInfo, *, applicability: MailApplicability | None = None) -> list[HardeningGap]:
     """Detect weak but present configurations."""
+    applicability = mail_applicability(info) if applicability is None else applicability
     services_set = observed_email_control_services(info.evidence)
     gaps: list[HardeningGap] = []
 
@@ -497,7 +502,8 @@ def detect_weak_configs(info: TenantInfo) -> list[HardeningGap]:
     mta_sts_evidence = mta_sts_mode_evidence(info, "testing")
     has_testing_policy_evidence = any(ref.source_type.upper() == "MTA_STS_POLICY" for ref in mta_sts_evidence)
     if (
-        hardening_scopes_available(("dns:mta_sts", "http:mta_sts_policy"), info.degraded_sources)
+        not applicability.inbound_not_applicable
+        and hardening_scopes_available(("dns:mta_sts", "http:mta_sts_policy"), info.degraded_sources)
         and info.mta_sts_mode == "testing"
         and has_testing_policy_evidence
     ):

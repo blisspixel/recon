@@ -417,6 +417,7 @@ def test_exposure_report_output_schemas_are_precise() -> None:
         "unresolved",
         "unavailable",
         "hypothetical_value",
+        "not_applicable",
     ]
     assert component["properties"]["evidence"]["items"]["$ref"] == "#/$defs/EvidenceReferenceSummary"
 

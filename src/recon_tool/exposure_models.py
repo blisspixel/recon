@@ -25,6 +25,7 @@ ExposureIndexState: TypeAlias = Literal[
     "unresolved",
     "unavailable",
     "hypothetical_value",
+    "not_applicable",
 ]
 ExposureMetadataValue: TypeAlias = str | int | bool | None
 ExposureMetadataOperator: TypeAlias = Literal["eq", "neq", "is_none"]
@@ -60,11 +61,13 @@ _EXPOSURE_INDEX_STATES = frozenset(
         "unresolved",
         "unavailable",
         "hypothetical_value",
+        "not_applicable",
     }
 )
 _EXPOSURE_METADATA_FIELDS = frozenset(
     {
         "auth_type",
+        "mail_applicability",
         "bimi_record_observed",
         "caa_record_observed",
         "dkim_observed_at_common_selectors",
@@ -185,13 +188,13 @@ class ExposureIndexComponent:
             raise ValueError("exposure-index component requires non-empty observation scopes")
         if self.awarded_points > 0 and not self.evidence:
             raise ValueError("positive exposure-index credit requires retained evidence")
-        if self.state in {"observed_value", "hypothetical_value"} and not self.evidence:
+        if self.state in {"observed_value", "hypothetical_value", "not_applicable"} and not self.evidence:
             raise ValueError(f"{self.state} exposure-index component requires retained evidence")
         if self.state == "unavailable" and self.awarded_points:
             raise ValueError("unavailable exposure-index component cannot award points")
         if self.state == "unavailable" and self.evidence:
             raise ValueError("unavailable exposure-index component cannot retain evidence")
-        if self.state in {"observed_empty", "unresolved"} and self.awarded_points:
+        if self.state in {"observed_empty", "unresolved", "not_applicable"} and self.awarded_points:
             raise ValueError(f"{self.state} exposure-index component cannot award points")
         if self.state == "observed_empty" and self.evidence:
             raise ValueError("observed-empty exposure-index component cannot retain positive evidence")
@@ -244,7 +247,7 @@ class ExposureIndex:
     @property
     def model_maximum_points(self) -> int:
         """Return the maximum points assigned by the current component model."""
-        return sum(component.maximum_points for component in self.components)
+        return sum(component.maximum_points for component in self.components if component.state != "not_applicable")
 
     @property
     def unavailable_controls(self) -> tuple[str, ...]:

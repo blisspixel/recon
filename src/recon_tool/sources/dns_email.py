@@ -44,6 +44,7 @@ from recon_tool.sources.dns_tables import (
     bimi_vmc_url_is_safe,
     extract_bimi_vmc_url,
     is_dkim_key_record,
+    is_null_mx_set,
     is_public_dns_name,
     is_spf_record,
     match_spf_targets,
@@ -303,7 +304,7 @@ async def detect_mx(ctx: dns_base.DetectionCtx, domain: str) -> None:
     # RFC 7505 section 3: the zero-preference root target must be the only
     # MX record. Duplicate observations of that same RDATA do not add a
     # distinct RR. A mixed set cannot support a no-mail declaration.
-    null_mx_observed = {tuple(record.split()) for record in mx_records} == {("0", ".")}
+    null_mx_observed = is_null_mx_set(mx_records)
     for mx in mx_records:
         parts = mx.strip().split()
         if null_mx_observed:
