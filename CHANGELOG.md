@@ -26,6 +26,31 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Changed
+
+- MCP DNS collection now works without setup on hosts whose resolver is not
+  Cloudflare or Google. Instead of reporting an unavailable capability, the
+  server binds encrypted Cloudflare DNS-over-HTTPS (`cloudflare-dns.com` via
+  `1.1.1.1` and `1.0.0.1`). Saved `RECON_DNS_*` settings and a recognized public
+  service in host configuration still take precedence, the host's enterprise or
+  stub resolver is still never used, and failures still never fall back.
+  `RECON_DNS_VIEW=none` disables DNS-dependent MCP tools; partial or invalid
+  settings stay unavailable rather than silently using the default. Trusted CLI
+  resolution is unchanged.
+
+### Documentation
+
+- Renumber the duplicate MCP DNS-view ADR to ADR-0019, record the encrypted
+  default as an amendment, and list it in the ADR index. Mark closed issues in
+  dated review records and note the live Best Practices result in the badge
+  worksheet.
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command, flag, MCP tool, resource or prompt name
+changes. The MCP DNS capability declaration keeps its fields; its unavailable
+setup text now points at fixing or removing `RECON_DNS_*` settings.
+
 ## [2.24.0] - 2026-10-24
 
 ### Tool Surface Changes

@@ -322,7 +322,7 @@ async def test_missing_startup_approval_reports_capability_without_network(
 ) -> None:
     from recon_tool.mcp_client.sdk_compat import ToolError
 
-    policy = CollectionPolicy.from_environment({})
+    policy = CollectionPolicy.from_environment({"RECON_DNS_VIEW": "none"})
     for module in (app, graph, runtime):
         monkeypatch.setattr(module, "MCP_COLLECTION_POLICY", policy)
     tools: dict[str, Callable[..., Any]] = {
@@ -330,7 +330,7 @@ async def test_missing_startup_approval_reports_capability_without_network(
         "review": review.build_review_bundle,
         "chain": graph.chain_lookup,
     }
-    with pytest.raises(ToolError, match=r"DNS-dependent lookup unavailable.*once"):
+    with pytest.raises(ToolError, match=r"DNS-dependent lookup unavailable.*RECON_DNS_"):
         await tools[tool]("example.com")
     assert dns_views == []
     assert await introspection.get_fingerprints(limit=1)

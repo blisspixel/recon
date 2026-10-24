@@ -1,4 +1,4 @@
-# ADR-0018: Bind lower-trust collection to a caller-safe DNS view
+# ADR-0019: Bind lower-trust collection to a caller-safe DNS view
 
 - **Status:** Accepted
 - **Date:** 2026-10-22
@@ -51,3 +51,34 @@ identity/version; expose only mode and opaque identity as provenance.
   remain blocking.
 - Offline split-view, cache, HTTP admission and normal lookup regressions are
   required. Local verification is separate from release and deployment.
+
+## Amendment, 2026-10-24: encrypted public default
+
+This ADR was first filed as a second ADR-0018 and is renumbered to 0019 so each
+number names one decision.
+
+Requiring one-time configuration left MCP DNS collection unavailable on every
+host whose resolver is not Cloudflare or Google, which includes typical home
+routers, enterprise resolvers, VPNs and local forwarding stubs. The maintainer
+now approves an encrypted public default for that case.
+
+Resolution order at startup:
+
+1. Saved `RECON_DNS_*` settings.
+2. A recognized public service already configured on the host, reused through
+   its authenticated endpoint.
+3. Otherwise Cloudflare DNS-over-HTTPS, `cloudflare-dns.com` bootstrapped from
+   `1.1.1.1` and `1.0.0.1`. IPv4 bootstraps avoid stalls on IPv4-only networks.
+
+The protections above are unchanged. The host's enterprise or stub resolver is
+still never used for MCP collection, transport failure never falls back to
+host DNS or another provider, policy identity still partitions caches, and
+trusted CLI resolution is unchanged. `RECON_DNS_VIEW=none` disables
+DNS-dependent MCP tools explicitly. Partial or invalid saved settings remain
+unavailable rather than silently selecting the default, so a mistyped override
+cannot redirect queries.
+
+Consequences: MCP works without setup wherever outbound DoH on port 443 is
+allowed. Cloudflare sees the names MCP queries unless the operator saves a
+different service; the MCP guide names that disclosure and the override.
+Networks that block DoH need a saved service they permit.

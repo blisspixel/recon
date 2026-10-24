@@ -30,33 +30,45 @@ There is no new prompt, wizard or required lookup flag. MCP instead binds one
 caller-safe DNS policy automatically at startup, because a connected agent can
 be less trusted than the host's private DNS view.
 
-Saved server configuration is reused on every restart. If the host already
-explicitly uses Cloudflare's or Google's published public resolver addresses,
-MCP reuses that service over certificate-verified DNS-over-HTTPS. It does not
-choose a different provider, add a fallback provider, or treat an enterprise
-resolver or a local forwarding stub as proof of public-only answers. Both the
-DNS collectors and HTTP hostname resolution use this bound view, including
-related enrichment, recursive chains and fresh review bundles. HTTP still
-refuses private/mixed destinations and pins accepted numeric socket addresses.
+The view is chosen in this order, once per server start:
 
-If no approved view can be established, DNS-dependent tools report the
-unavailable capability and link this one-time setup. The server still starts
-and its offline catalogs remain available. It never falls back to corporate or
-VPN DNS, fabricates an empty successful lookup, or asks the same question at
-each launch. Transport failures follow the existing explicit source-failure
-contract rather than changing the view.
+1. Saved `RECON_DNS_*` settings in the MCP server's environment, reused on
+   every restart.
+2. If the host already explicitly uses Cloudflare's or Google's published public
+   resolver addresses, that same service over certificate-verified
+   DNS-over-HTTPS.
+3. Otherwise, the encrypted default: Cloudflare DNS-over-HTTPS
+   (`https://cloudflare-dns.com/dns-query`, bootstrapped from `1.1.1.1` and
+   `1.0.0.1`). This works with no setup on home, enterprise, VPN and
+   forwarding-stub networks.
 
-For an enterprise or forwarding-stub environment, put the approved view once
-in the MCP server's saved environment configuration. For example, **only when
-the operator approves Cloudflare for these queries**, set:
+recon never treats an enterprise resolver or a local forwarding stub as proof
+of public-only answers, and never sends MCP queries to it. Both the DNS
+collectors and HTTP hostname resolution use the bound view, including related
+enrichment, recursive chains and fresh review bundles. HTTP still refuses
+private/mixed destinations and pins accepted numeric socket addresses.
+Transport failures follow the existing explicit source-failure contract; they
+never fall back to host, corporate or VPN DNS or to another provider.
+
+The default resolver operator sees the names recon queries; see
+[Cloudflare's 1.1.1.1 privacy commitments](https://developers.cloudflare.com/1.1.1.1/privacy/public-dns-resolver/).
+To use a different encrypted service, save it once in the MCP server's
+environment configuration. For example, Google Public DNS:
 
 ```json
 {
   "RECON_DNS_VIEW": "caller-safe",
-  "RECON_DNS_SERVERS": "1.1.1.1,1.0.0.1",
-  "RECON_DNS_TLS_NAME": "cloudflare-dns.com"
+  "RECON_DNS_SERVERS": "8.8.8.8,8.8.4.4",
+  "RECON_DNS_TLS_NAME": "dns.google"
 }
 ```
+
+Quad9 uses `9.9.9.9,149.112.112.112` with `dns.quad9.net`. To disable
+DNS-dependent MCP tools entirely, save `RECON_DNS_VIEW=none`; the server still
+starts and its offline catalogs remain available. Partial or invalid saved
+settings also disable DNS collection rather than silently using the default,
+and DNS-dependent tools then report the unavailable capability with a link to
+this section. recon never fabricates an empty successful lookup.
 
 `RECON_DNS_SERVERS` accepts one to four numeric bootstrap addresses.
 `RECON_DNS_TLS_NAME` is the authenticated resolver hostname. Both are required
@@ -67,8 +79,9 @@ enterprise service may be configured when its answers are approved for the
 caller; encryption alone does not establish that authorization. TLS uses the
 patched certifi bundle and validates the configured service name. Bootstrap
 uses the configured numeric address and never host DNS. Allow the selected
-transport through egress policy. Resolver operators see queried names; review
-their privacy policy before approving a new service.
+transport through egress policy; a network that blocks outbound DoH needs a
+saved service it permits. Resolver operators see queried names; review their
+privacy policy before saving a different service.
 
 Advanced trusted internal automation may save `RECON_DNS_VIEW=operator` in a
 separate server process restricted to callers allowed to see host DNS. This
@@ -85,9 +98,9 @@ Structured lookup provenance includes `resolution_vantage` (`caller-safe` or
 Older records can have null provenance. This isolates recon's collection; it
 does not confine an agent with independent unrestricted shell or network tools.
 
-Both MCP doctors report the DNS capability for the launch they check. An
-unapproved view is a `warn` row with the one-time `Next:` setup link; offline
-tools and local resources remain usable. Refused DNS-dependent calls do not
+Both MCP doctors report the DNS capability for the launch they check. A
+disabled or misconfigured view is a `warn` row with a `Next:` link to this
+section; offline tools and local resources remain usable. Refused DNS-dependent calls do not
 reserve a rate-limit slot, so retries keep the same actionable setup message.
 The live doctor reads a bounded capability declaration from the checked
 server's discovery instructions, including mode, transport, and an opaque

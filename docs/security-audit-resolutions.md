@@ -665,6 +665,13 @@ new provider. Missing or invalid approval reports an unavailable capability
 with concise one-time server setup guidance. Transport failure never falls
 back to host DNS. Trusted bare CLI use retains its existing resolver behavior.
 
+*Amended after v2.24.0:* the maintainer approved an encrypted default for
+hosts without a recognized public resolver. MCP now binds Cloudflare
+DNS-over-HTTPS instead of reporting an unavailable capability; saved settings
+and recognized host services still take precedence, `RECON_DNS_VIEW=none`
+disables collection, and the enterprise/stub resolver is still never used. See
+the [ADR-0019 amendment](adr/0019-mcp-dns-view-isolation.md).
+
 The same policy identity/version partitions process cache authority and binds
 persistent cache admission. Retained results cannot acquire a new view merely
 by reloading catalogs or re-evaluating fingerprints. Resolver-vantage labels

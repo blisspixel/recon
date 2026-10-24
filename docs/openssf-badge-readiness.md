@@ -4,6 +4,13 @@ Status: questionnaire-preparation worksheet. This file does not claim an
 OpenSSF Best Practices Badge, does not add a badge URL, and does not change
 repository rules.
 
+> **Note, 2026-10-24:** this worksheet records the proposal state from before
+> the questionnaire was submitted, including its unknown answers. The live
+> project result and its date are recorded in
+> [openssf-posture.md](openssf-posture.md#best-practices-badge-readiness); the badge
+> service owns the current answers. The remaining unanswered criteria on the
+> service belong to the optional higher tiers and the OpenSSF Baseline set.
+
 ## Sources Checked
 
 - OpenSSF Best Practices Badge passing criteria:

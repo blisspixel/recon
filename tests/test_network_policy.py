@@ -66,6 +66,9 @@ assert calls == [True, False]
 """
     environment = {key: value for key, value in os.environ.items() if not key.startswith("RECON_DNS_")}
     environment["RECON_CONFIG_DIR"] = str(tmp_path)
+    # Without host configuration the encrypted default would apply; the explicit
+    # opt-out keeps this probe offline while exercising the refusal boundary.
+    environment["RECON_DNS_VIEW"] = "none"
     result = subprocess.run(  # noqa: S603 - fixed offline probe with a bounded test parameter
         [sys.executable, "-I", "-c", script, failure],
         cwd=tmp_path,
@@ -78,7 +81,7 @@ assert calls == [True, False]
     assert result.returncode == 0, result.stderr
 
 
-def test_saved_policy_restarts_with_identical_authority_and_no_provider_substitution() -> None:
+def test_saved_policy_restarts_with_identical_authority() -> None:
     saved = {
         "RECON_DNS_SERVERS": "192.0.2.53",
         "RECON_DNS_TLS_NAME": "resolver.example.org",
@@ -90,10 +93,45 @@ def test_saved_policy_restarts_with_identical_authority_and_no_provider_substitu
     assert first.identity == CollectionPolicy.from_environment(saved).identity
     with pytest.raises(FrozenInstanceError):
         first.mode = "operator"  # pyright: ignore[reportAttributeAccessIssue]  # Assert frozen runtime enforcement.
-    assert not CollectionPolicy.from_environment({}, ("127.0.0.53",)).available
-    assert not CollectionPolicy.from_environment({}, ("192.0.2.53",)).available
-    assert not CollectionPolicy.from_environment({}).available
     assert not CollectionPolicy.from_environment({"RECON_DNS_SERVERS": "1.1.1.1"}).available
+
+
+@pytest.mark.parametrize(
+    "system_servers",
+    [(), ("127.0.0.53",), ("192.0.2.53",), ("1.1.1.1", "192.0.2.53"), ("1.1.1.1", "8.8.8.8")],
+)
+def test_unrecognized_host_resolver_uses_the_encrypted_default(system_servers: tuple[str, ...]) -> None:
+    # A stub, enterprise or mixed host configuration is never reused; the
+    # maintainer-approved encrypted public service is bound instead.
+    selected = CollectionPolicy.from_environment({}, system_servers)
+    assert selected.available
+    assert selected.mode == "caller-safe"
+    assert selected.servers == network_policy.DEFAULT_CALLER_SAFE_SERVERS == ("1.1.1.1", "1.0.0.1")
+    assert selected.tls_name == network_policy.DEFAULT_CALLER_SAFE_TLS_NAME == "cloudflare-dns.com"
+    assert selected.transport == "https"
+    assert not {"127.0.0.53", "192.0.2.53", "8.8.8.8"} & set(selected.servers)
+    with collection_scope(selected):
+        resolver = network_policy.selected_resolver(network_policy.HOST_RESOLVER)
+        assert [ns.url for ns in resolver.nameservers if isinstance(ns, dns.nameserver.DoHNameserver)] == [
+            "https://cloudflare-dns.com/dns-query"
+        ] * 2
+
+
+def test_encrypted_default_honors_saved_transport() -> None:
+    selected = CollectionPolicy.from_environment({"RECON_DNS_TRANSPORT": "tls"}, ("192.0.2.53",))
+    assert selected.available
+    assert selected.servers == network_policy.DEFAULT_CALLER_SAFE_SERVERS
+    assert selected.transport == "tls"
+    with collection_scope(selected):
+        resolver = network_policy.selected_resolver(network_policy.HOST_RESOLVER)
+        assert all(isinstance(ns, dns.nameserver.DoTNameserver) for ns in resolver.nameservers)
+
+
+@pytest.mark.parametrize("system_servers", [(), ("1.1.1.1",), ("192.0.2.53",)])
+def test_explicit_opt_out_disables_dns_collection(system_servers: tuple[str, ...]) -> None:
+    disabled = CollectionPolicy.from_environment({"RECON_DNS_VIEW": "none"}, system_servers)
+    assert not disabled.available
+    assert disabled.identity != CollectionPolicy.from_environment({}, system_servers).identity
 
 
 @pytest.mark.parametrize(
@@ -122,6 +160,7 @@ def test_automatic_reuse_honors_saved_transport_and_rejects_invalid_transport() 
     "settings",
     [
         {"RECON_DNS_VIEW": "invalid"},
+        {"RECON_DNS_TLS_NAME": "resolver.example.org"},
         {"RECON_DNS_SERVERS": "bad", "RECON_DNS_TLS_NAME": "resolver.example.org"},
         {"RECON_DNS_SERVERS": "192.0.2.53", "RECON_DNS_TLS_NAME": "bad/name"},
         {"RECON_DNS_SERVERS": "192.0.2.53", "RECON_DNS_TLS_NAME": ""},
@@ -134,7 +173,7 @@ def test_invalid_approval_is_unavailable(settings: dict[str, str]) -> None:
 
 @pytest.mark.asyncio
 async def test_unavailable_view_has_actionable_error_without_collection(monkeypatch: pytest.MonkeyPatch) -> None:
-    policy = CollectionPolicy.from_environment({})
+    policy = CollectionPolicy.from_environment({"RECON_DNS_VIEW": "none"})
     monkeypatch.setattr(app, "MCP_COLLECTION_POLICY", policy)
 
     async def forbidden(*_args: Any, **_kwargs: Any) -> None:
@@ -145,7 +184,7 @@ async def test_unavailable_view_has_actionable_error_without_collection(monkeypa
         await app.resolve_tenant("example.com")
     assert caught.value.error_type == "dns_view_unavailable"
     message = app.lookup_failure_message("example.com", caught.value)
-    assert "once" in message
+    assert "RECON_DNS_*" in message
     assert "unavailable" in message
     assert "mcp.md#dns-view-isolation" in message
 
@@ -278,10 +317,10 @@ def test_bare_cli_needs_no_dns_setup_when_mcp_has_no_approved_view(
         return TenantInfo(None, "Synthetic namespace", domain, domain), [SourceResult(source_name="dns")]
 
     monkeypatch.setenv("RECON_CONFIG_DIR", str(tmp_path))
-    monkeypatch.setattr(app, "MCP_COLLECTION_POLICY", CollectionPolicy.from_environment({}))
+    monkeypatch.setattr(app, "MCP_COLLECTION_POLICY", CollectionPolicy.from_environment({"RECON_DNS_VIEW": "none"}))
     monkeypatch.setattr(resolver, "resolve_tenant", collect)
     result = CliRunner().invoke(cli, ["example.com"])
     assert result.exit_code == 0, result.output
     assert calls == ["example.com"]
     assert "Synthetic namespace" in result.output
-    assert "approve a caller-safe" not in result.output
+    assert "RECON_DNS_" not in result.output
