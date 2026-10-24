@@ -70,6 +70,16 @@ def test_operator_and_unavailable_views_are_explicit_without_a_network_probe() -
         DNS_CAPABILITY_PREFIX + "[" * 600,
         "x" * 65537,
     ],
+    ids=[
+        "non-text",
+        "missing",
+        "invalid-json",
+        "wrong-root",
+        "missing-fields",
+        "duplicate",
+        "oversized-line",
+        "oversized-instructions",
+    ],
 )
 def test_missing_or_malformed_capability_never_claims_dns_readiness(instructions: object) -> None:
     result = dns_readiness_from_instructions(instructions)
