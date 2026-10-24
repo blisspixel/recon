@@ -251,6 +251,13 @@ should use JSON rather than the spreadsheet-oriented CSV surface.
   after other available metadata is shown. Expired files remain visible but are
   labeled for refresh instead of reuse. Cache-writer-shaped `*.tmp` residue is
   counted without payload inspection and also causes a visible exit 4.
+  A structurally identified envelope from another collection policy is an
+  expected, separate state: `other collection policy; not reusable here`.
+  Bounded JSON decoding precedes the envelope check; its typed payload is not
+  admitted or rendered, its resolver identity is not printed, and the mismatch
+  does not cause exit 4. Both cache read paths still refuse to serve it.
+  Invalid JSON, version/domain bindings, or policy-identity syntax remain
+  inspection failures even when the file claims another policy.
 - **Cache deletion failures remain visible.** The CLI clears CT and result
   layers independently, including completed JSON entries and interrupted-write
   artifacts matching the cache writer's filename shape during confirmed
@@ -336,7 +343,11 @@ should use JSON rather than the spreadsheet-oriented CSV surface.
   breaker so `breaker_open` means every failed provider was stopped locally.
   Cache reuse preserves the full certificate summary and infrastructure
   cluster report, including wildcard sibling clusters and deployment bursts;
-  a summary-only entry is still a usable hit.
+  a summary-only entry with a positive certificate count is still a usable hit.
+  Empty graph or summary containers are not contributions. If every DNS query
+  is unavailable and CT contributed no retained names, certificate metadata,
+  or graph observations, the DNS source fails even if an empty CT cache file
+  exists. Fully failed lookup and review workflows retain exit 4.
 - **Batch identity is canonical.** Valid URL, sub-host, and apex spellings that
   reduce to the same registrable apex are resolved once, preserving the first
   occurrence. Malformed inputs deduplicate by their trimmed, lowercased raw

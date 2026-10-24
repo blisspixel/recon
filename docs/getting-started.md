@@ -341,6 +341,7 @@ DNS facts for the literal host:
 
 ```bash
 recon mail.example.com --exact
+recon www.example.com --exact
 ```
 
 ## Output Modes

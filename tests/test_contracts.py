@@ -251,9 +251,11 @@ class TestValidateDomainIsIdempotent:
 
         # ``com`` alone is not a valid domain, so the strip must stop.
         assert validate_domain("www.com", apex=False) == "www.com"
-        assert validate_domain("www.www.com", apex=False) == "www.com"
+        assert validate_domain("www.www.com", apex=False) == "www.www.com"
+        assert validate_domain("www.www.com") == "www.com"
 
-    def test_repeated_www_labels_reduce_to_the_host(self) -> None:
+    def test_repeated_www_labels_reduce_only_for_apex_queries(self) -> None:
         from recon_tool.validator import validate_domain
 
-        assert validate_domain("www.www.example.com", apex=False) == "example.com"
+        assert validate_domain("www.www.example.com", apex=False) == "www.www.example.com"
+        assert validate_domain("www.www.example.com") == "example.com"

@@ -409,11 +409,11 @@ def _merge_oidc_metadata(results: list[SourceResult]) -> tuple[str | None, str |
 
 
 def _collect_evidence(results: list[SourceResult]) -> tuple[EvidenceRecord, ...]:
-    """Flatten evidence records from every source."""
+    """Flatten evidence in canonical order while preserving its multiplicity."""
     all_evidence: list[EvidenceRecord] = []
     for result in results:
         all_evidence.extend(result.evidence)
-    return tuple(all_evidence)
+    return tuple(sorted(all_evidence, key=lambda item: (item.source_type, item.raw_value, item.slug, item.rule_name)))
 
 
 def _finalize_confidence(

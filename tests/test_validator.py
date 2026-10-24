@@ -46,11 +46,8 @@ class TestValidateDomain:
     def test_apex_input_idempotent(self):
         assert validate_domain("alpha.invalid") == "alpha.invalid"
 
-    def test_apex_false_still_strips_www(self):
-        # www. stripping is part of base normalization, independent of apex
-        # reduction: --exact (apex=False) still drops www. but keeps a real
-        # sub-host (see test_subdomain_exact_preserves_host).
-        assert validate_domain("www.alpha.invalid", apex=False) == "alpha.invalid"
+    def test_apex_false_preserves_www(self):
+        assert validate_domain("www.alpha.invalid", apex=False) == "www.alpha.invalid"
 
     def test_trailing_dot_fqdn_normalized(self):
         # An absolute FQDN with a trailing root-label dot is a common paste
@@ -88,8 +85,8 @@ class TestValidateDomain:
     def test_idn_with_scheme_and_www_stripped(self):
         assert validate_domain("https://www.café.invalid") == "xn--caf-dma.invalid"
 
-    def test_exact_idn_with_www_stripped(self):
-        assert validate_domain("www.café.invalid", apex=False) == "xn--caf-dma.invalid"
+    def test_exact_idn_preserves_www(self):
+        assert validate_domain("www.café.invalid", apex=False) == "www.xn--caf-dma.invalid"
 
     def test_idn_uppercase_normalized(self):
         assert validate_domain("CAFÉ.INVALID") == "xn--caf-dma.invalid"

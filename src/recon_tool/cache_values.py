@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import math
 from bisect import insort
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Generic, TypeVar
@@ -25,12 +26,28 @@ _CACHE_TEMP_NONCE_LENGTH = 8
 _CACHE_TEMP_NONCE_CHARS = frozenset("abcdefghijklmnopqrstuvwxyz0123456789_")
 
 
+class CachePolicyMismatch(ValueError):
+    """A cache envelope belongs to a different, non-reusable DNS policy."""
+
+
+def require_cache_policy(data: Mapping[str, object]) -> None:
+    """Check policy identity without decoding another policy's payload."""
+    from recon_tool.network_policy import OPERATOR_POLICY, current_policy
+
+    identity = data.get("_resolution_policy_id", OPERATOR_POLICY.identity)
+    if not isinstance(identity, str) or len(identity) != 64 or any(c not in "0123456789abcdef" for c in identity):
+        raise ValueError("Cache collection policy identity is invalid")
+    if identity != current_policy().identity:
+        raise CachePolicyMismatch("Cache belongs to a different collection policy")
+
+
 @dataclass(frozen=True)
 class CacheInspection(Generic[_T]):
     """Read-only inspection outcome that distinguishes absence from failure."""
 
     entry: _T | None = None
     failed: bool = False
+    other_policy: bool = False
 
 
 @dataclass(frozen=True)
@@ -42,6 +59,7 @@ class CacheListing(Generic[_T]):
     inspected: int = 0
     total: int = 0
     temporary_files: int = 0
+    other_policy: int = 0
 
 
 @dataclass(frozen=True)

@@ -18,6 +18,7 @@ from collections.abc import Iterable, Sequence
 from itertools import chain
 from typing import TYPE_CHECKING
 
+from recon_tool.collection_progress import ct_has_observations
 from recon_tool.constants import (
     SVC_EXCHANGE_AUTODISCOVER,
     SVC_INTUNE_MDM,
@@ -678,6 +679,8 @@ async def _query_cert_providers(ctx: dns_base.DetectionCtx, domain: str) -> tupl
             # Keep partial CT names/summary while recording that paging was cut short.
             failures["rate_limit"] += 1
             ctx.degraded_sources.add(provider.name)
+            if not ct_has_observations(partial.subdomains, partial.cert_summary, partial.infrastructure_clusters):
+                continue
             ctx.related_domains.update(partial.subdomains)
             ctx.ct_related_domains.update(partial.subdomains)
             if partial.cert_summary is not None:
@@ -707,7 +710,7 @@ async def _query_cert_providers(ctx: dns_base.DetectionCtx, domain: str) -> tupl
             ctx.degraded_sources.add(provider.name)
             continue
 
-        if not subdomains and cert_summary is None and infrastructure_clusters is None:
+        if not ct_has_observations(subdomains, cert_summary, infrastructure_clusters):
             # Soft-empty is not observed-empty: mark the channel unavailable so
             # consumers cannot treat it as "no CT names published."
             logger.debug(
@@ -759,10 +762,8 @@ async def detect_cert_intel(ctx: dns_base.DetectionCtx, domain: str) -> None:
     from recon_tool.ct_cache import ct_cache_get
 
     cached_first = ct_cache_get(domain)
-    if cached_first is not None and (
-        cached_first.subdomains
-        or cached_first.cert_summary is not None
-        or cached_first.infrastructure_clusters is not None
+    if cached_first is not None and ct_has_observations(
+        cached_first.subdomains, cached_first.cert_summary, cached_first.infrastructure_clusters
     ):
         _apply_cached_cert_intel(ctx, cached_first, f"{cached_first.provider_used} (cached)")
         logger.debug(
@@ -778,8 +779,8 @@ async def detect_cert_intel(ctx: dns_base.DetectionCtx, domain: str) -> None:
         return
 
     cached = ct_cache_get(domain)
-    if cached is not None and (
-        cached.subdomains or cached.cert_summary is not None or cached.infrastructure_clusters is not None
+    if cached is not None and ct_has_observations(
+        cached.subdomains, cached.cert_summary, cached.infrastructure_clusters
     ):
         # Attribution: if a live provider returned empty (soft failure), name
         # it explicitly so the panel reflects what actually ran.

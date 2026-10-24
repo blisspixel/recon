@@ -26,7 +26,7 @@ from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Literal
 
-from recon_tool.models import SourceResult
+from recon_tool.models import CertSummary, InfrastructureClusterReport, SourceResult
 from recon_tool.source_status import CT_PROVIDER_MARKERS
 
 __all__ = [
@@ -36,6 +36,7 @@ __all__ = [
     "ProgressEvent",
     "UnitOutcome",
     "UnitState",
+    "ct_has_observations",
     "ct_outcome",
     "ct_outcome_from_result",
     "emit",
@@ -141,6 +142,19 @@ _MTA_STS_DNS_MARKERS = frozenset({"dns:mta_sts", "detector:email_security"})
 _MTA_STS_HTTP_MARKER = "http:mta_sts_policy"
 
 
+def ct_has_observations(
+    subdomains: Collection[str],
+    summary: CertSummary | None,
+    clusters: InfrastructureClusterReport | None,
+) -> bool:
+    """Require retained CT data, rather than an empty metadata container."""
+    return bool(
+        subdomains
+        or (summary is not None and summary.cert_count > 0)
+        or (clusters is not None and (clusters.node_count > 0 or clusters.clusters or clusters.edges))
+    )
+
+
 def ct_outcome(
     *,
     subdomain_count: int,
@@ -192,7 +206,7 @@ def ct_outcome_from_result(dns_result: SourceResult) -> UnitOutcome:
         return whole
     return ct_outcome(
         subdomain_count=dns_result.ct_subdomain_count,
-        has_summary=dns_result.cert_summary is not None,
+        has_summary=ct_has_observations((), dns_result.cert_summary, dns_result.infrastructure_clusters),
         degraded=dns_result.degraded_sources,
         attempt_outcome=dns_result.ct_attempt_outcome,
     )

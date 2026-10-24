@@ -361,6 +361,20 @@ table above. Field order in emitted JSON is not guaranteed; use the key name.
 | `wildcard_sibling_clusters` | `list[{names: [...]}]` | stable (v1.7+): each entry's `names` is the deduplicated, sorted concrete-name SANs from a single cert that also covered ≥1 wildcard SAN. Empty when no wildcard cert produced concrete siblings. Bounded (≤10 clusters, ≤20 names per cluster). |
 | `deployment_bursts` | `list[CertBurst]` | stable (v1.7+): co-issuance cohorts within a 60s window with ≥3 distinct non-wildcard SANs. Output is relative (span_seconds + names) and never claims ownership. Bounded (≤8 bursts, ≤25 names per burst). |
 
+`top_issuers` contains short display labels, not issuer identity keys. DN
+inputs use their organization attribute, with a common-name fallback; a
+provider's friendly label stays readable. The bounded display parser handles
+escaped separators and quoted values but is not a DN validator. Exact SSL.com
+and Sectigo legal-name aliases coalesce equivalent labels before ranking.
+Current cache reads also normalize retained display labels without rewriting
+files or certificate counts; an old cache cannot recover frequency information
+beyond its retained top labels. Previously captured capsules keep their
+recorded values. Provider coverage and branding can still differ over time;
+these labels do not establish cryptographic issuer identity or trust. See the
+[CertSpotter issuer contract](https://sslmate.com/help/reference/ct_search_api_v1),
+[SSL.com repository](https://www.ssl.com/repository/), and
+[Sectigo legal repository](https://www.sectigo.com/legal).
+
 `CertBurst`:
 
 ```json

@@ -56,7 +56,7 @@ def parse_rdata(raw: str) -> str:
         parts = raw.split('" "')
         return "".join(p.strip('"') for p in parts)
     # Non-TXT (CNAME, MX, NS, SRV, etc.) - strip trailing FQDN dot
-    value = raw.strip('"')
+    value = raw
     stripped = value.rstrip(".")
     if not stripped or stripped.endswith(" "):
         # The whole target was the root label; keep it verbatim.

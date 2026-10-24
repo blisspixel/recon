@@ -96,7 +96,7 @@ def _unit_outcome(unit: str, ctx: _DetectionCtx) -> collection_progress.UnitOutc
     if unit == collection_progress.CT_UNIT:
         return collection_progress.ct_outcome(
             subdomain_count=ctx.ct_subdomain_count,
-            has_summary=ctx.cert_summary is not None,
+            has_summary=collection_progress.ct_has_observations((), ctx.cert_summary, ctx.infrastructure_clusters),
             degraded=ctx.degraded_sources,
             attempt_outcome=ctx.ct_attempt_outcome,
         )
@@ -752,7 +752,13 @@ class DNSSource:
         # else (CT) contributed: the DNS source made no observation at all.
         # Report that as a whole-source failure instead of an empty success,
         # so a lookup whose every source failed reaches ``all_sources_failed``.
-        if ledger.all_unavailable and not ctx.services and ctx.ct_provider_used is None:
+        if (
+            ledger.all_unavailable
+            and not ctx.services
+            and not collection_progress.ct_has_observations(
+                ctx.ct_related_domains, ctx.cert_summary, ctx.infrastructure_clusters
+            )
+        ):
             return SourceResult(
                 source_name="dns_records",
                 error=(

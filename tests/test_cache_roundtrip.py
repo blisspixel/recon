@@ -294,13 +294,15 @@ class TestCacheDiskOperations:
 
         assert not (cache_dir() / "beta.invalid.json").exists()
 
-    def test_put_normalizes_url_input_to_apex_cache_key(self) -> None:
-        info = _complete_info()
+    def test_put_normalizes_url_input_to_literal_cache_key(self) -> None:
+        from dataclasses import replace
+
+        info = replace(_complete_info(), queried_domain="www.alpha.invalid")
 
         cache_put("https://www.alpha.invalid/path?utm=1", info)
 
-        assert (cache_dir() / "alpha.invalid.json").exists()
-        assert cache_get("alpha.invalid") is not None
+        assert (cache_dir() / "www.alpha.invalid.json").exists()
+        assert cache_get("alpha.invalid") is None
         assert cache_get("https://www.alpha.invalid/path") is not None
 
     def test_exact_subhost_does_not_reuse_apex_cache_entry(self) -> None:

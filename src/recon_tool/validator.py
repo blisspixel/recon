@@ -306,8 +306,8 @@ def validate_domain(raw_input: str, *, apex: bool = True) -> str:
             if encoded.encode("ascii").decode("idna") == domain.lower():
                 domain = encoded
 
-    # Strip www. after IDNA normalization so Unicode and ASCII inputs follow
-    # the same exact-host contract. Only strip when the remainder is still a
+    # Strip www. only for ordinary apex lookups. Exact-host requests preserve
+    # every label after IDNA normalization. Only strip when the remainder is a
     # valid domain, preserving registrable names such as ``www.com``.
     #
     # Loop rather than strip once, so the result is a fixpoint. Callers treat
@@ -318,7 +318,7 @@ def validate_domain(raw_input: str, *, apex: bool = True) -> str:
     # payload-versus-key guard reject the write, so the host could never be
     # cached. ``www.com`` is still preserved because ``com`` alone is not a
     # valid domain, which also terminates the loop.
-    while domain.startswith("www.") and _DOMAIN_RE.fullmatch(domain[4:]):
+    while apex and domain.startswith("www.") and _DOMAIN_RE.fullmatch(domain[4:]):
         domain = domain[4:]
 
     # Validate format

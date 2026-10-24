@@ -110,6 +110,8 @@ def _render_listing_state(console: Console, listing: CacheListing[Any]) -> None:
         print_indented(console, "recon cache show --all", indent=6, style=WARNING)
     if listing.failed:
         console.print(f"    [{ERROR}]Inspection failures: {listing.failed}[/{ERROR}]")
+    if listing.other_policy:
+        console.print(f"    Other collection policy: {listing.other_policy} (not reusable here)")
     if listing.temporary_files:
         console.print(
             f"    [{ERROR}]Temporary write artifacts: {listing.temporary_files} "
@@ -126,6 +128,8 @@ def _render_result_inspection(
     console.print("  [bold]Result cache[/bold]")
     if inspection.failed:
         console.print(f"    Status:     [{ERROR}]could not inspect[/{ERROR}]")
+    elif inspection.other_policy:
+        console.print("    Status:     other collection policy; not reusable here")
     elif inspection.entry is None:
         console.print("    Status:     no entry")
     else:
@@ -146,6 +150,8 @@ def _render_ct_inspection(console: Console, inspection: CacheInspection[CTCacheI
     console.print("  [bold]CT cache[/bold]")
     if inspection.failed:
         console.print(f"    Status:     [{ERROR}]could not inspect[/{ERROR}]")
+    elif inspection.other_policy:
+        console.print("    Status:     other collection policy; not reusable here")
     elif inspection.entry is None:
         console.print("    Status:     no entry")
     else:

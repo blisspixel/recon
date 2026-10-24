@@ -84,11 +84,14 @@ When falling back to the CLI, **never** interpolate a user- or context-supplied 
 ^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$
 ```
 
-Lowercase the input, strip any leading `https://` / `http://` / `www.`, then match. If the resulting string does **not** match - including any presence of whitespace, quotes, `;`, `|`, `&`, `$`, backticks, parentheses, redirection (`>` `<`), path components (`/` `\`), or non-ASCII - refuse to run the command and tell the user the domain is malformed. Do not "fix it up" by stripping characters; reject the input.
+Lowercase the input and strip a leading `https://` or `http://`. For ordinary apex lookups, also strip a leading `www.`; preserve it when the user requests the literal host with `--exact`. Then match. If the resulting string does **not** match - including any presence of whitespace, quotes, `;`, `|`, `&`, `$`, backticks, parentheses, redirection (`>` `<`), path components (`/` `\`), or non-ASCII - refuse to run the command and tell the user the domain is malformed. Do not "fix it up" by stripping characters; reject the input.
 
 Pass the validated domain inside double quotes in the Bash command (`recon "validated.example.com"`) as defense-in-depth; the regex is the primary control. The MCP path takes structured arguments and is not subject to this rule.
 
 Once a domain passes validation, recon reduces it to the registrable apex (eTLD+1) before analysis, so `mail.example.co.uk` is analyzed as `example.co.uk` and `queried_domain` is the apex - almost always what you want, since the signal lives at the apex. Pass `--exact` only when the user specifically wants DNS facts about that one literal sub-host. This does not relax the validation rule above.
+
+Use the CLI for an explicitly requested literal-host lookup with `--exact`.
+The MCP domain tools normalize to the apex and do not offer that flag.
 
 ## Two invocation modes
 
