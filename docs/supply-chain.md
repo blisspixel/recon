@@ -57,8 +57,8 @@ directory, these commands select the exact version tag and its commit instead
 of mutable branch content:
 
 ```bash
-git clone --branch v2.22.0 --single-branch https://github.com/blisspixel/recon.git recon-2.22.0
-cd recon-2.22.0
+git clone --branch v2.23.0 --single-branch https://github.com/blisspixel/recon.git recon-2.23.0
+cd recon-2.23.0
 ```
 
 Inspect this document and the referenced local scripts before execution. If you
@@ -76,7 +76,7 @@ subject.
 ```bash
 set -euo pipefail
 
-VERSION=2.22.0
+VERSION=2.23.0
 REPO=blisspixel/recon
 LEGACY_SBOM_ATTESTATION_SHA=2751dc11c64001272750df29477d6b9052407261
 MAX_RELEASE_ASSET_BYTES=$((64 * 1024 * 1024))
@@ -217,7 +217,7 @@ echo "      PyPI provenance, channel byte parity, and both working wheel entry p
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$Version = "2.22.0"
+$Version = "2.23.0"
 $Repo = "blisspixel/recon"
 $LegacySbomAttestationSha = "2751dc11c64001272750df29477d6b9052407261"
 $MaxReleaseAssetBytes = 64 * 1024 * 1024
@@ -468,7 +468,7 @@ To verify a published release yourself:
 
 ```bash
 # 1. Check out the exact tag.
-VERSION=2.22.0  # replace with the release being verified
+VERSION=2.23.0  # replace with the release being verified
 git clone https://github.com/blisspixel/recon
 cd recon
 git checkout "v${VERSION}"
@@ -661,6 +661,26 @@ The remaining Scorecard limits are intentional or process-bound:
   posture summary lives in [openssf-posture.md](openssf-posture.md).
 - Contributors is low until outside contributors from distinct organizations
   participate naturally.
+
+### Solo-maintainer review exception
+
+On 2026-10-23 the maintainer accepted the independent-review risks represented
+by [Branch-Protection alert 1](https://github.com/blisspixel/recon/security/code-scanning/1)
+and [Code-Review alert 59](https://github.com/blisspixel/recon/security/code-scanning/59)
+for the current solo-maintainer workflow. This is a governance exception,
+not independent human review or a claim that the reported risks were removed.
+Automated checks do not count as another human reviewer, and the original
+Scorecard checks, historical results and scores remain visible.
+
+The enforced controls remain mandatory pull requests, strict CI/Gitleaks/CodeQL checks
+on the current PR revision, no bypass actors, protected linear history, resolved
+review threads and dismissal of stale approvals. Alert disposition records
+retain the decision and verification basis. Revisit this exception when another
+qualified human reviewer becomes available, after an ownership or contribution
+model change, or after an incident involving unauthorized changes. Then require
+actual independent approvals, CODEOWNERS review and approval after the last
+push without adding a bypass. Historical review coverage improves only through
+changes reviewed by another human.
 
 ## Deferred, with reasons
 
