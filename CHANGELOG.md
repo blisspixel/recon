@@ -26,6 +26,15 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Security
+
+- Require dnspython 2.9.0, which fixes CVE-2026-114605 (GHSA-45c3-73f7-pv4m):
+  a crafted DNS message could make name decompression consume excessive CPU.
+  recon parses DNS answers controlled by the owner of any queried domain, and
+  MCP parses DNS-over-HTTPS responses by default since v2.25.0. Refresh the
+  runtime dependency set, including a current Public Suffix List snapshot for
+  apex reduction, certifi 2026.10.23 and cryptography 50.0.2.
+
 ### Tests
 
 - Warm the synthetic MCP launch installation before its timed handshakes:
