@@ -1,5 +1,3 @@
-# Legacy typing exceptions are owned in docs/typing-exceptions.json.
-# pyright: reportUnknownMemberType=none, reportUnknownVariableType=none
 """Stateful (model-based) tests for the TenantInfo disk cache (Track B, B2).
 
 The existing cache tests (`test_cache_roundtrip`, `test_cache_forward_compat`,
