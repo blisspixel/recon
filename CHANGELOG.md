@@ -26,6 +26,10 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.25.0] - 2026-10-24
+
+Make MCP DNS collection work without setup, over encrypted DNS by default.
+
 ### Changed
 
 - MCP DNS collection now works without setup on hosts whose resolver is not
@@ -47,9 +51,9 @@ operator, corporate group, ownership, or control.
 
 ### Tool Surface Changes
 
-Tool surface changes: no CLI command, flag, MCP tool, resource or prompt name
-changes. The MCP DNS capability declaration keeps its fields; its unavailable
-setup text now points at fixing or removing `RECON_DNS_*` settings.
+Tool surface changes: no CLI command or flag changes. No MCP tool, resource or
+prompt name changes. The MCP DNS capability declaration keeps its fields; its
+unavailable setup text now points at fixing or removing `RECON_DNS_*` settings.
 
 ## [2.24.0] - 2026-10-24
 

@@ -37,28 +37,26 @@ absent.
 
 ## Resume here
 
-State at 2026-10-24: v2.24.0 is tagged and matches on GitHub Release and PyPI.
-`main` is the only branch, CI on `main` is green, and there are no open issues
-or pull requests. `main` carries one unreleased behavior change: MCP DNS
-collection defaults to encrypted Cloudflare DNS-over-HTTPS when no saved or
-recognized public resolver applies (see the changelog's Unreleased section and
-the [ADR-0019 amendment](docs/adr/0019-mcp-dns-view-isolation.md)).
+State at 2026-10-24: the release named in Status above is tagged and published
+to GitHub Release and PyPI; its latest change makes MCP DNS collection default
+to encrypted Cloudflare DNS-over-HTTPS (see the
+[ADR-0019 amendment](docs/adr/0019-mcp-dns-view-isolation.md)). `main` is the
+only branch, and no implementation work is in flight.
 
 When picking work back up:
 
 1. Sync `main`, run `uv run python scripts/check.py`, and triage any new issues
-   before starting anything else.
-2. If the Unreleased changelog section is still unpublished, prepare the next
-   minor release (v2.25.0) through the
-   [release process](docs/release-process.md).
-3. Recheck upstream blockers during the next dependency refresh: a PyYAML cp315
+   before starting anything else. If the changelog's Unreleased section has
+   accumulated user-visible changes, batch them into the next release through
+   the [release process](docs/release-process.md).
+2. Recheck upstream blockers during the next dependency refresh: a PyYAML cp315
    wheel (6.0.3 still has none, so 3.15 builds from source) and a stable pip
    whose vendored urllib3 carries the proxy TLS and chunk-size fixes (see
    [the October review](docs/maintenance-review-2026-10-08.md); closed issue
    187 records the current mitigation).
-4. Run the monthly fingerprint-freshness loop through the catalog maintenance
+3. Run the monthly fingerprint-freshness loop through the catalog maintenance
    entry point shipped in v2.23.
-5. Otherwise continue the ordered work below. Black-box defects come first, and
+4. Otherwise continue the ordered work below. Black-box defects come first, and
    new surfaces still need a named operator handoff.
 
 ## Current release and next steps
@@ -124,7 +122,9 @@ Bayesian assurance scenarios without changing model parameters. v2.24 closed
 the next black-box issue batch (issues 284 through 291): Null MX applicability,
 wide boxed reports, MCP DNS capability and chain-depth bounds, evidence
 canonicalization, literal `www` hosts, cache policy labels, offline exit codes,
-and shared CNAME matching between fresh and cached detection.
+and shared CNAME matching between fresh and cached detection. v2.25 made MCP DNS
+collection work without setup by defaulting to encrypted Cloudflare
+DNS-over-HTTPS, with saved settings and `RECON_DNS_VIEW=none` as overrides.
 
 `main` is the single integration and release branch. Short-lived implementation
 and release-preparation branches merge through required checks and are deleted
