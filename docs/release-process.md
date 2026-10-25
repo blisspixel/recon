@@ -373,10 +373,11 @@ exact `vX.Y.Z` tag and title, notes extracted from that version's checked
 --title vX.Y.Z --notes-file <notes-file> <wheel> <sdist> <sbom> <provenance>`.
 Use explicit file paths, not a wildcard over a mixed directory. Do not use
 automatically generated contributor notes. Inspect the draft author and every
-asset uploader, then run the read-only draft verifier before publishing:
+asset uploader, then run the read-only draft verifier before publishing. Run it
+in the project environment; a bare system `python3` can lack its dependencies:
 
 ```bash
-python3 scripts/verify_github_release.py --version X.Y.Z \
+uv run --frozen python scripts/verify_github_release.py --version X.Y.Z \
   --source-sha <original-full-source-sha> \
   --dist-dir <sealed-dist-directory> --sbom-dir <sealed-sbom-directory> \
   --provenance-dir <sealed-provenance-directory> --check-draft --release-id <draft-numeric-id>
