@@ -297,6 +297,21 @@ def synthetic_install(tmp_path_factory: pytest.TempPathFactory) -> SyntheticInst
     assert loaded_from.resolve().parent == (site_packages / "recon_tool").resolve(), (
         f"synthetic install imported recon_tool from {loaded_from}, not its own site-packages"
     )
+    # The SDK bounds server/discover at a fixed 10 seconds. Pay the one-time
+    # costs of a fresh install (bytecode compilation and the first run of a new
+    # interpreter, which Windows may scan) here, untimed, so the launch tests
+    # measure the launcher rather than first-install warm-up (issue 303).
+    compiled = subprocess.run(  # noqa: S603 - argv list built locally, no shell.
+        [str(python), "-m", "compileall", "-q", str(site_packages / "recon_tool")],
+        cwd=probe_cwd,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=180,
+        check=False,
+    )
+    assert compiled.returncode == 0, compiled.stdout + compiled.stderr
+    _run_probe(python, "import recon_tool.server", cwd=probe_cwd, env=env)
     block = json.loads(
         _run_probe(
             python,
