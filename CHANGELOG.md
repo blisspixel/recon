@@ -35,6 +35,15 @@ operator, corporate group, ownership, or control.
   runtime dependency set, including a current Public Suffix List snapshot for
   apex reduction, certifi 2026.10.23 and cryptography 50.0.2.
 
+### Fixed
+
+- When every source fails or times out under the caller-safe MCP DNS view,
+  say that a network blocking outbound encrypted DNS is one possible cause and
+  link the resolver override, instead of only "Try again". Since v2.25.0 a
+  DoH-blocking network reached this generic failure rather than a setup
+  message. The hint names no resolver and is absent for the operator and
+  disabled views.
+
 ### Tests
 
 - Warm the synthetic MCP launch installation before its timed handshakes:

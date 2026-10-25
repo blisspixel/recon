@@ -327,7 +327,8 @@ class TestErrors:
             await lookup_tenant("https://example.com/path")
         result = str(exc_info.value)
         assert "Lookup failed for example.com" in result
-        assert "https://" not in result
+        # The caller's raw input must not be echoed; a fixed setup link may be.
+        assert "https://example.com" not in result
         assert "/path" not in result
 
     @pytest.mark.asyncio

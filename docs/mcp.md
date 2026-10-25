@@ -80,7 +80,9 @@ caller; encryption alone does not establish that authorization. TLS uses the
 patched certifi bundle and validates the configured service name. Bootstrap
 uses the configured numeric address and never host DNS. Allow the selected
 transport through egress policy; a network that blocks outbound DoH needs a
-saved service it permits. Resolver operators see queried names; review their
+saved service it permits. When every source fails or times out under the
+caller-safe view, the MCP error says that blocked encrypted DNS is one possible
+cause and links this section; it never names the resolver. Resolver operators see queried names; review their
 privacy policy before saving a different service.
 
 Advanced trusted internal automation may save `RECON_DNS_VIEW=operator` in a
