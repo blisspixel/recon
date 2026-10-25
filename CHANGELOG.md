@@ -26,6 +26,27 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.26.0] - 2026-10-25
+
+Add an opt-in encrypted DNS view for CLI lookups and refresh DNS security,
+failure diagnostics, and verification tooling.
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
+### Added
+
+- Opt the `recon` CLI in to encrypted DNS with `RECON_DNS_VIEW=caller-safe`.
+  Lookups then use the same view as the MCP server (saved `RECON_DNS_*`
+  settings, else a recognized host public resolver, else Cloudflare
+  DNS-over-HTTPS) and record `resolution_vantage: caller-safe`. The default is
+  unchanged: without the exact opt-in value the CLI keeps the system resolver.
+  With the opt-in set, invalid settings exit with code 2 before any collection
+  (lookup, review, batch, discover, capsule capture and chain) and never fall
+  back to the system resolver; total failure names a possibly blocked
+  encrypted resolver. Links in these messages wrap only at word boundaries.
+
 ### Security
 
 - Require dnspython 2.9.0, which fixes CVE-2026-114605 (GHSA-45c3-73f7-pv4m):

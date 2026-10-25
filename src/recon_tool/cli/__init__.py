@@ -889,8 +889,11 @@ def run() -> None:
     the terminal), and a Ctrl-C exits quietly with code 130. Normal Typer/Click
     exits (help, version, usage errors) pass through untouched.
     """
+    from recon_tool.cli.shared import cli_collection_context
+
     try:
-        app()
+        with cli_collection_context():
+            app()
     except KeyboardInterrupt:
         get_err_console().print(f"[{WARNING}]Interrupted.[/{WARNING}]")
         raise SystemExit(130) from None

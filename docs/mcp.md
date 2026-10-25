@@ -25,8 +25,10 @@ production-ready.
 
 ## DNS view isolation
 
-Ordinary `recon <domain>` keeps its existing trusted-operator resolver behavior.
-There is no new prompt, wizard or required lookup flag. MCP instead binds one
+Ordinary `recon <domain>` keeps its existing trusted-operator resolver behavior
+unless the operator opts the CLI in with `RECON_DNS_VIEW=caller-safe` (see
+[Encrypted DNS](getting-started.md#encrypted-dns)); the same view described
+here then applies. There is no prompt, wizard or required lookup flag. MCP binds one
 caller-safe DNS policy automatically at startup, because a connected agent can
 be less trusted than the host's private DNS view.
 
