@@ -37,7 +37,7 @@ absent.
 
 ## Resume here
 
-State at 2026-10-24: the release named in Status above is tagged and published
+State at 2026-10-25: the release named in Status above is tagged and published
 to GitHub Release and PyPI; its latest change makes MCP DNS collection default
 to encrypted Cloudflare DNS-over-HTTPS (see the
 [ADR-0019 amendment](docs/adr/0019-mcp-dns-view-isolation.md)). `main` is the
