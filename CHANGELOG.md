@@ -51,6 +51,12 @@ operator, corporate group, ownership, or control.
   SDK bounds `server/discover` at a fixed 10 seconds, and the first launch of a
   fresh install on a loaded Windows runner had spent that budget on one-time
   bytecode compilation and first-run interpreter cost (issue 303).
+- Refresh development and mutation tooling, including ruff 0.17.2 (no code
+  changes needed), Hypothesis 6.170.9, coverage 7.17.0 and cosmic-ray 8.7.0,
+  and regenerate the build constraints. Hypothesis's improved annotations
+  repaired five legacy test typing diagnostics, so the exception inventory is
+  narrowed: one stateful test drops its file-level control and another keeps
+  only its private-contract exception.
 
 ### Documentation
 

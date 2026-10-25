@@ -1031,16 +1031,6 @@
           "digest": "9ebd4dacd3bb04b3e290870f89d3aecbeedc78474a05c060719cfe5160cce4a5"
         }
       },
-      "tests/test_cache_stateful.py": {
-        "reportUnknownMemberType": {
-          "count": 2,
-          "digest": "19e2af1b7b5ccec1d4f4786192f95ce3587e3d7f5676e346ab7920fe0f3774ee"
-        },
-        "reportUnknownVariableType": {
-          "count": 1,
-          "digest": "b93ce0cc632a5e772099e35f715c196f7c716f1460c8f621d8ebb09b2a0cf72a"
-        }
-      },
       "tests/test_calibration_metrics.py": {
         "reportPrivateUsage": {
           "count": 5,
@@ -3063,14 +3053,6 @@
         "reportPrivateUsage": {
           "count": 6,
           "digest": "86b54302733ead4787df3f78eed05d49e0ee2c1fe05f5286f132dc96ebc91645"
-        },
-        "reportUnknownMemberType": {
-          "count": 1,
-          "digest": "4f3d99a6ac106c207b4899f4ecfede5bc7c9e657f7ad728abd7613005bf18f9e"
-        },
-        "reportUnknownVariableType": {
-          "count": 1,
-          "digest": "04cdd12ccecd227bb4ef251b402d03d2eaf0e5c29feb81f680dd44eaa41c46fa"
         }
       },
       "tests/test_reference_calibration.py": {
@@ -4387,10 +4369,6 @@
     "tests/test_cache_roundtrip.py": [
       "reportPrivateUsage"
     ],
-    "tests/test_cache_stateful.py": [
-      "reportUnknownMemberType",
-      "reportUnknownVariableType"
-    ],
     "tests/test_calibration_metrics.py": [
       "reportPrivateUsage"
     ],
@@ -5123,9 +5101,7 @@
       "reportPrivateUsage"
     ],
     "tests/test_rate_limit_stateful.py": [
-      "reportPrivateUsage",
-      "reportUnknownMemberType",
-      "reportUnknownVariableType"
+      "reportPrivateUsage"
     ],
     "tests/test_reference_calibration.py": [
       "reportGeneralTypeIssues",
@@ -6369,10 +6345,6 @@
     "tests/test_cache_roundtrip.py": {
       "reportPrivateUsage": "private-contract"
     },
-    "tests/test_cache_stateful.py": {
-      "reportUnknownMemberType": "unknown-containers",
-      "reportUnknownVariableType": "unknown-containers"
-    },
     "tests/test_calibration_metrics.py": {
       "reportPrivateUsage": "private-contract"
     },
@@ -7105,9 +7077,7 @@
       "reportPrivateUsage": "private-contract"
     },
     "tests/test_rate_limit_stateful.py": {
-      "reportPrivateUsage": "private-contract",
-      "reportUnknownMemberType": "unknown-containers",
-      "reportUnknownVariableType": "unknown-containers"
+      "reportPrivateUsage": "private-contract"
     },
     "tests/test_reference_calibration.py": {
       "reportGeneralTypeIssues": "dynamic-json-fixtures",
