@@ -41,7 +41,10 @@ State at 2026-10-25: the release named in Status above is tagged and published
 to GitHub Release and PyPI; its latest change makes MCP DNS collection default
 to encrypted Cloudflare DNS-over-HTTPS (see the
 [ADR-0019 amendment](docs/adr/0019-mcp-dns-view-isolation.md)). `main` is the
-only branch, and no implementation work is in flight.
+only branch, and no implementation work is in flight. One issue is open:
+[#303](https://github.com/blisspixel/recon/issues/303), a Windows MCP launch
+test that timed out once under CI load; it lists two candidate fixes and is the
+natural first task.
 
 When picking work back up:
 

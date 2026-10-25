@@ -26,6 +26,11 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Documentation
+
+- Run the local draft-release verifier through the project environment in the
+  release runbook; a bare system `python3` can lack its dependencies.
+
 ## [2.25.0] - 2026-10-25
 
 Make MCP DNS collection work without setup, over encrypted DNS by default.
