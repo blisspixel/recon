@@ -324,3 +324,28 @@ def test_bare_cli_needs_no_dns_setup_when_mcp_has_no_approved_view(
     assert calls == ["example.com"]
     assert "Synthetic namespace" in result.output
     assert "RECON_DNS_" not in result.output
+
+
+@pytest.mark.parametrize("error_type", ["all_sources_failed", "timeout"])
+@pytest.mark.parametrize(
+    ("policy", "hinted"),
+    [
+        (CollectionPolicy.from_environment({}, ("192.0.2.53",)), True),
+        (CollectionPolicy.from_environment({"RECON_DNS_TRANSPORT": "tls"}, ("192.0.2.53",)), True),
+        (CollectionPolicy("operator"), False),
+        (CollectionPolicy.from_environment({"RECON_DNS_VIEW": "none"}), False),
+    ],
+)
+def test_total_failure_names_a_blocked_encrypted_resolver_only_for_the_caller_safe_view(
+    monkeypatch: pytest.MonkeyPatch, policy: CollectionPolicy, hinted: bool, error_type: str
+) -> None:
+    # A network that blocks outbound DoH/DoT fails every source; without the
+    # hint the caller only sees "Try again" and no route to a permitted resolver.
+    monkeypatch.setattr(app, "MCP_COLLECTION_POLICY", policy)
+    error = ReconLookupError(domain="example.com", message="collection failed", error_type=error_type)
+    message = app.lookup_failure_message("example.com", error)
+    assert ("blocks outbound encrypted DNS" in message) is hinted
+    assert ("mcp.md#dns-view-isolation" in message) is hinted
+    assert message.startswith(("Lookup failed for example.com", "Lookup timed out for example.com"))
+    for endpoint in (*policy.servers, policy.tls_name or "unused.invalid"):
+        assert endpoint not in message

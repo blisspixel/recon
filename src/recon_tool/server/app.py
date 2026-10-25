@@ -70,14 +70,25 @@ def invalid_domain_message(error: ValueError) -> str:
     return f"Error: {strip_control_chars(str(error))}"
 
 
+def _encrypted_dns_hint() -> str:
+    """Name the likely setup cause of a total failure without naming the resolver."""
+    if MCP_COLLECTION_POLICY.mode != "caller-safe" or not MCP_COLLECTION_POLICY.available:
+        return ""
+    return (
+        " If this network blocks outbound encrypted DNS (DNS-over-HTTPS or DNS-over-TLS), "
+        "save a resolver it permits in the MCP server's RECON_DNS_* settings: "
+        "https://github.com/blisspixel/recon/blob/main/docs/mcp.md#dns-view-isolation."
+    )
+
+
 def lookup_failure_message(domain: str, error: ReconLookupError) -> str:
     """Map resolver outcomes to truthful, non-sensitive MCP text."""
     if error.error_type == "no_data":
         return f"No information found for {domain}"
     if error.error_type == "timeout":
-        return f"Lookup timed out for {domain}. Try again."
+        return f"Lookup timed out for {domain}. Try again.{_encrypted_dns_hint()}"
     if error.error_type == "all_sources_failed":
-        return f"Lookup failed for {domain}: all passive sources returned errors. Try again."
+        return f"Lookup failed for {domain}: all passive sources returned errors. Try again.{_encrypted_dns_hint()}"
     if error.error_type == "dns_view_unavailable":
         return (
             "DNS-dependent lookup unavailable: the MCP server's DNS view is disabled or misconfigured; "
