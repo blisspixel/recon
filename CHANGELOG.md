@@ -26,6 +26,14 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Tests
+
+- Warm the synthetic MCP launch installation before its timed handshakes:
+  precompile the copied package and import the server once, untimed. The MCP
+  SDK bounds `server/discover` at a fixed 10 seconds, and the first launch of a
+  fresh install on a loaded Windows runner had spent that budget on one-time
+  bytecode compilation and first-run interpreter cost (issue 303).
+
 ### Documentation
 
 - Run the local draft-release verifier through the project environment in the
