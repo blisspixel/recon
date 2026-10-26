@@ -40,9 +40,10 @@ absent.
 State at 2026-10-26: the inherited maintenance batch addresses routine MCP
 request logging, invalid CLI DNS views, offline CT cache status (#312), empty CT
 status (#313), capsule lexical ordering (#311), sdist validation modules (#314),
-and validation model/provider maintenance (#315, #316). Release preparation
-for v2.26.1 is in progress; local and hosted verification must finish before
-publication. The README remains aligned with the supported CLI and MCP surfaces.
+and validation model/provider maintenance (#315, #316). The v2.26.1 release boundary is this maintenance batch. Its publication
+evidence belongs to the exact-tag release workflow and remote readiness check,
+not a source-tree status note. The README remains aligned with the supported
+CLI and MCP surfaces.
 
 Next work is the MCP and packaging tracker #324, beginning with capability
 accuracy (#319) and portable plugin path expansion (#318), then progress
