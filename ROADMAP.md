@@ -7,7 +7,7 @@ operator and contributor view: current state, next work, boundaries, and gates.
 
 ## Status
 
-recon **v2.25.0** is the current production baseline. The CLI, versioned JSON,
+recon **v2.26.0** is the current production baseline. The CLI, versioned JSON,
 local stdio MCP server, bounded public-metadata collectors, fail-closed claim
 audit, MCP dual-SDK matrix, and verified release path are complete. Local
 execution is the default, and the project does not operate a hosted service.
@@ -37,14 +37,16 @@ absent.
 
 ## Resume here
 
-State at 2026-10-25: v2.25.0 is published to GitHub Release and PyPI.
-Issue [#303](https://github.com/blisspixel/recon/issues/303) is closed by
+State at 2026-10-25: the CLI encrypted-DNS opt-in is complete in
+[#309](https://github.com/blisspixel/recon/pull/309), alongside the DNS security,
+resolver-diagnostic and development-tooling maintenance batch. Issue
+[#303](https://github.com/blisspixel/recon/issues/303) is closed by
 [#305](https://github.com/blisspixel/recon/pull/305), which warms the synthetic
-MCP installation before timed launches. No issues remain open. The next release
-batch adds the CLI encrypted-DNS opt-in, fixes encrypted-resolver diagnostics,
-and includes the dnspython security update and refreshed development tooling.
-The remaining handoff is the checked v2.26.0 preparation PR, exact-main tag,
-and verified GitHub Release/PyPI publication through the release process.
+MCP installation before timed launches. No issues or unfinished implementation
+work remain. Verify the release named in Status against its exact tag with
+`uv run python scripts/release_readiness.py --remote` before starting the next
+maintenance task; this checks publication and channel parity rather than
+assuming them from a merged release-preparation PR.
 
 When picking work back up:
 
