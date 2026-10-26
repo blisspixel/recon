@@ -204,9 +204,15 @@ def ct_outcome_from_result(dns_result: SourceResult) -> UnitOutcome:
     whole = _dns_unavailable(dns_result)
     if whole is not None:
         return whole
+    ct_cached = dns_result.ct_cache_age_days is not None or dns_result.ct_attempt_outcome == "cache_hit"
+    has_summary = (
+        False
+        if ct_cached and dns_result.ct_subdomain_count == 0
+        else ct_has_observations((), dns_result.cert_summary, dns_result.infrastructure_clusters)
+    )
     return ct_outcome(
         subdomain_count=dns_result.ct_subdomain_count,
-        has_summary=ct_has_observations((), dns_result.cert_summary, dns_result.infrastructure_clusters),
+        has_summary=has_summary,
         degraded=dns_result.degraded_sources,
         attempt_outcome=dns_result.ct_attempt_outcome,
     )

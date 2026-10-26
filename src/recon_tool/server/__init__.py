@@ -55,21 +55,24 @@ _MAX_FATAL_DETAIL = 500
 @contextmanager
 def _runtime_logging() -> Generator[None]:
     """Provide default MCP stderr logging only while the server is running."""
-    if logger.hasHandlers():
-        yield
-        return
-
-    previous_level = logger.level
+    managed = [logging.getLogger(name) for name in ("recon", "recon_tool", "httpx", "httpcore")]
+    previous_levels = [item.level for item in managed]
     handler = logging.StreamHandler()
     handler.setFormatter(logging.Formatter("%(message)s"))
-    logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
+    attached = [item for item in managed if not item.hasHandlers()]
+    for item in attached:
+        item.addHandler(handler)
+    level = logging.INFO if _server_runtime.request_logging_enabled() else logging.WARNING
+    for item in managed:
+        item.setLevel(level)
     try:
         yield
     finally:
-        logger.removeHandler(handler)
+        for item, previous_level in zip(managed, previous_levels, strict=True):
+            item.setLevel(previous_level)
+        for item in attached:
+            item.removeHandler(handler)
         handler.close()
-        logger.setLevel(previous_level)
 
 
 def _fatal_detail(exc: BaseException) -> str:

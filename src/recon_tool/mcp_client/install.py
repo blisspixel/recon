@@ -680,7 +680,8 @@ def _atomic_write_text(
     parent = write_path.parent
     if directory_fd is not None:
         tmp_path = write_path.name + "." + secrets.token_hex(16) + ".tmp"
-        fd = os.open(tmp_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=directory_fd)
+        o_nofollow = getattr(os, "O_NOFOLLOW", 0)
+        fd = os.open(tmp_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | o_nofollow, 0o600, dir_fd=directory_fd)
     else:
         if not workspace:
             parent.mkdir(parents=True, exist_ok=True)

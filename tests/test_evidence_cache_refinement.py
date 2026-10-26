@@ -299,7 +299,7 @@ async def test_only_real_cached_ct_observations_can_recover_an_offline_dns_sourc
 
     _install_offline_dns(monkeypatch)
     result = await dns_source.DNSSource().lookup("example.com", skip_ct=False)
-    real_data = payload in {"names", "summary"}
+    real_data = payload == "names"
     assert result.source_unavailable is not real_data
     assert (result.error is None) is real_data
     if real_data:
@@ -400,4 +400,44 @@ def test_old_cache_labels_are_projected_without_rewriting_stored_artifacts(isola
     assert ct.cert_summary.top_issuers == cached.cert_summary.top_issuers == ("SSL.com",)
     assert ct.cert_summary.cert_count == cached.cert_summary.cert_count == 2
     assert (ct_path.read_bytes(), result_path.read_bytes()) == before
+    assert isolated_cache.is_dir()
+
+
+@pytest.mark.parametrize("command", [["example.com", "--no-cache"], ["review", "example.com", "--json"]])
+@pytest.mark.usefixtures("_real_cert_intel")
+def test_cached_cert_summary_with_zero_subdomains_cannot_turn_offline_cli_into_success(
+    monkeypatch: pytest.MonkeyPatch, isolated_cache: Path, command: list[str]
+) -> None:
+    _install_offline_dns(monkeypatch)
+    ct_cache_put(
+        "example.com",
+        [],
+        CertSummary(9, 9, 0, 0, 0, ("Synthetic CA",)),
+        "certspotter",
+    )
+    result = CliRunner().invoke(app, command)
+    assert result.exit_code == 4, result.output
+    assert "1 matched" not in result.output
+    if command[0] == "review":
+        assert json.loads(result.stdout)["workflow"]["status"] == "failed"
+    assert isolated_cache.is_dir()
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("_real_cert_intel")
+async def test_soft_empty_ct_with_no_cache_does_not_set_provider_used_or_report_recovered(
+    monkeypatch: pytest.MonkeyPatch, isolated_cache: Path
+) -> None:
+    async def empty_query(
+        _self: object, _domain: str
+    ) -> tuple[list[str], CertSummary | None, InfrastructureClusterReport | None]:
+        return [], None, None
+
+    monkeypatch.setattr(CrtshProvider, "query", empty_query)
+    monkeypatch.setattr(CertSpotterProvider, "query", empty_query)
+    result = await dns_source.DNSSource().lookup("example.com", skip_ct=False)
+    assert result.ct_provider_used is None
+    assert result.ct_attempt_outcome == "cache_miss"
+    assert "certspotter" in result.degraded_sources
+    assert "crt.sh" in result.degraded_sources
     assert isolated_cache.is_dir()

@@ -499,3 +499,25 @@ def test_capsule_write_at_exact_utf8_limit_round_trips(tmp_path: Path, monkeypat
     output = tmp_path / "capsule.json"
     write_capsule(output, capsule)
     assert load_capsule(output) == capsule
+
+
+def test_lexical_order_keeps_capsule_rendered_result_digest_stable() -> None:
+    from recon_tool.merger import merge_results
+
+    names = ("dev.example.com", "stage.example.com", "qa.example.com", "uat.example.com")
+    first_result = replace(_dns_result(), related_domains=names)
+    second_result = replace(_dns_result(), related_domains=tuple(reversed(names)))
+    first_info = merge_results([first_result, _oidc_result()], "example.com")
+    second_info = merge_results([second_result, _oidc_result()], "example.com")
+    context = CollectionContext(
+        started_at=_START,
+        ended_at=_END,
+        ct_enabled=False,
+        direct_probes=False,
+        timeout_seconds=30.0,
+        vantage="caller-local",
+    )
+    first = build_capsule(first_info, (first_result, _oidc_result()), context)
+    second = build_capsule(second_info, (second_result, _oidc_result()), context)
+    assert first["interpretation"]["rendered_result_digest"] == second["interpretation"]["rendered_result_digest"]
+    assert compare_capsules(first, second)["interpretation"]["changed"] is False

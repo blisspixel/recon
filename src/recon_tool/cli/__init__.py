@@ -537,12 +537,16 @@ def lookup(
             exact=exact,
         ),
     )
-    asyncio.run(
-        _lookup(
-            domain,
-            options,
+    from recon_tool.cli.shared import cli_collection_context, reject_unavailable_dns_view
+
+    with cli_collection_context():
+        reject_unavailable_dns_view()
+        asyncio.run(
+            _lookup(
+                domain,
+                options,
+            )
         )
-    )
 
 
 @app.command(short_help="Look up domains in a file.")

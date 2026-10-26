@@ -227,9 +227,13 @@ If you genuinely need to drive the JSON-RPC loop by hand (e.g. piping crafted re
 
 Importing the server module does not install a shared logging handler. The
 actual stdio runtime supplies a temporary stderr handler only when no host
-logging configuration exists, then removes it on exit. If the loop fails
-unexpectedly, stderr receives one bounded control-free line with the exception
-type instead of raw multiline exception text.
+logging configuration exists, then removes it on exit. By default, request
+logging is suppressed (runtime level WARNING); set `RECON_MCP_LOG_REQUESTS=1`
+to enable verbose request logging, including full URLs and queried domains.
+Warning and exception diagnostics can still contain domain inputs, so review
+client logs before sharing them. If the loop fails unexpectedly, stderr receives one bounded
+control-free line with the exception type instead of raw multiline exception
+text.
 
 ## Available Tools
 

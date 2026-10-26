@@ -16,6 +16,7 @@ from recon_tool.fingerprints import DetectionRule, Fingerprint
 from validation import catalog_baseline
 from validation.evaluate_catalog_promotions import (
     CandidateRule,
+    PromotionThresholds,
     _candidate_rules_digest,
     _matched_slugs,
     _type_rows,
@@ -171,10 +172,7 @@ def test_acceptance_uses_unrounded_uplift(minimum: float, expected: bool) -> Non
     _, pooled = evaluate_partitioned_records(
         [records],
         rules,
-        min_count=1,
-        min_distinct_namespaces=1,
-        minimum_improvement=minimum,
-        maximum_regression=0.0,
+        PromotionThresholds(1, 1, minimum, 0.0),
     )
 
     assert pooled["decision"]["accepted"] is expected
@@ -201,10 +199,7 @@ def test_counterfactual_uses_fixed_denominators_and_zero_regression() -> None:
     strata, pooled = evaluate_partitioned_records(
         [records],
         rules,
-        min_count=1,
-        min_distinct_namespaces=1,
-        minimum_improvement=0.1,
-        maximum_regression=0.0,
+        PromotionThresholds(1, 1, 0.1, 0.0),
     )
 
     assert strata[0]["record_types"]["mx"]["counterfactual_added_classified"] == 2
@@ -225,10 +220,7 @@ def test_counterfactual_fails_when_a_candidate_is_unobserved_or_below_budget() -
     _strata, pooled = evaluate_partitioned_records(
         [records],
         rules,
-        min_count=1,
-        min_distinct_namespaces=1,
-        minimum_improvement=0.6,
-        maximum_regression=0.0,
+        PromotionThresholds(1, 1, 0.6, 0.0),
     )
 
     assert pooled["record_types"]["mx"]["classified_rate_delta"] == 0.5
@@ -242,10 +234,7 @@ def test_public_shape_has_no_target_fields(tmp_path: Path) -> None:
     _strata, pooled = evaluate_partitioned_records(
         [[_record(mx="mx.example.net")]],
         rules,
-        min_count=1,
-        min_distinct_namespaces=1,
-        minimum_improvement=0.1,
-        maximum_regression=0.0,
+        PromotionThresholds(1, 1, 0.1, 0.0),
     )
 
     catalog_baseline.assert_aggregate_safe(pooled)
@@ -411,10 +400,7 @@ def test_acceptance_does_not_claim_per_candidate_recurrence() -> None:
     _, pooled = evaluate_partitioned_records(
         [[_record(mx="vendor.invalid")]],
         (CandidateRule("synthetic", "mx", "vendor.invalid"),),
-        min_count=100,
-        min_distinct_namespaces=100,
-        minimum_improvement=0.1,
-        maximum_regression=0.0,
+        PromotionThresholds(100, 100, 0.1, 0.0),
     )
 
     assert pooled["decision"]["accepted"] is True

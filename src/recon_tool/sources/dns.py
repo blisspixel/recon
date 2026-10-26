@@ -94,9 +94,15 @@ _PROGRESS_UNITS = {"email_security": collection_progress.MTA_STS_UNIT, "cert_int
 def _unit_outcome(unit: str, ctx: _DetectionCtx) -> collection_progress.UnitOutcome:
     """Classify a DNS-internal progress unit from the shared context."""
     if unit == collection_progress.CT_UNIT:
+        ct_cached = ctx.ct_cache_age_days is not None or ctx.ct_attempt_outcome == "cache_hit"
+        has_summary = (
+            False
+            if ct_cached and ctx.ct_subdomain_count == 0
+            else collection_progress.ct_has_observations((), ctx.cert_summary, ctx.infrastructure_clusters)
+        )
         return collection_progress.ct_outcome(
             subdomain_count=ctx.ct_subdomain_count,
-            has_summary=collection_progress.ct_has_observations((), ctx.cert_summary, ctx.infrastructure_clusters),
+            has_summary=has_summary,
             degraded=ctx.degraded_sources,
             attempt_outcome=ctx.ct_attempt_outcome,
         )
@@ -752,13 +758,15 @@ class DNSSource:
         # else (CT) contributed: the DNS source made no observation at all.
         # Report that as a whole-source failure instead of an empty success,
         # so a lookup whose every source failed reaches ``all_sources_failed``.
-        if (
-            ledger.all_unavailable
-            and not ctx.services
-            and not collection_progress.ct_has_observations(
+        ct_cached = ctx.ct_cache_age_days is not None or ctx.ct_attempt_outcome == "cache_hit"
+        ct_contributed = (
+            bool(ctx.ct_related_domains)
+            if ct_cached
+            else collection_progress.ct_has_observations(
                 ctx.ct_related_domains, ctx.cert_summary, ctx.infrastructure_clusters
             )
-        ):
+        )
+        if ledger.all_unavailable and not ctx.services and not ct_contributed:
             return SourceResult(
                 source_name="dns_records",
                 error=(

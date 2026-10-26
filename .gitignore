@@ -66,6 +66,8 @@ docs/accuracy.md
 !/validation/catalog_maintenance_round.py
 !/validation/catalog_result_input.py
 !/validation/catalog_baseline.py
+!/validation/run_path_safety.py
+!/validation/evaluate_catalog_promotions.py
 # Frozen, aggregate-only agent-portability preregistration and its network-free
 # validator. Client transcripts, hidden reasoning, and run records remain under
 # the ignored validation/agent-portability-local/ workspace.
@@ -74,6 +76,10 @@ docs/accuracy.md
 !/validation/2026-08-14-agent-portability-preflight.md
 !/validation/2026-08-20-agent-portability-preflight.md
 # Disclosure-safe aggregate dispositions for bounded public-evidence reviews.
+!/validation/2026-06-25-squarespace-ext-sq.md
+!/validation/2026-06-25-ultradns-web-forwarding.md
+!/validation/2026-06-26-c3-ct-partial.md
+!/validation/2026-08-13-catalog-rank-round.md
 !/validation/2026-08-20-agent-portability-cost-gate.md
 !/validation/2026-08-20-microsoft-residual-review.md
 !/validation/2026-08-21-statuspage-fingerprint-review.md

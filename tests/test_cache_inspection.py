@@ -127,7 +127,11 @@ _SCENARIO_FIELDS: dict[str, dict[str, object]] = {
     "core_failure": {"degraded_sources": ("identity:user_realm",), "confidence": ConfidenceLevel.LOW},
     "dns_channel_failure": {"degraded_sources": ("dns:mx",)},
     "all_ct_failed": {"degraded_sources": ("certspotter", "crt.sh")},
-    "ct_fallback_recovered": {"degraded_sources": ("crt.sh",), "ct_provider_used": "certspotter"},
+    "ct_fallback_recovered": {
+        "degraded_sources": ("crt.sh",),
+        "ct_provider_used": "certspotter",
+        "ct_subdomain_count": 5,
+    },
     "ct_cache_recovered": {
         "degraded_sources": ("certspotter", "crt.sh"),
         "ct_provider_used": "crt.sh (cached)",

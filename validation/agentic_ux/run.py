@@ -81,6 +81,7 @@ class SessionRecord:
     cost_usd: float
     model: str
     provider: str
+    cost_known: bool = True
 
 
 def _strip_fusion(payload: dict[str, Any]) -> dict[str, Any]:
@@ -189,6 +190,7 @@ def run_session(
         input_tokens=response.input_tokens,
         output_tokens=response.output_tokens,
         cost_usd=response.cost_usd,
+        cost_known=response.cost_known,
         model=response.model,
         provider=response.provider,
     )
@@ -417,7 +419,10 @@ def render_report(
     parts.append(f"- Started: {started_at.isoformat()}")
     parts.append(f"- Finished: {finished_at.isoformat()} (duration {duration:.1f}s)")
     parts.append(f"- Tokens: {total_input:,} input / {total_output:,} output")
-    parts.append(f"- Realized cost: **${total_cost:.4f}**\n")
+    if all(record.cost_known for record in records):
+        parts.append(f"- Realized cost: **${total_cost:.4f}**\n")
+    else:
+        parts.append("- Realized cost: cost unknown, pass --input-price/--output-price\n")
     parts.append("## Methodology\n")
     parts.append(
         "Three persona system prompts (security analyst, due-diligence "
@@ -461,9 +466,10 @@ def render_report(
     for record in records:
         fusion_label = "fusion=on" if record.fusion else "fusion=off"
         parts.append(f"### {record.persona} / {record.fixture} / {fusion_label}\n")
-        parts.append(
-            f"_Tokens: {record.input_tokens:,} in / {record.output_tokens:,} out; cost ${record.cost_usd:.4f}_\n",
+        cost_msg = (
+            f"cost ${record.cost_usd:.4f}" if record.cost_known else "cost unknown, pass --input-price/--output-price"
         )
+        parts.append(f"_Tokens: {record.input_tokens:,} in / {record.output_tokens:,} out; {cost_msg}_\n")
         parts.append("**Agent response:**\n")
         parts.append("```markdown")
         parts.append(record.response_text.strip() or "(empty response)")
@@ -518,8 +524,12 @@ def _build_parser() -> argparse.ArgumentParser:
         prog="validation.agentic_ux.run",
         description="Run the v1.9.2 agentic UX validation matrix.",
     )
-    parser.add_argument("--provider", default="anthropic", choices=("anthropic", "openai", "xai"))
-    parser.add_argument("--model", default="claude-sonnet-4-6")
+    parser.add_argument(
+        "--provider",
+        default="anthropic",
+        choices=("anthropic", "openai", "xai", "openrouter", "google", "local"),
+    )
+    parser.add_argument("--model", default="claude-sonnet-5-5")
     parser.add_argument("--base-url", default=None, help="Override provider base URL.")
     parser.add_argument("--input-price", type=float, default=None, help="USD per million input tokens.")
     parser.add_argument("--output-price", type=float, default=None, help="USD per million output tokens.")
@@ -599,6 +609,7 @@ def main(argv: list[str] | None = None) -> int:
                 "input_tokens": r.input_tokens,
                 "output_tokens": r.output_tokens,
                 "cost_usd": r.cost_usd,
+                "cost_known": r.cost_known,
                 "model": r.model,
                 "provider": r.provider,
                 "response_text": r.response_text,
@@ -612,8 +623,13 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     total_cost = sum(r.cost_usd for r in records)
+    cost_summary = (
+        f"${total_cost:.4f} realized cost"
+        if all(record.cost_known for record in records)
+        else "cost unknown (pass --input-price/--output-price)"
+    )
     print(
-        f"wrote agentic validation report ({len(records)} sessions, ${total_cost:.4f} realized cost)",
+        f"wrote agentic validation report ({len(records)} sessions, {cost_summary})",
         file=sys.stderr,
     )
     return 0

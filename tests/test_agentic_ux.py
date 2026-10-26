@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import json
 import sys
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, ClassVar
@@ -126,6 +127,7 @@ def test_openai_provider_normalizes_response(monkeypatch: pytest.MonkeyPatch) ->
         content = "ok"
 
     class _Choice:
+        finish_reason = "stop"
         message: ClassVar[_Message] = _Message()
 
     class _Usage:
@@ -181,6 +183,61 @@ def test_xai_provider_uses_xai_base_url(monkeypatch: pytest.MonkeyPatch) -> None
     providers.XAIProvider("grok-4")
     assert captured.get("base_url") == "https://api.x.ai/v1"
     assert captured.get("api_key") == "sk-grok"
+
+
+def test_openrouter_provider_uses_openrouter_base_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, object] = {}
+
+    class _Client:
+        def __init__(self, **kwargs: object) -> None:
+            captured.update(kwargs)
+            self.chat: object = None
+
+    fake_module = type(sys)("openai")
+    fake_module.__dict__["OpenAI"] = _Client
+    monkeypatch.setitem(sys.modules, "openai", fake_module)
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-test")
+
+    providers.OpenRouterProvider("anthropic/claude-sonnet-5-5")
+    assert captured.get("base_url") == "https://openrouter.ai/api/v1"
+    assert captured.get("api_key") == "sk-or-test"
+
+
+def test_google_provider_uses_gemini_base_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, object] = {}
+
+    class _Client:
+        def __init__(self, **kwargs: object) -> None:
+            captured.update(kwargs)
+            self.chat: object = None
+
+    fake_module = type(sys)("openai")
+    fake_module.__dict__["OpenAI"] = _Client
+    monkeypatch.setitem(sys.modules, "openai", fake_module)
+    monkeypatch.setenv("GEMINI_API_KEY", "sk-gemini-test")
+
+    providers.GoogleProvider("gemini-2.5-flash")
+    assert captured.get("base_url") == "https://generativelanguage.googleapis.com/v1beta/openai/"
+    assert captured.get("api_key") == "sk-gemini-test"
+
+
+def test_local_provider_defaults_without_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, object] = {}
+
+    class _Client:
+        def __init__(self, **kwargs: object) -> None:
+            captured.update(kwargs)
+            self.chat: object = None
+
+    fake_module = type(sys)("openai")
+    fake_module.__dict__["OpenAI"] = _Client
+    monkeypatch.setitem(sys.modules, "openai", fake_module)
+    monkeypatch.delenv("LOCAL_API_KEY", raising=False)
+
+    provider = providers.LocalProvider("llama3")
+    assert captured.get("base_url") == "http://localhost:11434/v1"
+    assert captured.get("api_key") == "local"
+    assert provider.name == "local"
 
 
 # --- Rubric scoring ----------------------------------------------------------
@@ -562,3 +619,15 @@ def test_committed_fixtures_have_expected_shape() -> None:
     assert "posterior_observations" in sparse
     # Sparse fixture should report sparse=true on at least one node, by design.
     assert any(p.get("sparse") for p in sparse["posterior_observations"])
+
+
+@pytest.mark.parametrize("known", [False, True])
+def test_zero_cost_report_distinguishes_unknown_from_explicit_free(known: bool) -> None:
+    records = [
+        replace(record, model="llama-remote", cost_usd=0.0, cost_known=known)
+        for record in run.run_matrix(_FakeProvider(), max_tokens=64)
+    ]
+    now = datetime(2026, 10, 26, tzinfo=UTC)
+    body = run.render_report(records, run.score_records(records), started_at=now, finished_at=now)
+    assert ("cost unknown" in body) is not known
+    assert ("$0.0000" in body) is known

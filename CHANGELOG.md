@@ -26,6 +26,54 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.26.1] - 2026-10-26
+
+Fix routine MCP request logging privacy, reject invalid encrypted DNS views,
+and correct collection status, capsule determinism, and validation packaging.
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes. Maintainer validation
+helpers add provider selection and endpoint overrides.
+
+### Security
+
+- Suppress MCP server request-level logging by default (runtime level WARNING)
+  to protect investigated domains from leaking into client log files. Full
+  request logging is opt-in via `RECON_MCP_LOG_REQUESTS=1`. Preserve root
+  logging configuration during MCP SDK construction.
+- Reject typos and invalid values in RECON_DNS_VIEW on CLI lookups with exit
+  code 2, preventing quiet fallback to unencrypted host DNS when an operator
+  intended encrypted resolution.
+
+### Fixed
+
+- Prevent offline lookups from exiting 0 when old certificate summaries without
+  subdomains exist in cache: when all live DNS queries fail and no services are
+  observed, a cached certificate summary without subdomains no longer recovers
+  the DNS source, correctly exiting 4 (all_sources_failed). (#312)
+- Disentangle certificate transparency status on domains with no certificates:
+  soft-empty provider responses without recovered certificates or cache are no
+  longer recorded as ct_provider_used, eliminating contradictory degraded and
+  recovered status messages. (#313)
+- Canonicalize lexical observation example order: sort matching subdomain
+  labels alphabetically before choosing examples so identical subdomain
+  collections yield deterministic statements and zero false interpretation
+  changes during capsule comparisons. (#311)
+- Include all tracked validation modules in source distributions: allowlist
+  validation/run_path_safety.py, validation/evaluate_catalog_promotions.py,
+  and four tracked validation notes in .gitignore so VCS-aware sdist builds
+  package all files needed by tests. (#314)
+
+### Changed
+
+- Refresh validation model helpers: default to current claude-sonnet-5-5,
+  update pricing table and documentation examples with current model identifiers,
+  and flag unknown model pricing instead of reporting a misleading $0.00. (#315)
+- Support OpenRouter, Google Gemini, and local models (Ollama, vLLM, LM Studio)
+  alongside Anthropic, OpenAI, and xAI in validation/agentic_ux and
+  validation/triage_llm.py. (#316)
+
 ## [2.26.0] - 2026-10-25
 
 Add an opt-in encrypted DNS view for CLI lookups and refresh DNS security,

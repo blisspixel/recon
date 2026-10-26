@@ -294,11 +294,23 @@ returns flat explanations for its observations, not an `explanation_dag`.
 """
 
 
-mcp = MCPApplication(
-    "recon-tool",
-    instructions=SERVER_INSTRUCTIONS + "\n" + advertised_dns_capability(MCP_COLLECTION_POLICY),
-    **mcp_application_options(),
-)
+# SDK construction configures the root logger. Importing this library must
+# preserve the embedding host's logging configuration.
+_root_logger = logging.getLogger()
+_root_handlers = _root_logger.handlers[:]
+_root_level = _root_logger.level
+try:
+    mcp = MCPApplication(
+        "recon-tool",
+        instructions=SERVER_INSTRUCTIONS + "\n" + advertised_dns_capability(MCP_COLLECTION_POLICY),
+        **mcp_application_options(),
+    )
+finally:
+    for _handler in _root_logger.handlers[:]:
+        if _handler not in _root_handlers:
+            _root_logger.removeHandler(_handler)
+            _handler.close()
+    _root_logger.setLevel(_root_level)
 
 
 def internal_lookup_error(domain: str, request_id: str, exc: BaseException, action: str = "looking up") -> str:
@@ -344,7 +356,7 @@ async def resolve_or_cache(domain: str) -> tuple[TenantInfo, list[SourceResult]]
         raise
     except Exception as exc:
         request_id = uuid.uuid4().hex[:12]
-        logger.exception("Unexpected error looking up %s (request_id=%s)", validated, request_id)
+        logger.exception("Unexpected error looking up domain (request_id=%s)", request_id)
         return internal_lookup_error(validated, request_id, exc)
 
     cache_set(validated, info, results)
@@ -385,7 +397,7 @@ async def _resolve_validated_domain_for_tool(validated: str, request_id: str) ->
     except asyncio.CancelledError:
         raise
     except Exception as exc:
-        logger.exception("Unexpected error looking up %s (request_id=%s)", validated, request_id)
+        logger.exception("Unexpected error looking up domain (request_id=%s)", request_id)
         raise ToolError(internal_lookup_error(validated, request_id, exc)) from exc
 
     cache_set(validated, info, results)

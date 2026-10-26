@@ -40,7 +40,9 @@ def test_regular_config_symlink_remains_supported(tmp_path: Path) -> None:
 @pytest.mark.parametrize("symlink", [False, True])
 def test_fifo_config_is_rejected_before_open(tmp_path: Path, symlink: bool) -> None:
     fifo = tmp_path / "pipe"
-    os.mkfifo(fifo)
+    mkfifo = getattr(os, "mkfifo", None)
+    assert mkfifo is not None
+    mkfifo(fifo)
     path = tmp_path / "config.json"
     if symlink:
         path.symlink_to(fifo)
