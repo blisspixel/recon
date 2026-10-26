@@ -82,3 +82,17 @@ Consequences: MCP works without setup wherever outbound DoH on port 443 is
 allowed. Cloudflare sees the names MCP queries unless the operator saves a
 different service; the MCP guide names that disclosure and the override.
 Networks that block DoH need a saved service they permit.
+
+## Amendment, 2026-10-25: opt-in encrypted view for the CLI
+
+The maintainer asked for encrypted DNS by default where it is safe. Flipping
+the trusted CLI default would change results for every existing user, break
+lookups on networks that block DoH, and send every CLI query to a public
+resolver operator. The CLI therefore keeps host resolution by default and opts
+in only on an explicit `RECON_DNS_VIEW=caller-safe`. The other `RECON_DNS_*`
+settings then apply exactly as for MCP, through the same immutable policy,
+task-local scope, cache identity binding and no-fallback rule. Any other value,
+including `none` and `operator`, keeps host DNS for the CLI. With the opt-in
+set, invalid settings refuse collection before any collector runs (exit code
+2) rather than silently returning to host DNS; offline commands keep working.
+No new flag is added.

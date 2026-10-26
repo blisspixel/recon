@@ -101,10 +101,22 @@ def _load_host_resolver() -> dns.asyncresolver.Resolver:
 
 
 HOST_RESOLVER = _load_host_resolver()
-MCP_COLLECTION_POLICY = CollectionPolicy.from_environment(
-    os.environ, tuple(server for server in HOST_RESOLVER.nameservers if isinstance(server, str))
-)
+_HOST_SERVERS = tuple(server for server in HOST_RESOLVER.nameservers if isinstance(server, str))
+MCP_COLLECTION_POLICY = CollectionPolicy.from_environment(os.environ, _HOST_SERVERS)
 OPERATOR_POLICY = CollectionPolicy("operator")
+
+
+def cli_collection_policy(environment: Mapping[str, str] = os.environ) -> CollectionPolicy | None:
+    """Return the CLI's opt-in encrypted view, or None to keep trusted host DNS.
+
+    Only an explicit ``RECON_DNS_VIEW=caller-safe`` opts the CLI in; the other
+    ``RECON_DNS_*`` settings then apply exactly as they do for MCP. Invalid
+    settings yield an unavailable policy so collection refuses instead of
+    silently returning to host DNS.
+    """
+    if environment.get("RECON_DNS_VIEW") != "caller-safe":
+        return None
+    return CollectionPolicy.from_environment(environment, _HOST_SERVERS)
 
 
 @dataclass(frozen=True, slots=True)

@@ -11,7 +11,12 @@ from typing import Annotated, Any
 
 import typer
 
-from recon_tool.cli.shared import fmt_exc, positive_finite_float, preflight_artifact_output
+from recon_tool.cli.shared import (
+    fmt_exc,
+    positive_finite_float,
+    preflight_artifact_output,
+    reject_unavailable_dns_view,
+)
 from recon_tool.exit_codes import EXIT_INTERNAL, EXIT_NO_DATA, EXIT_VALIDATION
 from recon_tool.formatter import render_error
 
@@ -23,6 +28,8 @@ _UNEXPECTED_REVIEW_ERROR = "Review collection failed because of an internal erro
 
 
 def _failure_exit_code(error_type: str) -> int:
+    if error_type == "dns_view_unavailable":
+        return EXIT_VALIDATION
     return EXIT_NO_DATA if error_type == "no_data" else EXIT_INTERNAL
 
 
@@ -65,6 +72,7 @@ def review(
     from recon_tool.review_bundle import ReviewCollectionContext, build_review_bundle, build_review_error_bundle
 
     coordinate, validated = _validated_review_input(domain, output, force=force)
+    reject_unavailable_dns_view()
 
     async def _collect() -> tuple[dict[str, Any], int]:
         started_at = datetime.now(UTC)

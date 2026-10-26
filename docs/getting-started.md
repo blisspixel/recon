@@ -321,6 +321,37 @@ keeps its hedges under `strict` by design, because dropping the hedge on sparse
 evidence would overclaim. So the same insight can read one way on a dense record
 and another on a thin one, and identically when neither is dense.
 
+## Encrypted DNS
+
+By default the `recon` command uses your system resolver, so results match
+what your machine sees and nothing changes on networks that block encrypted
+DNS. To send CLI lookups over encrypted DNS instead, opt in once in your shell
+profile:
+
+```bash
+export RECON_DNS_VIEW=caller-safe
+```
+
+The CLI then uses the same encrypted view as the MCP server: saved
+`RECON_DNS_SERVERS` and `RECON_DNS_TLS_NAME` settings if present, otherwise
+Cloudflare or Google when your system already uses one of them, otherwise
+Cloudflare DNS-over-HTTPS (`cloudflare-dns.com`). Your local, office or VPN
+resolver is not consulted, so split-horizon private answers stay out of the
+results, and the chosen resolver operator sees the names you look up. See
+[DNS view isolation](mcp.md#dns-view-isolation) for the Google and Quad9
+settings and the DNS-over-TLS option.
+
+Only the exact value `caller-safe` opts the CLI in; any other value, or none,
+keeps the system resolver. With the opt-in set, invalid `RECON_DNS_*` settings
+make lookups exit with code 2 before any collection instead of silently using
+the system resolver. A failure never falls back to the system resolver. If the
+network blocks encrypted DNS, every source fails and recon says so; save a
+resolver the network permits, or unset `RECON_DNS_VIEW`. Structured output
+records the view in `resolution_vantage` (`caller-safe` or `operator`). A result
+cached under one view is never reused under the other. The result cache holds
+one entry per domain; collecting under a different view replaces that entry,
+so switching back collects again.
+
 ## Input Normalization
 
 Pass a public-suffix domain (for example `example.com`). A bare hostname without

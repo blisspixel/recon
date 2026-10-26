@@ -550,8 +550,18 @@ async def resolve_tenant(
         ReconLookupError: If all sources fail, no sources are configured, or timeout.
     """
     from recon_tool.collection_limits import admit_namespace
+    from recon_tool.network_policy import current_policy
 
     admit_namespace(domain)
+    # A bound but unusable view (disabled, or invalid saved settings) refuses
+    # before any collector runs; it never falls back to host DNS.
+    if not current_policy().available:
+        raise ReconLookupError(
+            domain=domain,
+            message="The encrypted DNS view is disabled or its RECON_DNS_* settings are invalid; "
+            "fix them, or unset RECON_DNS_VIEW to use the system resolver",
+            error_type="dns_view_unavailable",
+        )
     if pool is None:
         pool = default_pool()
 
@@ -570,8 +580,6 @@ async def resolve_tenant(
     # Stamp the fresh-resolution timestamp so downstream consumers (CLI,
     # MCP, cache serializer) can distinguish a live-resolved result from
     # a cache hit. cached_at is set only by the cache read path.
-    from recon_tool.network_policy import current_policy
-
     policy = current_policy()
     info = replace(
         info,

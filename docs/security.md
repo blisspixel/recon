@@ -20,7 +20,7 @@ credentials, local retention, and hosting controls are additional trust boundari
 
 | What recon trusts | Rationale |
 |---|---|
-| Operator-selected DNS view | Trusted CLI uses host DNS. MCP binds a caller-safe view at startup; legitimate split DNS can otherwise disclose private answers without resolver compromise. See the CNAME boundary below. |
+| Operator-selected DNS view | Trusted CLI uses host DNS unless the operator opts in with `RECON_DNS_VIEW=caller-safe`. MCP binds a caller-safe view at startup; legitimate split DNS can otherwise disclose private answers without resolver compromise. See the CNAME boundary below. |
 | Public OIDC / UserRealm / Google identity / CT endpoints | These are Microsoft, Google, and Sectigo-operated services. recon validates response shapes but cannot out-verify the underlying TLS-authenticated origin. |
 | `src/recon_tool/data/fingerprints.generated.json` (built-in fingerprints) | Installed wheels load the checked-in generated JSON. Canonical split YAML is contributor source and ships in the source distribution, not as a second wheel runtime catalog. Both have the same trust level as Python source. |
 | `src/recon_tool/data/*.yaml` and `src/recon_tool/data/profiles/*.yaml` (signals, posture rules, profiles) | These ship with the package and are loaded via `yaml.safe_load`. Same trust level as Python source. |

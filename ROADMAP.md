@@ -37,14 +37,14 @@ absent.
 
 ## Resume here
 
-State at 2026-10-25: the release named in Status above is tagged and published
-to GitHub Release and PyPI; its latest change makes MCP DNS collection default
-to encrypted Cloudflare DNS-over-HTTPS (see the
-[ADR-0019 amendment](docs/adr/0019-mcp-dns-view-isolation.md)). `main` is the
-only branch, and no implementation work is in flight. One issue is open:
-[#303](https://github.com/blisspixel/recon/issues/303), a Windows MCP launch
-test that timed out once under CI load; it lists two candidate fixes and is the
-natural first task.
+State at 2026-10-25: v2.25.0 is published to GitHub Release and PyPI.
+Issue [#303](https://github.com/blisspixel/recon/issues/303) is closed by
+[#305](https://github.com/blisspixel/recon/pull/305), which warms the synthetic
+MCP installation before timed launches. No issues remain open. The next release
+batch adds the CLI encrypted-DNS opt-in, fixes encrypted-resolver diagnostics,
+and includes the dnspython security update and refreshed development tooling.
+The remaining handoff is the checked v2.26.0 preparation PR, exact-main tag,
+and verified GitHub Release/PyPI publication through the release process.
 
 When picking work back up:
 

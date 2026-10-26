@@ -9,10 +9,12 @@ them back to their historical `_name` where convenient.
 
 from __future__ import annotations
 
+import contextlib
 import math
 import shutil
 import textwrap
 from collections.abc import Sequence
+from contextlib import AbstractContextManager
 from pathlib import Path
 from typing import Literal, Never
 
@@ -33,6 +35,44 @@ _NARROW_HELP_COLUMNS = 70
 # column worth hanging beside the name before falling back to that block.
 _BLOCK_INDENT = 8
 _MIN_HANGING_DETAIL = 24
+
+
+_ENCRYPTED_DNS_GUIDE = "https://github.com/blisspixel/recon/blob/main/docs/getting-started.md#encrypted-dns"
+
+
+def cli_collection_context() -> AbstractContextManager[None]:
+    """Bind the opt-in encrypted DNS view for this CLI process, if requested.
+
+    Without an explicit ``RECON_DNS_VIEW=caller-safe`` the CLI keeps trusted
+    host resolution, so the default experience is unchanged.
+    """
+    from recon_tool.network_policy import cli_collection_policy, collection_scope
+
+    policy = cli_collection_policy()
+    return collection_scope(policy) if policy is not None else contextlib.nullcontext()
+
+
+def reject_unavailable_dns_view() -> None:
+    """Refuse a whole multi-domain run before work when the bound view is unusable."""
+    from recon_tool.formatter import get_err_console, render_error
+    from recon_tool.network_policy import current_policy
+
+    if current_policy().available:
+        return
+    render_error(
+        "The encrypted DNS view is disabled or its RECON_DNS_* settings are invalid; "
+        "fix them, or unset RECON_DNS_VIEW to use the system resolver"
+    )
+    _print_unbroken(get_err_console(), f"See {_ENCRYPTED_DNS_GUIDE}")
+    raise typer.Exit(code=EXIT_VALIDATION)
+
+
+def encrypted_dns_active() -> bool:
+    """Report whether this process collects through the opt-in encrypted view."""
+    from recon_tool.network_policy import current_policy
+
+    policy = current_policy()
+    return policy.mode == "caller-safe" and policy.available
 
 
 def help_markup_mode() -> Literal["rich"] | None:
@@ -220,9 +260,24 @@ def raise_lookup_error(error: ReconLookupError, *, domain: str | None = None) ->
         raise typer.Exit(code=EXIT_NO_DATA) from None
 
     render_error(fmt_exc(error))
+    if error.error_type == "dns_view_unavailable":
+        _print_unbroken(get_err_console(), f"See {_ENCRYPTED_DNS_GUIDE}")
+        raise typer.Exit(code=EXIT_VALIDATION) from None
     if error.error_type in {"timeout", "all_sources_failed"}:
         get_err_console().print("Run recon doctor to check online source connectivity, then retry.")
+        if encrypted_dns_active():
+            _print_unbroken(
+                get_err_console(),
+                "Encrypted DNS is on (RECON_DNS_VIEW=caller-safe). If this network blocks it, "
+                f"save a resolver it permits or unset RECON_DNS_VIEW: {_ENCRYPTED_DNS_GUIDE}",
+            )
     raise typer.Exit(code=EXIT_INTERNAL) from None
+
+
+def _print_unbroken(console: Console, text: str) -> None:
+    """Wrap at word boundaries only, so a link stays whole and copyable."""
+    for line in wrap_plain_text(text, max(1, console.width)):
+        console.print(escape(line), soft_wrap=True)
 
 
 def lookup_validate(

@@ -23,7 +23,7 @@ from rich.markup import escape
 from recon_tool.cli.batch_summary import build_batch_summary_document as _batch_build_summary_document
 from recon_tool.cli.batch_summary import emit_batch_summary as batch_emit_summary
 from recon_tool.cli.shared import fmt_exc as _fmt_exc
-from recon_tool.cli.shared import raise_lookup_error
+from recon_tool.cli.shared import raise_lookup_error, reject_unavailable_dns_view
 from recon_tool.exit_codes import (
     EXIT_INTERNAL,
     EXIT_VALIDATION,
@@ -225,6 +225,7 @@ def batch_validate_flags(
     if include_ecosystem and not json_output:
         render_error("--include-ecosystem requires --json")
         raise typer.Exit(code=EXIT_VALIDATION)
+    reject_unavailable_dns_view()
 
 
 def _batch_load_domains(file: str, console: Any, *, announce_dupes: bool) -> list[str]:
