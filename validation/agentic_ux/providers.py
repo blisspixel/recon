@@ -50,6 +50,7 @@ class ChatResponse:
     cost_usd: float
     model: str
     provider: str
+    cost_known: bool = True
 
 
 class ProviderError(RuntimeError):
@@ -76,19 +77,29 @@ class ChatProvider(Protocol):
 # --- Pricing -----------------------------------------------------------------
 
 # Per-million-token list prices in USD. Best-effort public values at the
-# time of authoring; the runner accepts overrides on the command line.
+# time of authoring (checked 2026-10-26); the runner accepts overrides on the command line.
+# https://platform.claude.com/docs/en/about-claude/pricing
+# https://developers.openai.com/api/docs/pricing
+# https://docs.x.ai/developers/models
+# https://ai.google.dev/gemini-api/docs/pricing
+# Tiered and unlisted models require explicit prices. These estimates omit
+# caching, discounts and provider-specific routing charges.
 PRICING_USD_PER_MTOK: dict[str, tuple[float, float]] = {
     # Anthropic
     "claude-opus-4-7": (15.0, 75.0),
-    "claude-sonnet-4-6": (3.0, 15.0),
-    "claude-haiku-4-5": (1.0, 5.0),
+    "claude-sonnet-5-5": (2.0, 10.0),
+    "claude-sonnet-4-6": (3.0, 15.0),  # legacy
+    "claude-haiku-4-5": (1.0, 5.0),  # legacy
     # OpenAI
-    "gpt-5": (5.0, 15.0),
-    "gpt-5-mini": (1.0, 4.0),
-    "gpt-4.1": (2.0, 8.0),
+    "gpt-5.6-sol": (4.0, 20.0),
+    "gpt-6-luna": (0.1, 0.5),
+    "gpt-5-mini": (0.25, 1.0),
     # xAI
-    "grok-4": (3.0, 15.0),
+    "grok-4.7": (2.0, 6.0),
+    "grok-4": (3.0, 15.0),  # legacy
     "grok-4-mini": (0.6, 2.4),
+    # Google
+    "gemini-2.5-flash": (0.3, 2.5),
 }
 
 
@@ -189,6 +200,8 @@ class AnthropicProvider:
             cost_usd=cost,
             model=self.model,
             provider=self.name,
+            cost_known=self.model in PRICING_USD_PER_MTOK
+            or (self._input_price is not None and self._output_price is not None),
         )
 
 
@@ -259,6 +272,8 @@ class _OpenAICompatibleProvider:
             raise ProviderError(f"{self.name} call failed: {exc}") from exc
 
         choice = response.choices[0]
+        if choice.finish_reason != "stop" or getattr(choice.message, "tool_calls", None):
+            raise ProviderError("model response must complete normally with text only")
         text = choice.message.content or ""
         usage = response.usage
         in_tok = int(getattr(usage, "prompt_tokens", 0))
@@ -277,6 +292,8 @@ class _OpenAICompatibleProvider:
             cost_usd=cost,
             model=self.model,
             provider=self.name,
+            cost_known=self.model in PRICING_USD_PER_MTOK
+            or (self._input_price is not None and self._output_price is not None),
         )
 
 
@@ -295,12 +312,57 @@ class XAIProvider(_OpenAICompatibleProvider):
     api_key_env = "XAI_API_KEY"
 
 
+class OpenRouterProvider(_OpenAICompatibleProvider):
+    """Adapter over OpenRouter's OpenAI-compatible API."""
+
+    name = "openrouter"
+    default_base_url = "https://openrouter.ai/api/v1"
+    api_key_env = "OPENROUTER_API_KEY"
+
+
+class GoogleProvider(_OpenAICompatibleProvider):
+    """Adapter over Google Gemini's OpenAI-compatible API."""
+
+    name = "google"
+    default_base_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
+    api_key_env = "GEMINI_API_KEY"
+
+
+class LocalProvider(_OpenAICompatibleProvider):
+    """Adapter for local OpenAI-compatible endpoints (Ollama, vLLM, LM Studio)."""
+
+    name = "local"
+    default_base_url = "http://localhost:11434/v1"
+    api_key_env = "LOCAL_API_KEY"
+
+    def __init__(
+        self,
+        model: str,
+        *,
+        api_key: str | None = None,
+        base_url: str | None = None,
+        input_price: float | None = None,
+        output_price: float | None = None,
+    ) -> None:
+        key = api_key or os.environ.get(self.api_key_env) or "local"
+        super().__init__(
+            model,
+            api_key=key,
+            base_url=base_url,
+            input_price=input_price if input_price is not None else 0.0,
+            output_price=output_price if output_price is not None else 0.0,
+        )
+
+
 # --- Registry ----------------------------------------------------------------
 
 PROVIDER_REGISTRY: dict[str, type[ChatProvider]] = {
     "anthropic": AnthropicProvider,
     "openai": OpenAIProvider,
     "xai": XAIProvider,
+    "openrouter": OpenRouterProvider,
+    "google": GoogleProvider,
+    "local": LocalProvider,
 }
 
 

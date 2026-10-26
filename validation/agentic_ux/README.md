@@ -63,6 +63,9 @@ are falsifiable.
    - `ANTHROPIC_API_KEY` for Anthropic
    - `OPENAI_API_KEY` for OpenAI
    - `XAI_API_KEY` for xAI Grok
+   - `OPENROUTER_API_KEY` for OpenRouter
+   - `GEMINI_API_KEY` for Google Gemini
+   - (No key required for local models via Ollama, vLLM, LM Studio)
 3. The fixtures and personas in this directory (already committed).
 
 ## Running it
@@ -72,17 +75,35 @@ are falsifiable.
 uv run --group agentic-validation python -m validation.agentic_ux.run
 
 # Lower-cost model option
-uv run --group agentic-validation python -m validation.agentic_ux.run --model claude-haiku-4-5
+uv run --group agentic-validation python -m validation.agentic_ux.run --model claude-haiku-5-5
 
 # OpenAI
-uv run --group agentic-validation python -m validation.agentic_ux.run --provider openai --model gpt-5
+uv run --group agentic-validation python -m validation.agentic_ux.run --provider openai --model gpt-5.6-sol
 
 # xAI Grok
-uv run --group agentic-validation python -m validation.agentic_ux.run --provider xai --model grok-4
+uv run --group agentic-validation python -m validation.agentic_ux.run --provider xai --model grok-4.7
+
+# OpenRouter
+uv run --group agentic-validation python -m validation.agentic_ux.run --provider openrouter --model anthropic/claude-sonnet-5-5
+
+# Google Gemini
+uv run --group agentic-validation python -m validation.agentic_ux.run --provider google --model gemini-2.5-flash
+
+# Local model
+uv run --group agentic-validation python -m validation.agentic_ux.run --provider local --model llama3
 
 # Subset of personas / fixtures
 uv run --group agentic-validation python -m validation.agentic_ux.run --personas analyst,ops --fixtures synthetic-dense
 ```
+
+Pricing was reviewed on 2026-10-26 against the provider pages linked in
+`providers.py`. Reports distinguish unknown prices from explicit zero prices.
+Use `--input-price` and `--output-price` together for tiered models, routed
+OpenRouter IDs, or prices outside the table. Local provider runs report zero
+API charges by default; hardware and hosting costs are outside this estimate.
+`--base-url` overrides any OpenAI-compatible provider endpoint. The same
+provider names, key variables and endpoint overrides apply to
+`validation/triage_llm.py`; its private report records the provider and model.
 
 The runner writes the report to
 `validation/agentic_ux/local/report.md` by default. `--output` and

@@ -37,16 +37,18 @@ absent.
 
 ## Resume here
 
-State at 2026-10-25: the CLI encrypted-DNS opt-in is complete in
-[#309](https://github.com/blisspixel/recon/pull/309), alongside the DNS security,
-resolver-diagnostic and development-tooling maintenance batch. Issue
-[#303](https://github.com/blisspixel/recon/issues/303) is closed by
-[#305](https://github.com/blisspixel/recon/pull/305), which warms the synthetic
-MCP installation before timed launches. No issues or unfinished implementation
-work remain. Verify the release named in Status against its exact tag with
-`uv run python scripts/release_readiness.py --remote` before starting the next
-maintenance task; this checks publication and channel parity rather than
-assuming them from a merged release-preparation PR.
+State at 2026-10-26: the inherited maintenance batch addresses routine MCP
+request logging, invalid CLI DNS views, offline CT cache status (#312), empty CT
+status (#313), capsule lexical ordering (#311), sdist validation modules (#314),
+and validation model/provider maintenance (#315, #316). The v2.26.1 release boundary is this maintenance batch. Its publication
+evidence belongs to the exact-tag release workflow and remote readiness check,
+not a source-tree status note. The README remains aligned with the supported
+CLI and MCP surfaces.
+
+Next work is the MCP and packaging tracker #324, beginning with capability
+accuracy (#319) and portable plugin path expansion (#318), then progress
+notifications (#317). Display metadata, registry distribution, marketplace
+packaging, and additional client setup remain open in #320 through #323.
 
 When picking work back up:
 

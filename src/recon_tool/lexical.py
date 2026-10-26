@@ -298,7 +298,7 @@ def classify_subdomains(
             seen_by_cat["shard"].add(label)
             by_cat["shard"].append(label)
 
-    return by_cat
+    return {k: sorted(v) for k, v in by_cat.items()}
 
 
 def lexical_observations(

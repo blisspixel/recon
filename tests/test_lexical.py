@@ -235,3 +235,13 @@ class TestLexicalObservationDataclass:
         )
         with pytest.raises(AttributeError):
             obs.category = "Z"  # pyright: ignore[reportAttributeAccessIssue]
+
+
+class TestLexicalOrderDeterminism:
+    def test_shuffled_subdomain_order_yields_identical_observations(self):
+        names = ["dev.example.com", "stage.example.com", "qa.example.com", "uat.example.com"]
+        reversed_names = list(reversed(names))
+        obs1 = lexical_observations(names, "example.com")
+        obs2 = lexical_observations(reversed_names, "example.com")
+        assert obs1 == obs2
+        assert obs1[0].sample_labels == ("dev", "qa", "stage")

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json as json_mod
 import logging
+import os
 import time
 from dataclasses import dataclass, field, replace
 
@@ -113,7 +114,7 @@ class _ServerRuntimeState:
                     resolution_policy_id=_info.resolution_policy_id,
                 )
             except Exception:
-                logger.exception("Failed to refresh cached TenantInfo for %s", domain)
+                logger.exception("Failed to refresh cached TenantInfo")
                 self.cache.pop(domain, None)
                 continue
             self.cache_refresh_info(domain, refreshed, results)
@@ -218,11 +219,26 @@ def rate_limit_clear() -> None:
     _STATE.rate_limit_clear()
 
 
+def request_logging_enabled() -> bool:
+    """Return whether MCP request logging is explicitly enabled.
+
+    Routine request logging is disabled by default. Warning and exception
+    diagnostics remain available. Set ``RECON_MCP_LOG_REQUESTS=1`` to enable.
+    """
+    val = os.environ.get("RECON_MCP_LOG_REQUESTS", "").strip().lower()
+    return val in {"1", "true", "yes", "on"}
+
+
 def log_structured(level: int, msg: str, **fields: object) -> None:
     """Emit a structured log entry as JSON for machine-parseable logging.
 
     Falls back to standard logging format when JSON serialization fails.
+    Events below the effective logger level are suppressed.
     """
+    if level < logging.WARNING and not request_logging_enabled():
+        return
+    if not logger.isEnabledFor(level):
+        return
     entry = {"msg": msg, **fields}
     try:
         logger.log(level, json_mod.dumps(entry))

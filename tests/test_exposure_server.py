@@ -323,7 +323,9 @@ class TestNormalizedOperatorLogs:
         self,
         mock_resolve: AsyncMock,
         caplog: pytest.LogCaptureFixture,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        monkeypatch.setenv("RECON_MCP_LOG_REQUESTS", "1")
         mock_resolve.side_effect = [
             (SAMPLE_INFO, SAMPLE_RESULTS),
             (SAMPLE_INFO_B, SAMPLE_RESULTS_B),

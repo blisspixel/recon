@@ -157,7 +157,10 @@ them before sharing.
 
 Importing the MCP server does not add a process-wide logging handler. When the
 stdio server actually runs without an existing logging configuration, it adds a
-temporary stderr handler for that runtime and removes it on exit. An unexpected
+temporary stderr handler for that runtime and removes it on exit. Request-level
+logging of queried targets is disabled by default (level WARNING) and opt-in
+via `RECON_MCP_LOG_REQUESTS=1`. Warning and exception diagnostics can still
+contain domain inputs; review client logs before sharing them. An unexpected
 server failure emits one bounded control-free line with the exception type;
 exception text cannot inject a second row or terminal control sequence.
 

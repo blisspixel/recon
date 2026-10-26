@@ -111,12 +111,17 @@ def cli_collection_policy(environment: Mapping[str, str] = os.environ) -> Collec
 
     Only an explicit ``RECON_DNS_VIEW=caller-safe`` opts the CLI in; the other
     ``RECON_DNS_*`` settings then apply exactly as they do for MCP. Invalid
-    settings yield an unavailable policy so collection refuses instead of
+    settings or unrecognized view values yield an unavailable policy so collection refuses instead of
     silently returning to host DNS.
     """
-    if environment.get("RECON_DNS_VIEW") != "caller-safe":
+    if "RECON_DNS_VIEW" not in environment:
         return None
-    return CollectionPolicy.from_environment(environment, _HOST_SERVERS)
+    view = environment["RECON_DNS_VIEW"]
+    if view in {"", "operator"}:
+        return None
+    if view == "caller-safe":
+        return CollectionPolicy.from_environment(environment, _HOST_SERVERS)
+    return CollectionPolicy("unavailable", available=False)
 
 
 @dataclass(frozen=True, slots=True)

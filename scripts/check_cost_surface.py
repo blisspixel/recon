@@ -40,6 +40,8 @@ FORBIDDEN_EXECUTION_MARKERS = {
     "ANTHROPIC_API_KEY": "paid model provider key",
     "OPENAI_API_KEY": "paid model provider key",
     "XAI_API_KEY": "paid model provider key",
+    "OPENROUTER_API_KEY": "paid model provider key",
+    "GEMINI_API_KEY": "paid model provider key",
     "api.anthropic.com": "paid model provider endpoint",
     "api.openai.com": "paid model provider endpoint",
     "api.x.ai": "paid model provider endpoint",
@@ -59,6 +61,9 @@ FORBIDDEN_WORKFLOW_MARKERS = {
     "--provider anthropic": "manual paid validation provider invoked from workflow",
     "--provider openai": "manual paid validation provider invoked from workflow",
     "--provider xai": "manual paid validation provider invoked from workflow",
+    "--provider openrouter": "manual paid validation provider invoked from workflow",
+    "--provider google": "manual paid validation provider invoked from workflow",
+    "--provider local": "manual paid validation provider invoked from workflow",
 }
 
 DEPENDENCY_NAME_RE = re.compile(r"^\s*([A-Za-z0-9_.-]+)")

@@ -26,6 +26,7 @@ from recon_tool.formatter.classify_tables import CATEGORY_BY_SLUG, SERVICE_CATEG
 from recon_tool.json_limits import load_bounded_json_file
 from recon_tool.regex_safety import validate_regex
 from recon_tool.sources.dns_tables import cname_target_pattern_matches
+from validation.agentic_ux.providers import ChatMessage, ChatProvider, get_provider
 from validation.run_path_safety import validate_private_output_root
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -306,6 +307,12 @@ def _call_model(system: str, user: str, *, model: str, api_key: str, max_tokens:
     return _parse_json(text)
 
 
+def call_compatible_model(system: str, user: str, *, client: ChatProvider, max_tokens: int) -> object:
+    response = client.chat(system, [ChatMessage(role="user", content=user)], max_tokens=max_tokens)
+    print("Model call completed; response remains untrusted pending validation.", file=sys.stderr)
+    return _parse_json(response.text)
+
+
 def _format_yaml(entries: list[dict[str, Any]]) -> str:
     """Serialize a private pending envelope, deliberately not a catalog document."""
     proposals: dict[str, dict[str, Any]] = {}
@@ -420,6 +427,24 @@ def _write_outputs(outputs: dict[Path, str]) -> None:
             os.close(descriptor)
 
 
+def _resolve_api_key(provider: str) -> str:
+    key_env = {
+        "anthropic": "ANTHROPIC_API_KEY",
+        "openai": "OPENAI_API_KEY",
+        "xai": "XAI_API_KEY",
+        "openrouter": "OPENROUTER_API_KEY",
+        "google": "GEMINI_API_KEY",
+    }.get(provider)
+    if provider == "local":
+        return os.environ.get("LOCAL_API_KEY") or "local"
+    if key_env:
+        key = os.environ.get(key_env)
+        if not key:
+            raise ValueError(f"{key_env} is not set")
+        return key
+    raise ValueError(f"unsupported provider: {provider}")
+
+
 def main(argv: list[str] | None = None) -> int:
     arguments = list(sys.argv[1:] if argv is None else argv)
     if any(argument == "--api-key" or argument.startswith("--api-key=") for argument in arguments):
@@ -438,7 +463,13 @@ def main(argv: list[str] | None = None) -> int:
         help="New private pending proposal envelope, not loadable catalog YAML.",
     )
     parser.add_argument("--raw", type=Path, default=None, help="Optional new private file for the validated response.")
-    parser.add_argument("--model", default="claude-sonnet-4-6")
+    parser.add_argument(
+        "--provider",
+        default="anthropic",
+        choices=("anthropic", "openai", "xai", "openrouter", "google", "local"),
+    )
+    parser.add_argument("--model", default="claude-sonnet-5-5")
+    parser.add_argument("--base-url", default=None, help="Optional custom base URL for OpenAI-compatible providers.")
     parser.add_argument("--max-tokens", type=int, default=20_000)
     args = parser.parse_args(arguments)
     try:
@@ -458,18 +489,24 @@ def main(argv: list[str] | None = None) -> int:
         )
         candidates = _validate_candidates(candidate_data)
         inventory = _load_inventory()
-        api_key = os.environ.get("ANTHROPIC_API_KEY")
-        if not api_key:
-            raise ValueError("ANTHROPIC_API_KEY is not set")
+        api_key = _resolve_api_key(args.provider)
+
         prompt = _build_system_prompt(_load_existing_slugs(inventory))
         prompt += "\nBUILT-IN CATEGORIES:\n" + json.dumps(
             {slug: fingerprint.category for slug, fingerprint in inventory.items()}, sort_keys=True
         )
-        payload = _call_model(
-            prompt, _build_user_prompt(candidates), model=args.model, api_key=api_key, max_tokens=args.max_tokens
-        )
+        user_prompt = _build_user_prompt(candidates)
+        if args.provider == "anthropic":
+            if args.base_url:
+                raise ValueError("--base-url requires an OpenAI-compatible provider")
+            payload = _call_model(prompt, user_prompt, model=args.model, api_key=api_key, max_tokens=args.max_tokens)
+        else:
+            client = get_provider(args.provider, args.model, api_key=api_key, base_url=args.base_url)
+            payload = call_compatible_model(prompt, user_prompt, client=client, max_tokens=args.max_tokens)
         entries = _validate_response(payload, candidates, inventory)
-        content = [_format_report(entries, candidates), _format_yaml(entries)]
+        report = _format_report(entries, candidates)
+        report += f"\nProvider: {_report_cell(args.provider)}; model: {_report_cell(args.model)}\n"
+        content = [report, _format_yaml(entries)]
         if args.raw is not None:
             content.append(json.dumps({"triage": entries}, indent=2, ensure_ascii=True) + "\n")
         _write_outputs(dict(zip(destinations, content, strict=True)))

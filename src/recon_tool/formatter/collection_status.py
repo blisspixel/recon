@@ -103,8 +103,10 @@ def project_collection_status(info: TenantInfo) -> CollectionStatusProjection:
             ct_state = "unavailable"
         elif info.ct_cache_age_days is not None and info.ct_subdomain_count > 0:
             ct_state = "cache_recovered"
-        else:
+        elif info.ct_subdomain_count > 0 or (info.cert_summary is not None and info.cert_summary.cert_count > 0):
             ct_state = "fallback_recovered"
+        else:
+            ct_state = "unavailable"
 
     degraded = frozenset(info.degraded_sources)
     all_sources_unavailable = (

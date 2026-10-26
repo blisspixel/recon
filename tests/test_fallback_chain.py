@@ -289,9 +289,7 @@ class TestFallbackChain:
     @pytest.mark.asyncio
     async def test_empty_providers_no_cache_records_soft_attribution(self, tmp_path, monkeypatch):
         """When all providers return empty AND no cache exists,
-        the panel still attributes to the first provider that responded.
-        Better than leaving ct_provider_used unset (which would suggest
-        no provider was tried)."""
+        ct_provider_used remains None to avoid falsely claiming recovery."""
         # Isolate from any real ~/.recon/ct-cache/example.com.json that
         # may exist from prior runs.
         monkeypatch.setenv("RECON_CONFIG_DIR", str(tmp_path))
@@ -319,7 +317,7 @@ class TestFallbackChain:
             ctx = _DetectionCtx()
             await _detect_cert_intel(ctx, "example.com")
 
-        assert ctx.ct_provider_used == "certspotter"
+        assert ctx.ct_provider_used is None
         assert ctx.ct_subdomain_count == 0
         assert ctx.cert_summary is None
         assert "crt.sh" in ctx.degraded_sources

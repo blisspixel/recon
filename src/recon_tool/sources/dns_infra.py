@@ -792,10 +792,10 @@ async def detect_cert_intel(ctx: dns_base.DetectionCtx, domain: str) -> None:
             cached.age_days,
         )
     elif soft_provider is not None:
-        # No cache, but a provider returned empty - surface it rather than
-        # leaving ct_provider_used unset.
-        ctx.ct_provider_used = soft_provider
+        # No cache, but a provider returned empty - do not record it as used
+        # since no CT observations were recovered.
         ctx.ct_attempt_outcome = "cache_miss"
+        ctx.ct_subdomain_count = 0
     else:
         ctx.ct_attempt_outcome = ct_failure_outcome(failures)
         ctx.ct_subdomain_count = 0

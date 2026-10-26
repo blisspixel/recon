@@ -32,10 +32,25 @@ INVALID = {"RECON_DNS_VIEW": "caller-safe", "RECON_DNS_TLS_NAME": "resolver.exam
 
 @pytest.mark.parametrize(
     "environment",
-    [{}, {"RECON_DNS_VIEW": "operator"}, {"RECON_DNS_VIEW": "none"}, {"RECON_DNS_VIEW": "Caller-Safe"}],
+    [{}, {"RECON_DNS_VIEW": ""}, {"RECON_DNS_VIEW": "operator"}],
 )
 def test_cli_keeps_host_dns_without_the_exact_opt_in(environment: dict[str, str]) -> None:
     assert cli_collection_policy(environment) is None
+
+
+@pytest.mark.parametrize(
+    "environment",
+    [
+        {"RECON_DNS_VIEW": "none"},
+        {"RECON_DNS_VIEW": "Caller-Safe"},
+        {"RECON_DNS_VIEW": "callersafe"},
+        {"RECON_DNS_VIEW": "caller_safe"},
+    ],
+)
+def test_cli_rejects_typo_in_recon_dns_view(environment: dict[str, str]) -> None:
+    policy = cli_collection_policy(environment)
+    assert policy is not None
+    assert not policy.available
 
 
 def test_cli_opt_in_binds_the_encrypted_default(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -83,6 +98,13 @@ async def test_unusable_view_refuses_before_any_collector(monkeypatch: pytest.Mo
     with collection_scope(CollectionPolicy("caller-safe", available=False)), pytest.raises(ReconLookupError) as caught:
         await resolver.resolve_tenant("example.com")
     assert caught.value.error_type == "dns_view_unavailable"
+
+
+def test_cli_invocation_with_typo_view_refuses(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("RECON_DNS_VIEW", "callersafe")
+    result = runner.invoke(app, ["example.com", "--no-cache"])
+    assert result.exit_code == 2
+    assert "The encrypted DNS view is disabled or its RECON_DNS_* settings are invalid" in result.stderr
 
 
 @patch(RESOLVE_PATH, new_callable=AsyncMock)

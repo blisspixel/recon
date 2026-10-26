@@ -228,7 +228,8 @@ class TestChainLookupCompact:
     def test_success_log_uses_only_normalized_domain(self, stub_chain, caplog: pytest.LogCaptureFixture):
         raw = "https://www.example.com/private/path?token=secret"
 
-        with caplog.at_level("INFO", logger="recon"):
+        with pytest.MonkeyPatch.context() as environment, caplog.at_level("INFO", logger="recon"):
+            environment.setenv("RECON_MCP_LOG_REQUESTS", "1")
             asyncio.run(server.chain_lookup(raw))
 
         assert "example.com" in caplog.text

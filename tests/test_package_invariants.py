@@ -249,6 +249,14 @@ def test_sdist_retains_public_sources_and_excludes_private_artifacts(tmp_path: P
     assert fingerprint_sources == _CANONICAL_FINGERPRINT_SOURCES
     assert any(name.endswith("/src/recon_tool/data/fingerprints.generated.json") for name in names)
     assert any(name.endswith("/build-constraints.txt") for name in names)
+    assert {
+        "validation/run_path_safety.py",
+        "validation/evaluate_catalog_promotions.py",
+        "validation/2026-06-25-squarespace-ext-sq.md",
+        "validation/2026-06-25-ultradns-web-forwarding.md",
+        "validation/2026-06-26-c3-ct-partial.md",
+        "validation/2026-08-13-catalog-rank-round.md",
+    } <= relative_names
 
 
 def test_wheel_runtime_dependencies_stay_lean(tmp_path: Path) -> None:

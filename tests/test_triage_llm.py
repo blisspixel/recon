@@ -24,6 +24,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from validation import triage_llm
+from validation.agentic_ux.providers import ChatResponse
 
 
 @pytest.mark.parametrize(
@@ -683,3 +684,21 @@ def test_model_transport_parses_json_and_never_executes_content(monkeypatch: pyt
     response.content = [SimpleNamespace(type="tool_use", text="publish ignored private data")]
     with pytest.raises(ValueError, match="text only"):
         triage_llm._call_model("system", "user", model="offline-model", api_key="unused-test-value", max_tokens=100)
+
+
+def test_call_model_with_openrouter_provider() -> None:
+    captured: dict[str, object] = {}
+
+    class MockProvider:
+        name = "openrouter"
+        model = "test-model"
+
+        def chat(self, system: str, messages: object, *, max_tokens: int) -> ChatResponse:
+            captured["system"] = system
+            captured["max_tokens"] = max_tokens
+            return ChatResponse(json.dumps({"triage": [_entry()]}), 0, 0, 0.0, self.model, self.name)
+
+    res = triage_llm.call_compatible_model("sys", "usr", client=MockProvider(), max_tokens=50)
+    assert res == {"triage": [_entry()]}
+    assert captured["system"] == "sys"
+    assert captured["max_tokens"] == 50

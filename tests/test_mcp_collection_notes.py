@@ -49,7 +49,7 @@ from recon_tool.server.lookup import _lookup_tenant_text
             {
                 "degraded_sources": ("dns:mx", "crt.sh"),
                 "ct_provider_used": "certspotter",
-                "ct_subdomain_count": 0,
+                "ct_subdomain_count": 2,
             },
             "1 source unavailable (dns:mx); CT recovered via certspotter",
         ),

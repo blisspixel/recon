@@ -236,9 +236,11 @@ def test_regular_file_swapped_to_fifo_does_not_block(tmp_path: Path, monkeypatch
     original_open = os.open
 
     def swapped_open(target: Path, flags: int) -> int:
-        assert flags & os.O_NONBLOCK
+        assert flags & getattr(os, "O_NONBLOCK", 0)
         target.unlink()
-        os.mkfifo(target)
+        mkfifo = getattr(os, "mkfifo", None)
+        assert mkfifo is not None
+        mkfifo(target)
         return original_open(target, flags)
 
     monkeypatch.setattr("recon_tool.json_limits.os.open", swapped_open)

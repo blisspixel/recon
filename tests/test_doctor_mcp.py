@@ -30,7 +30,9 @@ class TestDoctorMcp:
         probe = (
             "import logging; "
             "logger = logging.getLogger('recon'); logger.handlers.clear(); "
+            "root = logging.getLogger(); before = (root.handlers[:], root.level); "
             "import recon_tool.server; "
+            "assert (root.handlers, root.level) == before; "
             "print(len(logger.handlers)); "
             "logging.getLogger().handlers.clear(); "
             "ctx = recon_tool.server._runtime_logging(); ctx.__enter__(); "
@@ -47,7 +49,28 @@ class TestDoctorMcp:
         )
 
         assert result.returncode == 0, result.stderr
-        assert result.stdout.splitlines() == ["0", "1 20", "0 0"]
+        assert result.stdout.splitlines() == ["0", "1 30", "0 0"]
+
+    def test_mcp_request_logging_explicit_opt_in(self) -> None:
+        probe = (
+            "import os, logging; "
+            "os.environ['RECON_MCP_LOG_REQUESTS'] = '1'; "
+            "logger = logging.getLogger('recon'); logger.handlers.clear(); "
+            "import recon_tool.server; "
+            "logging.getLogger().handlers.clear(); "
+            "ctx = recon_tool.server._runtime_logging(); ctx.__enter__(); "
+            "print(logger.level); "
+            "ctx.__exit__(None, None, None)"
+        )
+        result = subprocess.run(  # noqa: S603 - fixed interpreter and test-owned probe.
+            [sys.executable, "-c", probe],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        assert result.returncode == 0, result.stderr
+        assert result.stdout.strip() == "20"
 
     def test_doctor_mcp_succeeds(self) -> None:
         """With MCP installed, --mcp should run all checks and emit config snippet."""

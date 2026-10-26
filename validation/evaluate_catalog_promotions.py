@@ -208,14 +208,20 @@ def _type_rows(
     return rows
 
 
+@dataclass(frozen=True)
+class PromotionThresholds:
+    """Fixed disclosure minimums and classification change budgets."""
+
+    min_count: int
+    min_distinct_namespaces: int
+    minimum_improvement: float
+    maximum_regression: float
+
+
 def evaluate_partitioned_records(
     records_by_stratum: Sequence[Sequence[dict[str, Any]]],
     rules: Sequence[CandidateRule],
-    *,
-    min_count: int,
-    min_distinct_namespaces: int,
-    minimum_improvement: float,
-    maximum_regression: float,
+    thresholds: PromotionThresholds,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Evaluate candidate rules against fixed observations by stratum and pooled."""
     strata: list[dict[str, Any]] = []
@@ -226,8 +232,8 @@ def evaluate_partitioned_records(
         pooled_records.extend(records)
         baseline, _ = catalog_baseline.aggregate_records(
             records,
-            min_count=min_count,
-            min_distinct_namespaces=min_distinct_namespaces,
+            min_count=thresholds.min_count,
+            min_distinct_namespaces=thresholds.min_distinct_namespaces,
             max_samples=0,
         )
         by_type, by_rule = _added_counts(records, rules)
@@ -239,24 +245,24 @@ def evaluate_partitioned_records(
                 "record_types": _type_rows(
                     baseline,
                     by_type,
-                    minimum_improvement=minimum_improvement,
-                    maximum_regression=maximum_regression,
+                    minimum_improvement=thresholds.minimum_improvement,
+                    maximum_regression=thresholds.maximum_regression,
                 ),
             }
         )
 
     pooled_baseline, _ = catalog_baseline.aggregate_records(
         pooled_records,
-        min_count=min_count,
-        min_distinct_namespaces=min_distinct_namespaces,
+        min_count=thresholds.min_count,
+        min_distinct_namespaces=thresholds.min_distinct_namespaces,
         max_samples=0,
     )
     pooled_by_type, _ = _added_counts(pooled_records, rules)
     pooled_types = _type_rows(
         pooled_baseline,
         pooled_by_type,
-        minimum_improvement=minimum_improvement,
-        maximum_regression=maximum_regression,
+        minimum_improvement=thresholds.minimum_improvement,
+        maximum_regression=thresholds.maximum_regression,
     )
     candidate_matches: list[dict[str, Any]] = [
         {"slug": slug, "record_type": record_type, "added_classified": count}
@@ -350,10 +356,12 @@ def evaluate_catalog_promotions(
     strata, pooled_result = evaluate_partitioned_records(
         records_by_stratum,
         rules,
-        min_count=int(thresholds["minimum_occurrences"]),
-        min_distinct_namespaces=int(thresholds["minimum_distinct_namespaces"]),
-        minimum_improvement=float(budget["minimum_improvement"]),
-        maximum_regression=float(budget["maximum_regression"]),
+        PromotionThresholds(
+            min_count=int(thresholds["minimum_occurrences"]),
+            min_distinct_namespaces=int(thresholds["minimum_distinct_namespaces"]),
+            minimum_improvement=float(budget["minimum_improvement"]),
+            maximum_regression=float(budget["maximum_regression"]),
+        ),
     )
     revision, dirty = catalog_baseline.repository_revision()
     public = {

@@ -752,7 +752,9 @@ class TestAnalyzePostureExplain:
         self,
         mock_resolve: AsyncMock,
         caplog: pytest.LogCaptureFixture,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        monkeypatch.setenv("RECON_MCP_LOG_REQUESTS", "1")
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
         raw = "https://www.alpha.invalid/private/path?token=secret"
 
@@ -798,7 +800,9 @@ class TestDiscoverCacheSafety:
         self,
         mock_resolve: AsyncMock,
         caplog: pytest.LogCaptureFixture,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        monkeypatch.setenv("RECON_MCP_LOG_REQUESTS", "1")
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
         raw = "https://www.alpha.invalid/private/path?token=secret"
 
