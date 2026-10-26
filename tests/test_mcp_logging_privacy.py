@@ -18,7 +18,8 @@ def test_embedded_request_events_require_opt_in(
     monkeypatch.setenv("RECON_MCP_LOG_REQUESTS", str(enabled))
     with caplog.at_level(logging.INFO, logger="recon"):
         log_structured(logging.INFO, "resolved", domain="example.com")
-    assert ("example.com" in caplog.text) is enabled
+    expected = '{"msg": "resolved", "domain": "example.com"}'
+    assert caplog.messages == ([expected] if enabled else [])
 
 
 @pytest.mark.parametrize("configured", [False, True])
@@ -52,8 +53,8 @@ except RuntimeError:
     pass
 assert (root.handlers, root.level) == before
 assert [logging.getLogger(name).level for name in names] == levels
-assert ("HTTP Request:" in stream.getvalue()) is {enabled!r}
-assert ("example.com/private-query" in stream.getvalue()) is {enabled!r}
+expected = 'HTTP Request: GET https://example.com/private-query "HTTP/1.1 200 OK"' + chr(10)
+assert stream.getvalue() == (expected if {enabled!r} else "")
 """
     result = subprocess.run(  # noqa: S603 - fixed interpreter and synthetic, test-owned probe.
         [sys.executable, "-c", probe], capture_output=True, text=True, timeout=30, check=False
