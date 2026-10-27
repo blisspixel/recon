@@ -29,6 +29,7 @@ from dataclasses import dataclass
 from pathlib import Path, PureWindowsPath
 from typing import Literal
 
+from recon_tool.mcp_client.codex_config import CODEX_OPERATOR_NOTE, read_codex_document
 from recon_tool.mcp_client.config_json import read_json_object
 from recon_tool.mcp_client.install import Client, Scope, resolve_config_path, servers_key
 from recon_tool.validator import strip_control_chars
@@ -318,6 +319,20 @@ _VSCODE_NOTES: tuple[str, ...] = (
     "a new editor tab does not re-spawn MCP servers.",
 )
 
+_CODEX_NOTES: tuple[str, ...] = (
+    "Codex reads [mcp_servers.recon] from ~/.codex/config.toml, or from .codex/config.toml in a trusted project. "
+    "The ChatGPT desktop app, Codex CLI, and the IDE extension share that file.",
+    CODEX_OPERATOR_NOTE,
+    "Restart Codex after changing config.toml. A new thread in the same process does not re-spawn MCP servers.",
+)
+
+_GEMINI_NOTES: tuple[str, ...] = (
+    "Gemini CLI reads mcpServers from ~/.gemini/settings.json or .gemini/settings.json.",
+    "Its per-server timeout is milliseconds. The documented default is 600000. "
+    "recon mcp install does not write a timeout.",
+    "Restart Gemini CLI after changing settings.json.",
+)
+
 
 def check_client(
     client: Client,
@@ -345,7 +360,10 @@ def check_client(
 
     located: tuple[dict[str, object], str] | None = None
     for scope, path in candidates:
-        state, data, detail = _read_config(path)
+        if client == "codex":
+            state, data, detail = read_codex_document(path)
+        else:
+            state, data, detail = _read_config(path)
         if state == "missing":
             checks.append(ClientCheck("config file", "info", f"{scope}: {path} ({detail})"))
             continue
@@ -388,6 +406,10 @@ def check_client(
         notes = _CLAUDE_CODE_NOTES
     elif client == "vscode":
         notes = _VSCODE_NOTES
+    elif client == "codex":
+        notes = _CODEX_NOTES
+    elif client == "gemini":
+        notes = _GEMINI_NOTES
     else:
         notes = _GENERIC_NOTES
     return ClientDoctorReport(client=client, checks=tuple(checks), notes=notes)

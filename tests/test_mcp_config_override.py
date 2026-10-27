@@ -7,7 +7,9 @@ from __future__ import annotations
 import json
 import os
 import shlex
+import tomllib
 from pathlib import Path
+from typing import cast
 
 import pytest
 from typer.testing import CliRunner
@@ -35,9 +37,25 @@ def test_explicit_install_needs_no_home(client: str, no_home: None, tmp_path: Pa
     result = runner.invoke(app, ["mcp", "install", "--client", client, "--config-path", str(target)])
 
     assert result.exit_code == 0, result.output
-    key = "servers" if client == "vscode" else "mcpServers"
-    assert "recon" in json.loads(target.read_text(encoding="utf-8"))[key]
-    assert json.loads(result.stdout)[key]["recon"]
+    if client == "codex":
+        document = _toml_object(target.read_text(encoding="utf-8"))
+        servers = document["mcp_servers"]
+        assert isinstance(servers, dict)
+        assert "recon" in cast(dict[str, object], servers)
+        echoed = _toml_object(result.stdout)
+        echoed_servers = echoed["mcp_servers"]
+        assert isinstance(echoed_servers, dict)
+        assert "recon" in cast(dict[str, object], echoed_servers)
+    else:
+        key = "servers" if client == "vscode" else "mcpServers"
+        written = _json_object(target.read_text(encoding="utf-8"))
+        stanza = written[key]
+        assert isinstance(stanza, dict)
+        assert "recon" in cast(dict[str, object], stanza)
+        echoed = _json_object(result.stdout)
+        echoed_stanza = echoed[key]
+        assert isinstance(echoed_stanza, dict)
+        assert "recon" in cast(dict[str, object], echoed_stanza)
     assert "--config-path" in result.stderr
     assert str(target) in result.stderr
 
@@ -47,7 +65,7 @@ def test_explicit_install_needs_no_home(client: str, no_home: None, tmp_path: Pa
     assert "registered" in verified.output
 
 
-@pytest.mark.parametrize("client", ["claude-code", "cursor", "vscode", "kiro"])
+@pytest.mark.parametrize("client", ["claude-code", "cursor", "vscode", "kiro", "codex", "gemini"])
 def test_workspace_install_needs_no_home(client: str, no_home: None, tmp_path: Path) -> None:
     result = runner.invoke(app, ["mcp", "install", "--client", client, "--scope", "workspace"])
     assert result.exit_code == 0, result.output
@@ -68,6 +86,17 @@ def test_appdata_desktop_path_needs_no_home(no_home: None, monkeypatch: pytest.M
     assert resolve_config_path("claude-desktop", "user", platform_name="win32") == (
         tmp_path / "roaming" / "Claude" / "claude_desktop_config.json"
     )
+
+
+def _json_object(text: str) -> dict[str, object]:
+    loaded: object = json.loads(text)
+    if not isinstance(loaded, dict):
+        raise AssertionError("JSON value is not an object")
+    return cast(dict[str, object], loaded)
+
+
+def _toml_object(text: str) -> dict[str, object]:
+    return cast(dict[str, object], tomllib.loads(text))
 
 
 def test_home_dependent_install_and_doctor_fail_actionably(no_home: None) -> None:

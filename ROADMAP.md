@@ -53,8 +53,13 @@ and the `domain_report` prompt has a display title (#320).
 The repository Claude Code marketplace is `blisspixel-recon`. It installs the
 existing plugin with `claude plugin install recon@blisspixel-recon` (#322).
 
-Next work is Codex and Gemini client setup (#323). Registry distribution
-remains open in #321.
+Codex and Gemini CLI are `recon mcp install` and `recon doctor --client`
+targets (#323). Codex uses `[mcp_servers.recon]` in `config.toml`. The
+installer appends that table or, with `--force`, replaces only its span, and
+it does not write `tool_timeout_sec` or `default_tools_approval_mode`. Gemini
+uses the existing JSON merge and omits `autoApprove`.
+
+Next work is MCP Registry distribution (#321).
 
 When picking work back up:
 

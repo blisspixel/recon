@@ -42,11 +42,21 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from recon_tool.mcp_client.codex_config import CodexConfigError, plan_codex_text, read_text_file
 from recon_tool.mcp_client.config_json import read_json_object
 from recon_tool.mcp_client.workspace import workspace_directory
 
 Scope = Literal["user", "workspace"]
-Client = Literal["claude-desktop", "claude-code", "cursor", "vscode", "windsurf", "kiro"]
+Client = Literal[
+    "claude-desktop",
+    "claude-code",
+    "cursor",
+    "vscode",
+    "windsurf",
+    "kiro",
+    "codex",
+    "gemini",
+]
 
 # Keep this in lockstep with the Client literal above. Used by typer for
 # enum validation and by the CLI help text.
@@ -57,7 +67,13 @@ SUPPORTED_CLIENTS: tuple[Client, ...] = (
     "vscode",
     "windsurf",
     "kiro",
+    "codex",
+    "gemini",
 )
+
+# These clients do not define autoApprove. Writing it would put a field
+# their current schema does not read, or that Gemini rejects as an extra key.
+_CLIENTS_WITHOUT_AUTO_APPROVE: frozenset[Client] = frozenset({"claude-code", "vscode", "gemini", "codex"})
 
 
 def servers_key(client: Client) -> str:
@@ -66,10 +82,15 @@ def servers_key(client: Client) -> str:
     VS Code's ``mcp.json`` uses a top-level ``servers`` key (see
     code.visualstudio.com/docs/agents/reference/mcp-configuration); a
     block written under ``mcpServers`` is silently ignored by VS Code.
-    Every other supported client (Claude Desktop / Code, Cursor,
-    Windsurf, Kiro) uses ``mcpServers``.
+    Codex stores the server as a ``[mcp_servers.recon]`` TOML table, so
+    its key is ``mcp_servers`` and the writer does not emit JSON.
+    Every other supported client uses ``mcpServers``.
     """
-    return "servers" if client == "vscode" else "mcpServers"
+    if client == "vscode":
+        return "servers"
+    if client == "codex":
+        return "mcp_servers"
+    return "mcpServers"
 
 
 @dataclass(frozen=True)
@@ -177,6 +198,24 @@ def _client_specs() -> dict[Client, _ClientSpec]:
             },
             workspace_path=Path(".kiro") / "settings" / "mcp.json",
             description="Kiro",
+        ),
+        "codex": _ClientSpec(
+            user_paths={
+                "windows": home / ".codex" / "config.toml",
+                "darwin": home / ".codex" / "config.toml",
+                "linux": home / ".codex" / "config.toml",
+            },
+            workspace_path=Path(".codex") / "config.toml",
+            description="Codex (ChatGPT desktop app, CLI, and IDE extension)",
+        ),
+        "gemini": _ClientSpec(
+            user_paths={
+                "windows": home / ".gemini" / "settings.json",
+                "darwin": home / ".gemini" / "settings.json",
+                "linux": home / ".gemini" / "settings.json",
+            },
+            workspace_path=Path(".gemini") / "settings.json",
+            description="Gemini CLI",
         ),
     }
 
@@ -291,9 +330,9 @@ def build_recon_block(client: Client | None = None) -> dict[str, object]:
     }
     if client == "vscode":
         block["type"] = "stdio"
-    if client in {"claude-code", "vscode"}:
-        # Neither client defines autoApprove in its current MCP configuration
-        # schema. Their permission systems remain authoritative.
+    if client in _CLIENTS_WITHOUT_AUTO_APPROVE:
+        # These clients do not define autoApprove. Their permission systems,
+        # or Gemini's strict server schema, remain authoritative.
         block.pop("autoApprove")
     return block
 
@@ -406,7 +445,7 @@ def _merge_recon_block(
     merged: dict[str, object] = dict(existing)
     for key in _canonical_keys(client):
         merged[key] = canonical[key]
-    if client in {"claude-code", "vscode"}:
+    if client in _CLIENTS_WITHOUT_AUTO_APPROVE:
         merged.pop("autoApprove", None)
     elif "autoApprove" not in merged:
         merged["autoApprove"] = canonical["autoApprove"]
@@ -436,6 +475,111 @@ def _planned_input(path: Path, is_implicit_workspace: bool) -> tuple[Path, dict[
     return target_path, existing
 
 
+def _missing_parents(path: Path) -> list[Path]:
+    """Parent directories an install would create. Empty when the parent exists."""
+    if path.parent.exists():
+        return []
+    parent_dirs: list[Path] = []
+    parent = path.parent
+    while parent != parent.parent and not parent.exists():
+        parent_dirs.append(parent)
+        parent = parent.parent
+    parent_dirs.reverse()
+    return parent_dirs
+
+
+def _read_codex_source(path: Path, is_implicit_workspace: bool) -> tuple[Path, str | None]:
+    """Read Codex TOML without parsing it as JSON. Missing means there is nothing to merge."""
+    if is_implicit_workspace:
+        target_path = path
+        try:
+            with workspace_directory(path, create=False) as directory_fd:
+                if directory_fd == -1:
+                    return target_path, None
+                read_path = Path(path.name) if directory_fd is not None else path
+                state, text, detail = read_text_file(read_path, allow_symlinks=False, directory_fd=directory_fd)
+        except OSError as exc:
+            raise InstallError(f"cannot safely read workspace config {path}: {exc}") from exc
+    else:
+        target_path = path.resolve(strict=False) if path.is_symlink() else path
+        state, text, detail = read_text_file(path)
+    if state == "missing":
+        return target_path, None
+    if state == "invalid":
+        raise InstallError(f"{path} exists but {detail}. Refusing to overwrite. Fix the file or delete it and rerun.")
+    return target_path, text
+
+
+def _plan_codex(path: Path, is_implicit_workspace: bool, *, force: bool) -> InstallPlan:
+    """Plan a Codex table append or span replacement."""
+    target_path, existing = _read_codex_source(path, is_implicit_workspace)
+    block = build_recon_block("codex")
+    try:
+        planned = plan_codex_text(existing, block, force=force)
+    except CodexConfigError as exc:
+        raise InstallError(f"{path}: {exc}") from exc
+    existing_block = block if planned.unchanged else planned.existing_block
+    parents = _missing_parents(path) if existing is None and not path.exists() else []
+    return InstallPlan(
+        path=path,
+        action=planned.action,
+        existing_block=existing_block,
+        new_block=block,
+        parent_dirs_to_create=parents,
+        target_path=target_path,
+    )
+
+
+def _install_codex(
+    plan: InstallPlan,
+    scope: Scope,
+    *,
+    config_path_override: Path | None,
+    force: bool,
+) -> InstallResult:
+    """Write a planned Codex document with the same symlink rules as JSON installs."""
+    is_implicit_workspace = scope == "workspace" and config_path_override is None
+    if is_implicit_workspace:
+        _validate_implicit_workspace_path(plan.path)
+        try:
+            with workspace_directory(plan.path) as directory_fd:
+                _write_codex(plan, workspace=True, directory_fd=directory_fd, force=force)
+        except OSError as exc:
+            raise InstallError(f"cannot safely write workspace config {plan.path}: {exc}") from exc
+    else:
+        plan.path.parent.mkdir(parents=True, exist_ok=True)
+        _write_codex(plan, workspace=False, directory_fd=None, force=force)
+    return InstallResult(
+        path=plan.path,
+        action=plan.action,
+        final_block=plan.new_block,
+        target_path=plan.target_path,
+    )
+
+
+def _write_codex(plan: InstallPlan, *, workspace: bool, directory_fd: int | None, force: bool) -> None:
+    """Re-read, edit the recon span, and publish while the workspace parent stays bound."""
+    read_path = Path(plan.path.name) if directory_fd is not None else plan.path
+    state, text, detail = read_text_file(read_path, allow_symlinks=not workspace, directory_fd=directory_fd)
+    if state == "invalid":
+        raise InstallError(
+            f"{plan.path} exists but {detail}. Refusing to overwrite. Fix the file or delete it and rerun."
+        )
+    try:
+        planned = plan_codex_text(None if state == "missing" else text, plan.new_block, force=force)
+    except CodexConfigError as exc:
+        raise InstallError(f"{plan.path}: {exc}") from exc
+    if planned.unchanged:
+        return
+    _atomic_write_text(
+        plan.path,
+        planned.text,
+        target_path=plan.target_path,
+        workspace=workspace,
+        directory_fd=directory_fd,
+    )
+
+
 def plan_install(
     client: Client,
     scope: Scope,
@@ -459,6 +603,13 @@ def plan_install(
     is_implicit_workspace = scope == "workspace" and config_path_override is None
     if is_implicit_workspace:
         _validate_implicit_workspace_path(path)
+    if client == "codex":
+        return _plan_codex(path, is_implicit_workspace, force=force)
+    return _plan_json(path, client, is_implicit_workspace, force=force)
+
+
+def _plan_json(path: Path, client: Client, is_implicit_workspace: bool, *, force: bool) -> InstallPlan:
+    """Plan a JSON client merge. Codex uses :func:`_plan_codex` instead."""
     target_path, existing = _planned_input(path, is_implicit_workspace)
     canonical_block = build_recon_block(client)
     key = servers_key(client)
@@ -594,6 +745,9 @@ def install(
             final_block=plan.new_block,
             target_path=plan.target_path,
         )
+
+    if client == "codex":
+        return _install_codex(plan, scope, config_path_override=config_path_override, force=force)
 
     is_implicit_workspace = scope == "workspace" and config_path_override is None
     if is_implicit_workspace:

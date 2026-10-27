@@ -28,6 +28,13 @@ operator, corporate group, ownership, or control.
 
 ### Added
 
+- Install recon for Codex and Gemini CLI. `recon mcp install --client=codex`
+  writes `[mcp_servers.recon]` in `~/.codex/config.toml` or `.codex/config.toml`,
+  preserving sibling tables and comments. `--force` replaces only that table's
+  span. The install does not write `tool_timeout_sec` or
+  `default_tools_approval_mode`. `recon mcp install --client=gemini` merges
+  `mcpServers.recon` into `~/.gemini/settings.json` or `.gemini/settings.json`
+  and omits `autoApprove`. `recon doctor --client` reads both files. (#323)
 - Publish a repository Claude Code marketplace named `blisspixel-recon`.
   `claude plugin marketplace add blisspixel/recon` and
   `claude plugin install recon@blisspixel-recon` install the existing plugin,

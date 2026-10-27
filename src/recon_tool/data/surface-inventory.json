@@ -137,6 +137,16 @@
         "title": "recon - Windsurf install"
       },
       {
+        "kind": "codex_docs",
+        "path": "agents/codex/README.md",
+        "title": "recon - Codex install"
+      },
+      {
+        "kind": "gemini_docs",
+        "path": "agents/gemini/README.md",
+        "title": "recon - Gemini CLI install"
+      },
+      {
         "frontmatter": {
           "allowed-tools": "Bash(recon:*)",
           "argument-hint": "<domain> [--full] [--explain] [--json]",

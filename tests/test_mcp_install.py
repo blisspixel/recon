@@ -128,7 +128,7 @@ class TestResolveConfigPath:
 
 class TestDefaultScope:
     def test_clients_with_user_default_to_user(self) -> None:
-        for client in ("claude-desktop", "cursor", "windsurf", "kiro", "claude-code"):
+        for client in ("claude-desktop", "cursor", "windsurf", "kiro", "claude-code", "codex", "gemini"):
             assert default_scope(client) == "user"  # pyright: ignore[reportArgumentType]
 
     def test_workspace_only_clients_default_to_workspace(self) -> None:
@@ -896,13 +896,16 @@ class TestSupportedClientsConstantStaysCurrent:
             scope = default_scope(client)
             path = resolve_config_path(client, scope)
             assert path is not None
-            assert path.name.endswith(".json")
+            if client == "codex":
+                assert path.name == "config.toml"
+            else:
+                assert path.name.endswith(".json")
 
 
 class TestVscodeServersKey:
     """VS Code's .vscode/mcp.json maps servers under a top-level `servers`
-    key, not `mcpServers`. The installer must write that key for vscode
-    and `mcpServers` for every other client."""
+    key, not `mcpServers`. Codex uses `mcp_servers`. Every other client uses
+    `mcpServers`."""
 
     def test_servers_key_helper(self) -> None:
         from recon_tool.mcp_client.install import servers_key
@@ -913,6 +916,8 @@ class TestVscodeServersKey:
         assert servers_key("cursor") == "mcpServers"
         assert servers_key("windsurf") == "mcpServers"
         assert servers_key("kiro") == "mcpServers"
+        assert servers_key("codex") == "mcp_servers"
+        assert servers_key("gemini") == "mcpServers"
 
     def test_install_vscode_writes_servers_not_mcpservers(self, tmp_path: Path) -> None:
         target = tmp_path / "mcp.json"

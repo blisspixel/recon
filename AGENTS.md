@@ -147,7 +147,7 @@ If the command is not found:
 
 Wait for explicit approval, then `pip install recon-tool` followed by `recon doctor` to verify connectivity. If `recon --version` succeeds, continue immediately.
 
-If the user asks you to wire recon into their MCP client (Claude Desktop, Claude Code, Cursor, VS Code, Windsurf, Kiro), use `recon mcp install --client=<name>` rather than instructing them to copy-paste a JSON block by hand. The command resolves the right per-OS path, merges into existing `mcpServers` without touching siblings, and preserves any hand-curated fields they've added to their recon block. Run `recon mcp doctor` afterward for a live JSON-RPC handshake check.
+If the user asks you to wire recon into their MCP client (Claude Desktop, Claude Code, Cursor, VS Code, Windsurf, Kiro, Codex, Gemini CLI), use `recon mcp install --client=<name>` rather than instructing them to copy-paste a config block by hand. Codex receives a `[mcp_servers.recon]` TOML table in `~/.codex/config.toml` or `.codex/config.toml`. A matching command and args leave that file unchanged. `--force` replaces only the recon table span, so in-table custom keys do not survive, while sibling tables and comments outside the span do. The install does not write `tool_timeout_sec` or `default_tools_approval_mode`. The other clients receive JSON. The command resolves the right per-OS path and merges into the existing server map (`servers` for VS Code, `mcpServers` for the rest) without touching siblings, and preserves hand-curated fields on the recon block. Gemini omits `autoApprove`. Run `recon mcp doctor` afterward for a live JSON-RPC handshake check.
 
 ## Detecting whether MCP is connected
 

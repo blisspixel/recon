@@ -127,6 +127,8 @@ class TestMcpInstallPersistsSafeEnv:
             Path("agents/windsurf/README.md"),
             Path("agents/vscode/README.md"),
             Path("agents/claude-code/README.md"),
+            Path("agents/codex/README.md"),
+            Path("agents/gemini/README.md"),
         ]
 
         for path in docs:
