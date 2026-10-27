@@ -127,7 +127,7 @@ def mcp_install_command(
 
     Idempotently merges the recon stanza into the client's config so a
     fresh install of a supported AI client picks up recon without any
-    copy-paste. Codex receives a ``[mcp_servers.recon]`` TOML table. The
+    copy-paste. Codex receives a [mcp_servers.recon] TOML table. The
     other clients receive JSON.
     """
     from recon_tool.mcp_client.install import (
