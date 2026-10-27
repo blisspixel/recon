@@ -303,6 +303,7 @@ async def _mcp_inventory_async() -> dict[str, object]:
         tool_entries.append(
             {
                 "name": tool.name,
+                "title": _display_title(tool, tool.name),
                 "summary": _summary(tool.description),
                 "annotations": annotations,
                 "structured_output": tool_output_schema is not None,
@@ -316,6 +317,7 @@ async def _mcp_inventory_async() -> dict[str, object]:
         {
             "uri": str(resource.uri),
             "name": resource.name,
+            "title": _display_title(resource, str(resource.uri)),
             "summary": _summary(resource.description),
             "mime_type": model_wire_dict(resource).get("mimeType"),
         }
@@ -341,6 +343,7 @@ async def _mcp_inventory_async() -> dict[str, object]:
         prompt_entries.append(
             {
                 "name": prompt.name,
+                "title": _display_title(prompt, prompt.name),
                 "summary": _summary(prompt.description),
                 "arguments": arguments,
             }
@@ -354,6 +357,14 @@ async def _mcp_inventory_async() -> dict[str, object]:
         "prompt_count": len(prompt_entries),
         "prompts": prompt_entries,
     }
+
+
+def _display_title(model: object, label: str) -> str:
+    """Return the protocol title a generated inventory row must show."""
+    title = model_wire_dict(model).get("title")
+    if not isinstance(title, str) or not title.strip():
+        raise RuntimeError(f"{label} is missing a display title")
+    return title
 
 
 def _mcp_inventory() -> dict[str, object]:

@@ -170,6 +170,7 @@ def _format_compact_chain_json(report: ChainReport, result_limit: int) -> str:
 
 
 @mcp.tool(
+    title="Follow related domains",
     annotations=tool_annotations(
         read_only=True,
         destructive=False,
@@ -329,6 +330,7 @@ def _admit_cluster_domains(domains: list[str]) -> tuple[list[str], list[DomainTo
 
 
 @mcp.tool(
+    title="Cluster verification tokens",
     annotations=tool_annotations(
         read_only=True,
         destructive=False,
@@ -445,6 +447,7 @@ async def cluster_verification_tokens(
 
 
 @mcp.tool(
+    title="List infrastructure clusters",
     annotations=tool_annotations(
         read_only=True,
         destructive=False,
@@ -537,6 +540,7 @@ async def get_infrastructure_clusters(domain: str, member_limit_per_cluster: int
 
 
 @mcp.tool(
+    title="Export infrastructure graph",
     annotations=tool_annotations(
         read_only=True,
         destructive=False,

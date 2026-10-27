@@ -46,9 +46,12 @@ a cache-miss `lookup_tenant`, `build_review_bundle`,
 `cluster_verification_tokens`, and `compare_postures` send
 `notifications/progress` with stage names and counts (#317).
 
-Next work is display titles and server metadata (#320). Registry
-distribution, marketplace packaging, and additional client setup remain open
-in #321 through #323.
+`server/discover` on mcp 2.0.0 and newer carries title `recon`, the package
+description, and the project `websiteUrl`, and every tool, catalog resource,
+and the `domain_report` prompt has a display title (#320).
+
+Next work is the Claude Code marketplace (#322). Registry distribution and
+additional client setup remain open in #321 and #323.
 
 When picking work back up:
 

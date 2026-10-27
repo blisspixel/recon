@@ -2293,7 +2293,8 @@
           }
         ],
         "name": "domain_report",
-        "summary": "Generate an evidence-backed defensive domain briefing."
+        "summary": "Generate an evidence-backed defensive domain briefing.",
+        "title": "Prepare domain briefing"
       }
     ],
     "resource_count": 6,
@@ -2302,36 +2303,42 @@
         "mime_type": "application/json",
         "name": "Fingerprint catalog",
         "summary": "Full SaaS fingerprint catalog as JSON. Each entry carries slug, name, category, confidence tier, M365 flag, match_mode, provider/display group, detection count, and a compact detection summary. Use to answer 'what services can recon identify?'.",
+        "title": "List fingerprint catalog",
         "uri": "recon://fingerprints"
       },
       {
         "mime_type": "application/json",
         "name": "Posture profile catalog",
         "summary": "Built-in posture profile lenses as JSON. Each entry carries name, description, focus categories, category/signal boost multipliers, excluded signals, and any profile-specific note. Use to answer 'which posture lens fits this target?' before calling analyze_posture with a profile argument.",
+        "title": "List posture profiles",
         "uri": "recon://profiles"
       },
       {
         "mime_type": "application/json",
         "name": "Namespace ReviewBundle schema",
         "summary": "The separate Draft 2020-12 JSON Schema for NamespaceReviewBundle v1, byte-identical to docs/review-bundle-schema.json. Use it to validate artifacts returned by build_review_bundle without an external fetch.",
+        "title": "Read review bundle schema",
         "uri": "recon://review-bundle-schema"
       },
       {
         "mime_type": "application/json",
         "name": "JSON output schema",
         "summary": "The recon JSON-output contract as a JSON Schema, the same document published at docs/recon-schema.json. Use it to self-describe the shape of `recon <domain> --json` output (and the batch / delta modes in its $defs) without an external fetch. The schema's own description field states the contract version and the additive-change policy.",
+        "title": "Read output schema",
         "uri": "recon://schema"
       },
       {
         "mime_type": "application/json",
         "name": "Signal catalog",
         "summary": "Derived intelligence signals recon can emit, as JSON. Each entry carries name, category, confidence, description, min_matches, candidate slugs, contradicts/requires relationships, and the positive-when-absent inversion set. Use to answer 'what higher-order observations can recon derive from fingerprint matches?'.",
+        "title": "List signal catalog",
         "uri": "recon://signals"
       },
       {
         "mime_type": "application/json",
         "name": "Generated surface inventory",
         "summary": "Generated, non-contractual map of recon's local CLI, MCP, JSON-schema, and agent-integration surfaces. Use it to choose local commands, tools, resources, and guidance files without reading repository files or making network calls.",
+        "title": "Read surface inventory",
         "uri": "recon://surface-inventory"
       }
     ],
@@ -2382,7 +2389,8 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "Analyze a domain's configuration posture and return neutral observations."
+        "summary": "Analyze a domain's configuration posture and return neutral observations.",
+        "title": "Analyze posture"
       },
       {
         "annotations": {
@@ -2432,7 +2440,8 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "Summarize a domain's public configuration evidence for defensive review."
+        "summary": "Summarize a domain's public configuration evidence for defensive review.",
+        "title": "Assess exposure"
       },
       {
         "annotations": {
@@ -2502,7 +2511,8 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "Build one fresh, evidence-linked NamespaceReviewBundle artifact."
+        "summary": "Build one fresh, evidence-linked NamespaceReviewBundle artifact.",
+        "title": "Build review bundle"
       },
       {
         "annotations": {
@@ -2548,7 +2558,8 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "Follow all `related_domains` observations; this does not establish ownership or a corporate relationship."
+        "summary": "Follow all `related_domains` observations; this does not establish ownership or a corporate relationship.",
+        "title": "Follow related domains"
       },
       {
         "annotations": {
@@ -2572,7 +2583,8 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "Remove all ephemeral fingerprints from this server process."
+        "summary": "Remove all ephemeral fingerprints from this server process.",
+        "title": "Clear ephemeral fingerprints"
       },
       {
         "annotations": {
@@ -2622,7 +2634,8 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "Cluster a list of domains by shared site-verification tokens."
+        "summary": "Cluster a list of domains by shared site-verification tokens.",
+        "title": "Cluster verification tokens"
       },
       {
         "annotations": {
@@ -2673,7 +2686,8 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "Compare the public configuration evidence of two domains side by side."
+        "summary": "Compare the public configuration evidence of two domains side by side.",
+        "title": "Compare postures"
       },
       {
         "annotations": {
@@ -2727,7 +2741,8 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "Mine unclassified CNAME candidates; each requires independent triage."
+        "summary": "Mine unclassified CNAME candidates; each requires independent triage.",
+        "title": "Discover fingerprint candidates"
       },
       {
         "annotations": {
@@ -2765,7 +2780,8 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "Render the v1.9 Bayesian evidence DAG for a domain."
+        "summary": "Render the v1.9 Bayesian evidence DAG for a domain.",
+        "title": "Explain inference graph"
       },
       {
         "annotations": {
@@ -2804,7 +2820,8 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "Query a specific signal's trigger conditions and current state for a domain."
+        "summary": "Query a specific signal's trigger conditions and current state for a domain.",
+        "title": "Explain signal"
       },
       {
         "annotations": {
@@ -2878,7 +2895,8 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "Return the raw CT co-occurrence graph (nodes + weighted edges)."
+        "summary": "Return the raw CT co-occurrence graph (nodes + weighted edges).",
+        "title": "Export infrastructure graph"
       },
       {
         "annotations": {
@@ -2916,7 +2934,8 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "Identify hardening opportunities in a domain's public configuration."
+        "summary": "Identify hardening opportunities in a domain's public configuration.",
+        "title": "Find hardening gaps"
       },
       {
         "annotations": {
@@ -2965,7 +2984,8 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "List all loaded fingerprints with slugs, categories, and detection types."
+        "summary": "List all loaded fingerprints with slugs, categories, and detection types.",
+        "title": "List fingerprints"
       },
       {
         "annotations": {
@@ -3023,7 +3043,8 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "Return the CT co-occurrence community-detection report for a domain."
+        "summary": "Return the CT co-occurrence community-detection report for a domain.",
+        "title": "List infrastructure clusters"
       },
       {
         "annotations": {
@@ -3067,7 +3088,8 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "Compute v1.9 Bayesian-network posteriors over high-level claims."
+        "summary": "Compute v1.9 Bayesian-network posteriors over high-level claims.",
+        "title": "Read posteriors"
       },
       {
         "annotations": {
@@ -3108,7 +3130,8 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "List reportable public signals with rules, layers, and conditions."
+        "summary": "List reportable public signals with rules, layers, and conditions.",
+        "title": "List signals"
       },
       {
         "annotations": {
@@ -3172,7 +3195,8 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "Inject a temporary fingerprint into this server process."
+        "summary": "Inject a temporary fingerprint into this server process.",
+        "title": "Inject ephemeral fingerprint"
       },
       {
         "annotations": {
@@ -3194,7 +3218,8 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "List all ephemeral fingerprints loaded in this server process."
+        "summary": "List all ephemeral fingerprints loaded in this server process.",
+        "title": "List ephemeral fingerprints"
       },
       {
         "annotations": {
@@ -3240,7 +3265,8 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "Return compact text by default; JSON returns a detailed serialized record."
+        "summary": "Return compact text by default; JSON returns a detailed serialized record.",
+        "title": "Look up domain"
       },
       {
         "annotations": {
@@ -3370,7 +3396,8 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "Re-evaluate a previously looked-up domain against current fingerprints."
+        "summary": "Re-evaluate a previously looked-up domain against current fingerprints.",
+        "title": "Reevaluate cached domain"
       },
       {
         "annotations": {
@@ -3392,7 +3419,8 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "Reload fingerprint, signal, and posture definitions for this server process."
+        "summary": "Reload fingerprint, signal, and posture definitions for this server process.",
+        "title": "Reload catalogs"
       },
       {
         "annotations": {
@@ -3445,7 +3473,8 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "Re-compute the public-evidence index with hypothetical fixes."
+        "summary": "Re-compute the public-evidence index with hypothetical fixes.",
+        "title": "Simulate hardening"
       },
       {
         "annotations": {
@@ -3496,7 +3525,8 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "Test a theory about a domain against signals and evidence."
+        "summary": "Test a theory about a domain against signals and evidence.",
+        "title": "Test hypothesis"
       }
     ],
     "transport": "stdio"

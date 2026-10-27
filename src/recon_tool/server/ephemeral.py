@@ -269,6 +269,7 @@ def _validate_raw_detections(detections: list[dict[str, str]]) -> None:
 
 
 @mcp.tool(
+    title="Inject ephemeral fingerprint",
     annotations=tool_annotations(
         read_only=False,
         destructive=False,
@@ -371,6 +372,7 @@ async def inject_ephemeral_fingerprint(
 
 
 @mcp.tool(
+    title="List ephemeral fingerprints",
     annotations=tool_annotations(
         read_only=True,
         destructive=False,
@@ -399,6 +401,7 @@ async def list_ephemeral_fingerprints() -> list[EphemeralFingerprintSummary]:
 
 
 @mcp.tool(
+    title="Clear ephemeral fingerprints",
     annotations=tool_annotations(
         read_only=False,
         destructive=True,
@@ -436,6 +439,7 @@ async def clear_ephemeral_fingerprints() -> EphemeralClearResult:
 
 
 @mcp.tool(
+    title="Reevaluate cached domain",
     annotations=tool_annotations(
         read_only=False,
         destructive=True,

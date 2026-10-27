@@ -28,6 +28,12 @@ operator, corporate group, ownership, or control.
 
 ### Added
 
+- Advertise MCP display metadata. On mcp 2.0.0 and newer, `server/discover`
+  and initialize `serverInfo` carry title `recon`, the package description,
+  and `websiteUrl` `https://github.com/blisspixel/recon`. Every tool, catalog
+  resource, and the `domain_report` prompt has a verb-first title. Names are
+  unchanged, and recon publishes no icon. The v1.28.1 rollback pin forwards
+  `websiteUrl` and those component titles. (#320)
 - Send MCP `notifications/progress` from `chain_lookup`, a cache-miss
   `lookup_tenant`, `build_review_bundle`, `cluster_verification_tokens`, and
   `compare_postures`. Messages are stage names and counts. A client that

@@ -1,16 +1,16 @@
-"""Introspection MCP resources and tools: catalogs, signals, reload, diagnostics.
+"""Introspection MCP tools: catalogs, signals, reload, and diagnostics.
 
 Extracted from server.py (docs/roadmap.md god-file track, app-sharing variant).
 Registers its tools on the shared ``mcp`` instance imported from
 ``recon_tool.server.app``; the server facade imports this module to trigger
-registration and re-exports the tool functions for the test surface. Imports
+registration and re-exports the tool functions for the test surface. Catalog
+resources are registered from ``catalog_resources``. Imports
 ``recon_tool.server.app`` and ``recon_tool.server.runtime``; never the reverse.
 """
 
 from __future__ import annotations
 
 import asyncio
-import json as json_mod
 import logging
 import time
 import uuid
@@ -176,162 +176,6 @@ def _metadata_summary(condition: MetadataCondition) -> SignalMetadataSummary:
     return {"field": condition.field, "operator": condition.operator, "value": condition.value}
 
 
-@mcp.resource(
-    "recon://fingerprints",
-    name="Fingerprint catalog",
-    description=(
-        "Full SaaS fingerprint catalog as JSON. Each entry carries slug, name, "
-        "category, confidence tier, M365 flag, match_mode, provider/display "
-        "group, detection count, and a compact detection summary. Use to "
-        "answer 'what services can recon identify?'."
-    ),
-    mime_type="application/json",
-)
-def _resource_fingerprints() -> str:  # pyright: ignore[reportUnusedFunction]
-    from recon_tool.fingerprints import load_fingerprints
-
-    payload = [
-        {
-            "slug": fp.slug,
-            "name": fp.name,
-            "category": fp.category,
-            "confidence": fp.confidence,
-            "m365": fp.m365,
-            "match_mode": fp.match_mode,
-            "provider_group": fp.provider_group,
-            "display_group": fp.display_group,
-            "detection_count": len(fp.detections),
-            "detection_types": sorted({d.type for d in fp.detections}),
-        }
-        for fp in load_fingerprints()
-    ]
-    return json_mod.dumps(
-        {"count": len(payload), "fingerprints": payload},
-        indent=2,
-    )
-
-
-@mcp.resource(
-    "recon://signals",
-    name="Signal catalog",
-    description=(
-        "Derived intelligence signals recon can emit, as JSON. Each entry "
-        "carries name, category, confidence, description, min_matches, "
-        "candidate slugs, contradicts/requires relationships, and the "
-        "positive-when-absent inversion set. Use to answer 'what higher-"
-        "order observations can recon derive from fingerprint matches?'."
-    ),
-    mime_type="application/json",
-)
-def _resource_signals() -> str:  # pyright: ignore[reportUnusedFunction]
-    from recon_tool.signals import public_signal_names, reportable_signals
-
-    payload = [
-        {
-            "name": public_label,
-            "category": sig.category,
-            "confidence": sig.confidence,
-            "description": sig.description,
-            "candidates": list(sig.candidates),
-            "min_matches": sig.min_matches,
-            "contradicts": list(sig.contradicts),
-            "requires_signals": public_signal_names(sig.requires_signals),
-            "expected_counterparts": list(sig.expected_counterparts),
-            "positive_when_absent": list(sig.positive_when_absent),
-            "explain": sig.explain,
-        }
-        for sig, public_label in reportable_signals()
-    ]
-    return json_mod.dumps(
-        {"count": len(payload), "signals": payload},
-        indent=2,
-    )
-
-
-@mcp.resource(
-    "recon://profiles",
-    name="Posture profile catalog",
-    description=(
-        "Built-in posture profile lenses as JSON. Each entry carries name, "
-        "description, focus categories, category/signal boost multipliers, "
-        "excluded signals, and any profile-specific note. Use to answer "
-        "'which posture lens fits this target?' before calling "
-        "analyze_posture with a profile argument."
-    ),
-    mime_type="application/json",
-)
-def _resource_profiles() -> str:  # pyright: ignore[reportUnusedFunction]
-    from recon_tool.profiles import list_profiles
-
-    payload = [
-        {
-            "name": prof.name,
-            "description": prof.description,
-            "focus_categories": list(prof.focus_categories),
-            "category_boost": dict(prof.category_boost),
-            "signal_boost": dict(prof.signal_boost),
-            "exclude_signals": list(prof.exclude_signals),
-            "prepend_note": prof.prepend_note,
-        }
-        for prof in list_profiles()
-    ]
-    return json_mod.dumps(
-        {"count": len(payload), "profiles": payload},
-        indent=2,
-    )
-
-
-@mcp.resource(
-    "recon://schema",
-    name="JSON output schema",
-    description=(
-        "The recon JSON-output contract as a JSON Schema, the same document "
-        "published at docs/recon-schema.json. Use it to self-describe the "
-        "shape of `recon <domain> --json` output (and the batch / delta modes "
-        "in its $defs) without an external fetch. The schema's own description "
-        "field states the contract version and the additive-change policy."
-    ),
-    mime_type="application/json",
-)
-def _resource_schema() -> str:  # pyright: ignore[reportUnusedFunction]
-    from recon_tool.schema_contract import packaged_schema_text
-
-    return packaged_schema_text()
-
-
-@mcp.resource(
-    "recon://review-bundle-schema",
-    name="Namespace ReviewBundle schema",
-    description=(
-        "The separate Draft 2020-12 JSON Schema for NamespaceReviewBundle v1, "
-        "byte-identical to docs/review-bundle-schema.json. Use it to validate "
-        "artifacts returned by build_review_bundle without an external fetch."
-    ),
-    mime_type="application/json",
-)
-def _resource_review_bundle_schema() -> str:  # pyright: ignore[reportUnusedFunction]
-    from recon_tool.review_bundle_schema import packaged_review_bundle_schema_text
-
-    return packaged_review_bundle_schema_text()
-
-
-@mcp.resource(
-    "recon://surface-inventory",
-    name="Generated surface inventory",
-    description=(
-        "Generated, non-contractual map of recon's local CLI, MCP, JSON-schema, "
-        "and agent-integration surfaces. Use it to choose local commands, tools, "
-        "resources, and guidance files without reading repository files or "
-        "making network calls."
-    ),
-    mime_type="application/json",
-)
-def _resource_surface_inventory() -> str:  # pyright: ignore[reportUnusedFunction]
-    from recon_tool.surface_inventory import packaged_surface_inventory_text
-
-    return packaged_surface_inventory_text()
-
-
 def _dag_collection_prefix(degraded: list[str], masked: list[str], output_format: str) -> str:
     """Render standalone DAG collection provenance without affecting inference."""
     if not degraded:
@@ -344,6 +188,7 @@ def _dag_collection_prefix(degraded: list[str], masked: list[str], output_format
 
 
 @mcp.tool(
+    title="List fingerprints",
     annotations=tool_annotations(
         read_only=True,
         destructive=False,
@@ -430,6 +275,7 @@ def _classify_signal_layer(sig: object) -> int:
 
 
 @mcp.tool(
+    title="List signals",
     annotations=tool_annotations(
         read_only=True,
         destructive=False,
@@ -496,6 +342,7 @@ async def get_signals(category: str | None = None, layer: int | None = None) -> 
 
 
 @mcp.tool(
+    title="Explain signal",
     annotations=tool_annotations(
         read_only=True,
         destructive=False,
@@ -627,6 +474,7 @@ def _static_weakening_conditions(sig: object) -> list[str]:
 
 
 @mcp.tool(
+    title="Reload catalogs",
     annotations=tool_annotations(
         read_only=False,
         destructive=True,
@@ -681,6 +529,7 @@ async def reload_data() -> str:
 
 
 @mcp.tool(
+    title="Discover fingerprint candidates",
     annotations=tool_annotations(
         read_only=True,
         destructive=False,
@@ -808,6 +657,7 @@ async def discover_fingerprint_candidates(
 
 
 @mcp.tool(
+    title="Read posteriors",
     annotations=tool_annotations(
         read_only=True,
         destructive=False,
@@ -915,6 +765,7 @@ async def get_posteriors(domain: str) -> PosteriorBlockResult:
 
 
 @mcp.tool(
+    title="Explain inference graph",
     annotations=tool_annotations(
         read_only=True,
         destructive=False,

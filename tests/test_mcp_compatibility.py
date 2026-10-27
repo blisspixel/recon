@@ -69,9 +69,19 @@ def test_server_options_match_the_active_sdk_generation() -> None:
     """
     options = mcp_application_options()
     if SDK_FAMILY == "v1":
-        assert options == {}
+        assert options == {"website_url": "https://github.com/blisspixel/recon"}
         return
-    assert set(options) == {"version", "subscriptions", "cache_hints"}
+    assert set(options) == {
+        "version",
+        "subscriptions",
+        "cache_hints",
+        "title",
+        "description",
+        "website_url",
+    }
+    assert options["title"] == "recon"
+    assert options["website_url"] == "https://github.com/blisspixel/recon"
+    assert options["description"]
     assert options["subscriptions"] is False
     assert options["version"]
     assert set(options["cache_hints"]) == {

@@ -92,6 +92,35 @@ def _wire_dict(model: object) -> dict[str, Any]:
     return value
 
 
+def _require_display_title(item: object, label: str) -> None:
+    title = _wire_dict(item).get("title")
+    if not isinstance(title, str) or not title.strip():
+        raise ValueError(f"{label} has no display title")
+
+
+def _require_server_identity(server_info: object, *, modern: bool) -> None:
+    """Require the display fields this SDK generation can actually send.
+
+    v1 FastMCP forwards ``websiteUrl`` and has no constructor parameter for a
+    server title or description. v2 copies all three onto initialize and
+    ``server/discover``. recon publishes no icon.
+    """
+    from recon_tool.mcp_client.sdk_compat import SERVER_TITLE, SERVER_WEBSITE_URL, server_description
+
+    if not isinstance(server_info, dict):
+        raise ValueError(f"serverInfo={server_info!r}")
+    if server_info.get("websiteUrl") != SERVER_WEBSITE_URL:
+        raise ValueError(f"serverInfo websiteUrl={server_info.get('websiteUrl')!r}")
+    if "icons" in server_info:
+        raise ValueError(f"serverInfo publishes an icon: {server_info.get('icons')!r}")
+    if not modern:
+        return
+    if server_info.get("title") != SERVER_TITLE:
+        raise ValueError(f"serverInfo title={server_info.get('title')!r}")
+    if server_info.get("description") != server_description():
+        raise ValueError(f"serverInfo description={server_info.get('description')!r}")
+
+
 def _distribution_version(name: str) -> str | None:
     try:
         return package_version(name)
@@ -257,6 +286,12 @@ async def _check_recon_registry(mcp: Any) -> tuple[ProbeCheck, list[Any] | None]
         if prompt_names[0] != prompt_names[1] or template_uris[0] != template_uris[1]:
             raise ValueError("prompt or resource-template order is not deterministic")
         _require_canonical_registry(tool_names[0], resource_uris[0], template_uris[0], prompt_names[0])
+        for tool in tool_runs[0]:
+            _require_display_title(tool, f"tool {tool.name}")
+        for resource in resource_runs[0]:
+            _require_display_title(resource, f"resource {resource.uri}")
+        for prompt in prompt_runs[0]:
+            _require_display_title(prompt, f"prompt {prompt.name}")
         return (
             ProbeCheck(
                 "recon_registry_order",
@@ -811,6 +846,7 @@ async def _raw_legacy_initialize(family: str) -> ProbeCheck:
             raise ValueError(f"legacy initialize negotiated protocolVersion={negotiated!r}")
         if not isinstance(server_info, dict) or not server_info.get("name"):
             raise ValueError(f"legacy initialize returned serverInfo={server_info!r}")
+        _require_server_identity(server_info, modern=family == "v2")
         # Instructions are recon's own bar, not a spec MUST: agents on the
         # legacy era must keep receiving the behavior-constraining guidance.
         if not isinstance(instructions, str) or not instructions.strip():
@@ -851,6 +887,7 @@ def _check_discover_payload(response: dict[str, Any]) -> ProbeCheck:
         server_info = meta.get(_META_SERVER_INFO_KEY) if isinstance(meta, dict) else None
         if not isinstance(server_info, dict) or not server_info.get("name"):
             raise ValueError(f"discover result serverInfo={server_info!r}")
+        _require_server_identity(server_info, modern=True)
         return ProbeCheck(
             "recon_stdio_discover_payload",
             "pass",

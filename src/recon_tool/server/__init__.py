@@ -37,6 +37,9 @@ from recon_tool.server import posture as server_posture
 from recon_tool.server import graph as server_graph
 
 # isort: split
+from recon_tool.server import catalog_resources as server_catalog_resources
+
+# isort: split
 from recon_tool.server import introspection as server_introspection
 
 # isort: split
@@ -103,6 +106,9 @@ chain_lookup = server_graph.chain_lookup
 cluster_verification_tokens = server_graph.cluster_verification_tokens
 get_infrastructure_clusters = server_graph.get_infrastructure_clusters
 export_graph = server_graph.export_graph
+# Imported for registration. The binding keeps the side effect visible.
+_CATALOG_RESOURCES = server_catalog_resources
+
 get_fingerprints = server_introspection.get_fingerprints
 get_signals = server_introspection.get_signals
 explain_signal = server_introspection.explain_signal
@@ -176,7 +182,7 @@ _log_structured = _server_runtime.log_structured
 # ── Ephemeral Fingerprint MCP Tools ─────────────────────────────────────
 
 
-@mcp.prompt()
+@mcp.prompt(title="Prepare domain briefing")
 def domain_report(domain: str) -> str:
     """Generate an evidence-backed defensive domain briefing.
 
