@@ -8,22 +8,20 @@ from __future__ import annotations
 
 import asyncio
 
-import httpx
-
 from recon_tool.models import SourceResult, TenantInfo
-from recon_tool.resolver import RESOLVE_TIMEOUT, SourcePool
 
 
 async def _resolve_tenant(
     domain: str,
-    pool: SourcePool | None = None,
-    client: httpx.AsyncClient | None = None,
-    timeout: float = RESOLVE_TIMEOUT,
-    skip_ct: bool = False,
-    active_probes: bool = False,
+    *_unused: object,
+    **_ignored: object,
 ) -> tuple[TenantInfo, list[SourceResult]]:
-    """Return one synthetic namespace. The pause lets two progress lines through."""
-    del pool, client, timeout, skip_ct, active_probes
+    """Return one synthetic namespace. The pause lets two progress lines through.
+
+    Positional and keyword arguments match ``resolve_tenant`` so the chain
+    caller can pass pool, client, timeout, and probe flags unchanged.
+    """
+    del _unused, _ignored
     await asyncio.sleep(0.6)
     related = ("related.invalid",) if domain == "alpha.invalid" else ()
     info = TenantInfo(

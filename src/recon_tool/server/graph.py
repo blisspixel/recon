@@ -238,15 +238,15 @@ async def chain_lookup(
         )
 
     try:
-        from recon_tool.chain import chain_resolve
+        from recon_tool.chain import ChainOptions, resolve_chain
         from recon_tool.formatter import format_chain_json
 
         server_app.require_collection_policy(validated)
-        # chain_resolve calls the core resolver for every queued domain rather
+        # resolve_chain calls the core resolver for every queued domain rather
         # than the MCP wrapper. Keep its entire traversal in the same boundary.
         # Progress is one line per queued name, not the nested source events.
         with collection_scope(MCP_COLLECTION_POLICY):
-            report = await chain_resolve(validated, depth=depth, on_progress=on_chain)
+            report = await resolve_chain(validated, ChainOptions(depth=depth, on_progress=on_chain))
     except asyncio.CancelledError:
         raise
     except ReconLookupError as exc:

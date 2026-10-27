@@ -19,6 +19,7 @@ import json
 import pytest
 
 from recon_tool import server, server_app
+from recon_tool.chain import ChainOptions
 from recon_tool.mcp_client.sdk_compat import ToolError, call_tool_parts
 from recon_tool.models import (
     ChainReport,
@@ -140,15 +141,16 @@ def stub_chain(monkeypatch: pytest.MonkeyPatch):
 
     report = _chain_report()
 
-    async def _stub(domain: str, depth: int = 1, **_kwargs: object) -> ChainReport:
+    async def _stub(domain: str, options: ChainOptions) -> ChainReport:
         assert domain == "example.com"
-        assert depth == 1
+        assert options.depth == 1
+        assert callable(options.on_progress)
         return report
 
     def _allow_rate_limit(_domain: str) -> bool:
         return True
 
-    monkeypatch.setattr(chain_module, "chain_resolve", _stub)
+    monkeypatch.setattr(chain_module, "resolve_chain", _stub)
     monkeypatch.setattr(server_graph, "rate_limit_try_acquire", _allow_rate_limit)
     return report
 
@@ -161,11 +163,11 @@ class TestChainLookupDepthBound:
 
         seen: list[int] = []
 
-        async def _capture(domain: str, depth: int = 1, **_kwargs: object) -> ChainReport:
-            seen.append(depth)
+        async def _capture(domain: str, options: ChainOptions) -> ChainReport:
+            seen.append(options.depth)
             return _chain_report()
 
-        monkeypatch.setattr(chain_module, "chain_resolve", _capture)
+        monkeypatch.setattr(chain_module, "resolve_chain", _capture)
         monkeypatch.setattr(server_graph, "rate_limit_try_acquire", _allow_any_rate_limit)
 
         with pytest.raises(ToolError, match="depth must be an integer"):
@@ -180,11 +182,11 @@ class TestChainLookupDepthBound:
 
         seen: list[int] = []
 
-        async def _capture(domain: str, depth: int = 1, **_kwargs: object) -> ChainReport:
-            seen.append(depth)
+        async def _capture(domain: str, options: ChainOptions) -> ChainReport:
+            seen.append(options.depth)
             return _chain_report()
 
-        monkeypatch.setattr(chain_module, "chain_resolve", _capture)
+        monkeypatch.setattr(chain_module, "resolve_chain", _capture)
         monkeypatch.setattr(server_graph, "rate_limit_try_acquire", _allow_any_rate_limit)
 
         with pytest.raises(ToolError, match="depth must be an integer"):
@@ -267,15 +269,15 @@ class TestChainLookupCompact:
         import recon_tool.server.graph as server_graph
         from recon_tool.mcp_client.sdk_compat import ToolError
 
-        async def fail(domain: str, depth: int = 1, **_kwargs: object) -> ChainReport:
+        async def fail(domain: str, options: ChainOptions) -> ChainReport:
             assert domain == "example.com"
-            assert depth == 1
+            assert options.depth == 1
             raise RuntimeError("boom")
 
         def allow(_domain: str) -> bool:
             return True
 
-        monkeypatch.setattr(chain_module, "chain_resolve", fail)
+        monkeypatch.setattr(chain_module, "resolve_chain", fail)
         monkeypatch.setattr(server_graph, "rate_limit_try_acquire", allow)
         raw = "https://www.example.com/private/path?token=secret"
 

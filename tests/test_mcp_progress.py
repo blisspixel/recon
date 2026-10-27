@@ -14,7 +14,7 @@ from mcp import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 from mcp.types import ProgressNotification
 
-from recon_tool.chain import ChainProgress, ChainReport, ChainResult, chain_resolve
+from recon_tool.chain import ChainOptions, ChainProgress, ChainReport, ChainResult, resolve_chain
 from recon_tool.collection_progress import emit
 from recon_tool.mcp_client.sdk_compat import ToolContext, ToolError, tool_schemas
 from recon_tool.models import TenantInfo
@@ -161,21 +161,21 @@ async def test_chain_progress_counts_names_and_survives_callback_errors(monkeypa
     async def on_progress(snapshot: ChainProgress) -> None:
         seen.append((snapshot.depth, snapshot.completed, snapshot.known))
 
-    report = await chain_resolve("alpha.invalid", depth=1, on_progress=on_progress)
+    report = await resolve_chain("alpha.invalid", ChainOptions(depth=1, on_progress=on_progress))
     assert seen == [(0, 1, 1), (1, 2, 2)]
     assert [result.chain_depth for result in report.results] == [0, 1]
 
     async def fail(_snapshot: ChainProgress) -> None:
         raise RuntimeError("progress down")
 
-    failed = await chain_resolve("alpha.invalid", depth=1, on_progress=fail)
+    failed = await resolve_chain("alpha.invalid", ChainOptions(depth=1, on_progress=fail))
     assert len(failed.results) == 2
 
     async def cancel(_snapshot: ChainProgress) -> None:
         raise asyncio.CancelledError
 
     with pytest.raises(asyncio.CancelledError):
-        await chain_resolve("alpha.invalid", depth=1, on_progress=cancel)
+        await resolve_chain("alpha.invalid", ChainOptions(depth=1, on_progress=cancel))
 
 
 @pytest.mark.asyncio
@@ -273,12 +273,12 @@ async def test_review_bundle_listens_on_every_call(monkeypatch: pytest.MonkeyPat
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("approved_mcp_dns")
 async def test_chain_lookup_sends_the_forwarded_snapshot(monkeypatch: pytest.MonkeyPatch) -> None:
-    async def resolve(domain: str, depth: int = 1, on_progress: Any = None) -> ChainReport:
-        del depth
-        await on_progress(ChainProgress(0, 1, 1))
+    async def resolve(domain: str, options: ChainOptions) -> ChainReport:
+        assert options.on_progress is not None
+        await options.on_progress(ChainProgress(0, 1, 1))
         return ChainReport(results=(ChainResult(domain, _info(domain), 0),), max_depth_reached=0, truncated=False)
 
-    monkeypatch.setattr("recon_tool.chain.chain_resolve", resolve)
+    monkeypatch.setattr("recon_tool.chain.resolve_chain", resolve)
     sink = _Sink()
     payload = await graph.chain_lookup("alpha.invalid", ctx=_ctx(sink))
     assert "alpha.invalid" in payload

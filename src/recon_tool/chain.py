@@ -100,19 +100,25 @@ async def _resolve_one_chain_domain(
     return ChainResult(domain=domain, info=info, chain_depth=depth)
 
 
+async def _notify_chain_progress(options: ChainOptions, snapshot: ChainProgress) -> None:
+    """Report one chain step. A callback error must not fail the lookup."""
+    if options.on_progress is None:
+        return
+    try:
+        await options.on_progress(snapshot)
+    except Exception:
+        logger.debug("chain progress callback failed", exc_info=True)
+
+
 async def chain_resolve(
     domain: str,
     depth: int = 1,
     pool: SourcePool | None = None,
     skip_ct: bool = False,
     active_probes: bool = False,
-    on_progress: ChainProgressCallback | None = None,
 ) -> ChainReport:
     """Compatibility entry point with the default per-domain timeout."""
-    return await resolve_chain(
-        domain,
-        ChainOptions(depth, pool, skip_ct, active_probes, on_progress=on_progress),
-    )
+    return await resolve_chain(domain, ChainOptions(depth, pool, skip_ct, active_probes))
 
 
 async def resolve_chain(domain: str, options: ChainOptions) -> ChainReport:
@@ -176,11 +182,7 @@ async def resolve_chain(domain: str, options: ChainOptions) -> ChainReport:
             visited.add(d)
             rest = sum(1 for name in current_level[index + 1 :] if name not in visited)
             known = max(len(visited), min(MAX_CHAIN_DOMAINS, len(visited) + rest))
-            if options.on_progress is not None:
-                try:
-                    await options.on_progress(ChainProgress(current_depth, len(visited), known))
-                except Exception:
-                    logger.debug("chain progress callback failed", exc_info=True)
+            await _notify_chain_progress(options, ChainProgress(current_depth, len(visited), known))
 
             resolved = await _resolve_one_chain_domain(
                 d,
