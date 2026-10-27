@@ -407,6 +407,27 @@ def _check_claude_marketplace(root: Path) -> CheckResult:
     return _result("claude marketplace", "pass", "plugin name, version, and source match")
 
 
+def _mcp_registry_problems(root: Path) -> list[str]:
+    try:
+        from scripts.generate_mcp_registry import agreement_problems
+    except ImportError:
+        from generate_mcp_registry import agreement_problems  # type: ignore[no-redef]
+
+    return agreement_problems(root)
+
+
+def _check_mcp_registry(root: Path) -> CheckResult:
+    problems = _mcp_registry_problems(root)
+    if problems:
+        return _result(
+            "mcp registry",
+            "fail",
+            "; ".join(problems),
+            "run uv run python scripts/generate_mcp_registry.py",
+        )
+    return _result("mcp registry", "pass", "name, version, marker, and launch match")
+
+
 def _check_uv_toolchain(runner: Runner) -> CheckResult:
     result = runner(["uv", "--version"])
     if result.returncode != 0:
@@ -1255,6 +1276,7 @@ def collect_checks(
         _check_upstream_state(actual_runner),
         _check_version_consistency(root),
         _check_claude_marketplace(root),
+        _check_mcp_registry(root),
         uv_toolchain,
         uv_lock,
         _check_coverage_targets(root),

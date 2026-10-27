@@ -131,6 +131,12 @@ def test_generic_root_json_artifact_fails_closed(tmp_path: Path) -> None:
     assert violations[0].render().startswith("[redacted]:")
 
 
+def test_generated_registry_document_is_not_a_domain_dump(tmp_path: Path) -> None:
+    violations = check_validation_hygiene.find_violations(tmp_path, ["server.json", "Server.JSON"])
+
+    assert violations == []
+
+
 def test_target_domain_fields_fail_in_committed_validation_artifact(tmp_path: Path) -> None:
     _write(tmp_path, "validation/new-calibration.md", "queried_domain: evaluated-target.localhost\n")
 

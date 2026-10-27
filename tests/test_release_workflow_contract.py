@@ -394,7 +394,7 @@ class TestProvenanceExportJob:
 # sealed dist and publishes it; attest downloads the sealed dist and signs
 # a provenance attestation. Both are dependency-free, asserted below. Any
 # new entry here must come with the same dependency-free guarantee.
-_OIDC_ALLOWED_JOBS = {"publish-pypi", "attest"}
+_OIDC_ALLOWED_JOBS = {"publish-pypi", "attest", "publish-mcp-registry"}
 
 
 class TestPublishJobIsHardened:

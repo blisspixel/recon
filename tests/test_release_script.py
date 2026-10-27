@@ -203,6 +203,12 @@ def test_release_surface_generation_updates_installers_and_artifacts(
             "uv",
             "run",
             "python",
+            "scripts/generate_mcp_registry.py",
+        ],
+        [
+            "uv",
+            "run",
+            "python",
             "scripts/generate_agent_plugin.py",
         ],
         [
@@ -221,6 +227,7 @@ def test_release_rollback_tracks_every_generated_agent_plugin_file() -> None:
 
     assert {
         ".claude-plugin/marketplace.json",
+        "server.json",
         "agents/agent-plugin/plugin.json",
         "agents/agent-plugin/mcp.json",
         "agents/agent-plugin/README.md",

@@ -28,6 +28,11 @@ operator, corporate group, ownership, or control.
 
 ### Added
 
+- Publish MCP Registry metadata for `io.github.blisspixel/recon`. `server.json`
+  is generated from the project version, and the README carries the PyPI
+  `mcp-name` marker. The declared launch is `uvx --from recon-tool recon mcp`.
+  The release job publishes that pointer with GitHub OIDC after PyPI parity.
+  The artifact remains the attested wheel. (#321)
 - Install recon for Codex and Gemini CLI. `recon mcp install --client=codex`
   writes `[mcp_servers.recon]` in `~/.codex/config.toml` or `.codex/config.toml`,
   preserving sibling tables and comments. `--force` replaces only that table's

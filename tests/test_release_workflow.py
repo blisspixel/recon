@@ -40,11 +40,13 @@ def test_release_oidc_is_scoped_to_dependency_free_jobs() -> None:
 
     jobs_with_oidc = {name for name, job in jobs.items() if job.get("permissions", {}).get("id-token") == "write"}
     # Only jobs that run NO project dependency code may mint an OIDC token:
-    # publish-pypi (downloads the sealed dist and publishes it) and attest
-    # (downloads the sealed dist and signs a provenance attestation). Both
-    # are verified dependency-free in test_release_workflow_contract.py, so
-    # a compromised dependency cannot mint a token in either.
-    assert jobs_with_oidc == {"publish-pypi", "attest"}
+    # publish-pypi (downloads the sealed dist and publishes it), attest
+    # (downloads the sealed dist and signs a provenance attestation), and
+    # publish-mcp-registry (publishes server.json with a verified
+    # mcp-publisher binary and does not download dist/). All three are
+    # verified dependency-free in test_release_workflow_contract.py, so a
+    # compromised dependency cannot mint a token in any of them.
+    assert jobs_with_oidc == {"publish-pypi", "attest", "publish-mcp-registry"}
     assert jobs["publish-pypi"]["environment"] == "pypi"
 
 

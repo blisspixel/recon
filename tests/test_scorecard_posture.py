@@ -38,6 +38,10 @@ _ALLOWED_ELEVATED_JOB_PERMISSIONS = {
         "publish-pypi": {
             "id-token": "write",
         },
+        "publish-mcp-registry": {
+            "contents": "read",
+            "id-token": "write",
+        },
     },
     ".github/workflows/scorecard.yml": {
         "analysis": {
