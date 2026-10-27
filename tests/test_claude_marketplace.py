@@ -86,3 +86,8 @@ def test_plugin_version_must_match_pyproject(tmp_path: Path) -> None:
 
 def test_committed_marketplace_matches_the_generator() -> None:
     assert check(ROOT) == []
+
+
+def test_marketplace_file_stays_lf_on_checkout() -> None:
+    attributes = (ROOT / ".gitattributes").read_text(encoding="utf-8").splitlines()
+    assert ".claude-plugin/marketplace.json text eol=lf" in attributes
