@@ -24,6 +24,7 @@ from typing import Any, Literal, TypeAlias
 
 import typer
 
+from recon_tool.cli.config_directory import config_directory_check
 from recon_tool.cli.doctor_report import (
     CT_CHECK_NAME,
     NEXT_MCP_REINSTALL,
@@ -313,6 +314,10 @@ def doctor_mcp() -> None:
     # 6. recon executable on PATH (important for short GUI-client configs).
     # A missing launcher is informational: the generated config still works
     # through the interpreter fallback.
+    config_directory = config_directory_check()
+    if config_directory is not None:
+        checks.append(config_directory)
+
     recon_path = shutil.which("recon")
     if recon_path:
         checks.append(DoctorCheck("recon on PATH", "ok", recon_path))
@@ -969,6 +974,9 @@ async def collect_doctor_checks() -> list[DoctorCheck]:
     checks.append(await _doctor_ct_check())
     checks.append(_doctor_mcp_check())
     checks.append(_doctor_fingerprint_db_check())
+    config_directory = config_directory_check()
+    if config_directory is not None:
+        checks.append(config_directory)
     checks.append(_doctor_custom_fingerprints_check())
     checks.append(_doctor_signal_db_check())
     checks.append(_doctor_schema_fields_check())

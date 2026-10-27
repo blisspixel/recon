@@ -42,8 +42,12 @@ argument `mcp`, from the plugin root. No source checkout is needed to launch.
 `mcp.json` sets `RECON_CONFIG_DIR` to `${PLUGIN_DATA}/recon`. The client
 supplies and expands `PLUGIN_DATA`; recon's configuration, caches, and
 limiter state stay there across plugin updates. The package directory need
-not be writable. This is separate from ordinary CLI/native-client config:
-existing custom fingerprints and profiles are not automatically imported.
+not be writable. Cursor and VS Code, checked 2026-10-25, leave
+`${PLUGIN_DATA}` unexpanded. recon then ignores that value, warns once,
+and uses the ordinary config location instead of creating a literal
+`${PLUGIN_DATA}` directory in the working directory. This is separate
+from ordinary CLI/native-client config: existing custom fingerprints and
+profiles are not automatically imported.
 
 Already-connected MCP tools do not require a shell or a CLI version probe.
 Tool prefixes and skill invocation UI are client-defined. The triage skill
