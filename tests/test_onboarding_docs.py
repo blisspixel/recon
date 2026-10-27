@@ -195,6 +195,8 @@ def test_agent_installer_guidance_describes_the_canonical_launcher() -> None:
         ROOT / "agents" / "kiro" / "README.md",
         ROOT / "agents" / "vscode" / "README.md",
         ROOT / "agents" / "windsurf" / "README.md",
+        ROOT / "agents" / "codex" / "README.md",
+        ROOT / "agents" / "gemini" / "README.md",
     )
 
     for readme in readmes:

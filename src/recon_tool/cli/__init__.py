@@ -754,7 +754,7 @@ def doctor(
         None,
         "--client",
         help="Check whether a client's MCP config has the recon stanza "
-        "(claude-code, claude-desktop, cursor, vscode, windsurf, kiro). "
+        "(claude-code, claude-desktop, cursor, vscode, windsurf, kiro, codex, gemini). "
         "Reads the config file the client loads. The config-side complement "
         "to --mcp, which validates the server itself.",
     ),

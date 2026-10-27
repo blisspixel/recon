@@ -2620,7 +2620,7 @@
       "tests/test_mcp_config_override.py": {
         "reportArgumentType": {
           "count": 1,
-          "digest": "4b961a1b102203c77646dda7067162da8cab00053f9e00f57949d5b4897af84d"
+          "digest": "637d38bbb1c6356495e6e1a8ffd20a7c013afb9fcc0b1b0121dc3cdc1bfc28a3"
         }
       },
       "tests/test_mcp_dns_view.py": {

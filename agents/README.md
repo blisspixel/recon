@@ -22,7 +22,7 @@ For the MCP-server half of the setup, the canonical move is:
 
 ```bash
 recon mcp install --client=claude-desktop
-# supported: claude-desktop, claude-code, cursor, vscode, windsurf, kiro
+# supported: claude-desktop, claude-code, cursor, vscode, windsurf, kiro, codex, gemini
 recon mcp install --client=cursor --dry-run            # preview the plan
 recon mcp install --client=kiro --scope=workspace      # project-local instead of user-global
 ```
@@ -30,7 +30,13 @@ recon mcp install --client=kiro --scope=workspace      # project-local instead o
 The install is idempotent and merge-safe: sibling MCP servers and
 client-supported extra fields survive a `--force` rerun. Unsupported legacy
 approval fields are removed for Claude Code and VS Code, whose current schemas
-delegate approval to client permission settings. Writes are atomic, so a
+delegate approval to client permission settings. Codex writes
+`[mcp_servers.recon]` in `config.toml`. A matching command and args leave the
+file unchanged. `--force` replaces only that table span, so custom keys inside
+the span do not survive, while sibling tables and comments outside it do. The
+Codex install does not write `tool_timeout_sec` or
+`default_tools_approval_mode`. Gemini uses the JSON merge and omits
+`autoApprove`. Writes are atomic, so a
 failure mid-write never leaves a truncated config.
 
 That handles **piece 1** of the setup (the MCP server). Per-client folders below still cover **piece 2** (the agent guidance - when and how the client should reach for recon) and per-client gotchas.
@@ -45,6 +51,8 @@ That handles **piece 1** of the setup (the MCP server). Per-client folders below
 | **Cursor** | [`cursor/`](cursor/) | MCP config + instructions for creating `.cursor/rules/recon.md` from `AGENTS.md`. |
 | **Windsurf** | [`windsurf/`](windsurf/) | MCP config + instructions for creating a `.windsurfrules` reference. |
 | **VS Code + Copilot** | [`vscode/`](vscode/) | MCP config + instructions for creating `.github/copilot-instructions.md`. |
+| **Codex** | [`codex/`](codex/) | README for `[mcp_servers.recon]` in `~/.codex/config.toml` or `.codex/config.toml`. Codex loads repository `AGENTS.md`. |
+| **Gemini CLI** | [`gemini/`](gemini/) | README for `mcpServers.recon` in `~/.gemini/settings.json` or `.gemini/settings.json`. |
 
 The client-named folders are native scaffolds. The Claude Code directory follows
 Claude Code's `.claude-plugin/plugin.json` and `.mcp.json` conventions; it is
@@ -78,6 +86,8 @@ Every supported agent has the same two things to wire:
 | Cursor | `.cursor/rules/*.md` (frontmatter) | Description matches *or* `alwaysApply: true` |
 | Windsurf | `.windsurfrules` (plain markdown) | Always |
 | VS Code + Copilot | `.github/copilot-instructions.md` | Always |
+| Codex | repository `AGENTS.md` | When Codex loads project instructions for a trusted project |
+| Gemini CLI | no recon file from this scaffold | Operator-owned. Gemini CLI context files are `GEMINI.md`; this folder does not install one. Canonical instructions stay in repository `AGENTS.md`. |
 
 The behavioral contract is shared across clients. It is maintained in two
 format-specific files:

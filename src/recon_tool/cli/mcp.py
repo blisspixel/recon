@@ -27,12 +27,31 @@ if TYPE_CHECKING:
     from rich.console import Console
 
     from recon_tool.mcp_client.doctor import LaunchConfig
+    from recon_tool.mcp_client.install import InstallPlan
 
 mcp_app = typer.Typer(
     help="MCP server commands: start the stdio server, install client config, run a self-check.",
     invoke_without_command=True,
     no_args_is_help=False,
 )
+
+
+def _render_install_plan(console: Console, client: str, resolved_scope: str, plan: InstallPlan) -> None:
+    """Print the install plan on stderr. The stanza itself stays on stdout."""
+    console.print()
+    console.print(f"  client    {_safe_markup(client)}")
+    console.print(f"  scope     {_safe_markup(resolved_scope)}")
+    console.print(f"  path      {_safe_markup(plan.path)}", soft_wrap=True)
+    if plan.target_path is not None and plan.target_path != plan.path:
+        console.print(f"  target    {_safe_markup(plan.target_path)}", soft_wrap=True)
+    console.print(f"  action    {_safe_markup(plan.action)}")
+    if plan.existing_block is not None and plan.action == "replace":
+        console.print(
+            f"  [{WARNING}]existing recon block will be replaced.[/{WARNING}] Use --dry-run to preview without writing."
+        )
+    if plan.parent_dirs_to_create:
+        console.print(f"  mkdir     {len(plan.parent_dirs_to_create)} new parent dir(s)")
+    console.print()
 
 
 def _render_install_verification(client: str, config_path: Path) -> None:
@@ -80,7 +99,7 @@ def mcp_install_command(
         ...,
         "--client",
         "-c",
-        help="Target MCP client: claude-desktop, claude-code, cursor, vscode, windsurf, kiro.",
+        help="Target MCP client: claude-desktop, claude-code, cursor, vscode, windsurf, kiro, codex, gemini.",
     ),
     scope: str = typer.Option(
         "auto",
@@ -106,9 +125,10 @@ def mcp_install_command(
 ) -> None:
     """Install the recon MCP server config into a client's config file.
 
-    Idempotently merges the recon stanza into the client's
-    `mcp.json`-shaped config so a fresh install of a supported AI
-    client picks up recon without any copy-paste.
+    Idempotently merges the recon stanza into the client's config so a
+    fresh install of a supported AI client picks up recon without any
+    copy-paste. Codex receives a [mcp_servers.recon] TOML table. The
+    other clients receive JSON.
     """
     from recon_tool.mcp_client.install import (
         SUPPORTED_CLIENTS,
@@ -122,7 +142,7 @@ def mcp_install_command(
     )
 
     # Plan and result diagnostics are stderr so a redirect or pipe receives
-    # only the client stanza JSON emitted on stdout via typer.echo below.
+    # only the client stanza emitted on stdout via typer.echo below.
     console = get_err_console()
 
     if client not in SUPPORTED_CLIENTS:
@@ -157,23 +177,17 @@ def mcp_install_command(
         console.print(f"[{ERROR}]install refused:[/{ERROR}] {_safe_markup(exc)}")
         raise typer.Exit(EXIT_VALIDATION) from exc
 
-    console.print()
-    console.print(f"  client    {_safe_markup(client)}")
-    console.print(f"  scope     {_safe_markup(resolved_scope)}")
-    console.print(f"  path      {_safe_markup(plan.path)}", soft_wrap=True)
-    if plan.target_path is not None and plan.target_path != plan.path:
-        console.print(f"  target    {_safe_markup(plan.target_path)}", soft_wrap=True)
-    console.print(f"  action    {_safe_markup(plan.action)}")
-    if plan.existing_block is not None and plan.action == "replace":
-        console.print(
-            f"  [{WARNING}]existing recon block will be replaced.[/{WARNING}] Use --dry-run to preview without writing."
-        )
-    if plan.parent_dirs_to_create:
-        console.print(f"  mkdir     {len(plan.parent_dirs_to_create)} new parent dir(s)")
-    console.print()
+    _render_install_plan(console, client, resolved_scope, plan)
     console.print("  [dim]new client stanza:[/dim]")
-    client_stanza = {servers_key(client): {"recon": plan.new_block}}  # pyright: ignore[reportArgumentType]
-    typer.echo(json.dumps(client_stanza, indent=2))
+    if client == "codex":
+        from recon_tool.mcp_client.codex_config import CODEX_OPERATOR_NOTE, render_recon_table
+
+        typer.echo(render_recon_table(plan.new_block).rstrip("\n"))
+        console.print()
+        console.print(f"  [dim]{_safe_markup(CODEX_OPERATOR_NOTE)}[/dim]", soft_wrap=True)
+    else:
+        client_stanza = {servers_key(client): {"recon": plan.new_block}}  # pyright: ignore[reportArgumentType]
+        typer.echo(json.dumps(client_stanza, indent=2))
     console.print()
 
     if dry_run:

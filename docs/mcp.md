@@ -4,7 +4,7 @@ recon runs as a local stdio MCP server so MCP-compatible AI tools can call it
 directly, with no API keys and no glue code. The default `pip install recon-tool`
 includes the MCP server.
 
-Works with Claude Desktop, Cursor, VS Code + Copilot, ChatGPT, or any other
+Works with Claude Desktop, Cursor, VS Code + Copilot, ChatGPT, Codex, Gemini CLI, or any other
 [MCP client](https://modelcontextprotocol.io/).
 
 > [!WARNING]
@@ -151,7 +151,7 @@ refuses to start, exits with status 2, and explains why on stderr.
 
    ```bash
    recon mcp install --client=claude-desktop
-   # supported: claude-desktop, claude-code, cursor, vscode, windsurf, kiro
+   # supported: claude-desktop, claude-code, cursor, vscode, windsurf, kiro, codex, gemini
    recon mcp install --client=cursor --dry-run        # preview configuration
    recon mcp install --client=cursor --scope=workspace  # project-local instead of user-global
    ```
@@ -161,6 +161,8 @@ refuses to start, exits with status 2, and explains why on stderr.
    not an object unless `--force` is explicit. Client-supported custom fields
    survive a `--force` rerun; canonical launcher fields are refreshed, and
    unsupported legacy approval fields are removed for Claude Code and VS Code.
+   Codex is the exception described under [Where to Put the Config](#where-to-put-the-config):
+   `--force` replaces the recon TOML span instead of preserving keys inside it.
    Writes are atomic (sibling tempfile plus `os.replace`), so a partial-write
    failure leaves the original config intact. Explicit user-selected config
    symlinks retain their topology. Implicit workspace installs reject symlinks
@@ -179,8 +181,8 @@ refuses to start, exits with status 2, and explains why on stderr.
    ```
 
    The preview includes the client-specific top-level key, including `servers`
-   for VS Code and `mcpServers` for other supported clients. Merge that stanza
-   without replacing sibling servers. The generated launcher avoids PATH
+   for VS Code, `mcpServers` for other JSON clients, and a `[mcp_servers.recon]`
+   table for Codex. Merge that stanza without replacing sibling servers. The generated launcher avoids PATH
    ambiguity and drops the working-directory entries Python itself adds to the
    import path, as described above. Do not replace it with a bare `recon`
    command or hand-write `python -m recon_tool.server` in an untrusted working
@@ -711,6 +713,10 @@ to disk or sharing data and disappear when the server exits.
 | Windsurf | `~/.codeium/windsurf/mcp_config.json` |
 | Kiro (workspace) | `.kiro/settings/mcp.json` |
 | Kiro (global) | `~/.kiro/settings/mcp.json` |
+| Codex (user) | `~/.codex/config.toml` |
+| Codex (trusted project) | `.codex/config.toml` |
+| Gemini CLI (user) | `~/.gemini/settings.json` |
+| Gemini CLI (project) | `.gemini/settings.json` |
 
 The repository marketplace is [`.claude-plugin/marketplace.json`](../.claude-plugin/marketplace.json).
 It installs the existing plugin under [`agents/claude-code/`](../agents/claude-code/),
@@ -730,6 +736,20 @@ reviewed 2026-07-13). `recon mcp install --client=vscode` writes the workspace
 form by default. VS Code also supports a user-profile file; open it with **MCP:
 Open User Configuration** and pass that path with `--config-path` when desired.
 VS Code does not define `autoApprove` in this file format.
+
+Codex stores MCP servers in TOML. `recon mcp install --client=codex` writes
+`[mcp_servers.recon]` in `~/.codex/config.toml`, or `.codex/config.toml` when
+the project is trusted. A matching command and args leave the file unchanged,
+including comments and extra keys inside the table. `--force` replaces only
+that table's span, so custom keys inside the span do not survive, while sibling
+tables and comments outside it do. The install does not write
+`tool_timeout_sec` or `default_tools_approval_mode`. `tool_timeout_sec`
+defaults to 60 seconds, and `chain_lookup` can take longer. Gemini CLI uses
+the JSON merge into `~/.gemini/settings.json` or `.gemini/settings.json` and
+omits `autoApprove`, because its server schema rejects that field. Its
+per-server timeout is milliseconds, and the documented default is 600000. The
+install does not write a timeout. Scaffolds live in
+[`agents/codex/`](../agents/codex/) and [`agents/gemini/`](../agents/gemini/).
 
 The installer prints a verification command bound to the file it wrote.
 For a profile file, run `recon doctor --client=vscode --config-path "<profile-file>"`.
@@ -769,7 +789,8 @@ installed server; the third validates that the named client was told about it.
    and prints a reference config. Prefer
    `recon mcp install --client=<name>` for an actual client because the
    installer safely merges the recon block without replacing sibling servers
-   or client-specific fields.
+   or client-specific fields. Codex `--force` replaces the recon table span
+   and still keeps sibling tables.
 2. **`recon mcp doctor`**: live local stdio diagnostic. It runs two labeled
    launches and prints the command, arguments, added environment entries, and
    working directory each one used. The isolated install check starts
@@ -799,7 +820,7 @@ installed server; the third validates that the named client was told about it.
    client configuration.
 3. **`recon doctor --client=<name>`**: reads the config file the named client
    actually loads (`claude-code`, `claude-desktop`, `cursor`, `vscode`,
-   `windsurf`, `kiro`) and reports whether its recon server entry is present
+   `windsurf`, `kiro`, `codex`, `gemini`) and reports whether its recon server entry is present
    and well-formed. For Claude Code it also looks under the project-nested
    `projects[...].mcpServers.recon` shape that `claude mcp add` writes, and
    notes that a plugin install keeps its config inside the plugin rather than

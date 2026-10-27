@@ -33,6 +33,8 @@ _AGENT_GUIDANCE_FILES: tuple[tuple[str, str], ...] = (
     ("agents/kiro/README.md", "kiro_docs"),
     ("agents/vscode/README.md", "vscode_docs"),
     ("agents/windsurf/README.md", "windsurf_docs"),
+    ("agents/codex/README.md", "codex_docs"),
+    ("agents/gemini/README.md", "gemini_docs"),
     ("agents/claude-code/skills/recon/SKILL.md", "skill"),
     ("agents/claude-code/skills/recon-fingerprint-triage/SKILL.md", "skill"),
     ("agents/maintainer/skills/recon-corpus-plan/SKILL.md", "maintainer_skill"),
