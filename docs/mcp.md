@@ -235,6 +235,19 @@ client logs before sharing them. If the loop fails unexpectedly, stderr receives
 control-free line with the exception type instead of raw multiline exception
 text.
 
+## Change notifications
+
+`server/discover` leaves `tools.listChanged`, `prompts.listChanged`,
+`resources.listChanged` and `resources.subscribe` false on mcp 2.3.0 and
+newer. recon does not send those notifications. Tool, prompt and resource
+lists are fixed for the life of the process. `reload_data` can change catalog
+resource bodies, and every cacheable result uses `ttlMs: 0`, so a client
+re-reads `recon://fingerprints`, `recon://signals` and `recon://profiles`
+after a reload. `recon mcp doctor` fails if a future SDK default advertises
+any of those flags again. mcp 2.0.0 through 2.2.x accept `subscriptions=False`
+and still advertise the flags, so the same doctor check warns on those
+releases and names the upgrade.
+
 ## Available Tools
 
 Start with `lookup_tenant` for a single-domain summary. Use

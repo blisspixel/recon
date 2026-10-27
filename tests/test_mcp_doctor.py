@@ -60,6 +60,7 @@ def _expected_prefix_through_resources_list() -> list[str]:
             "server spawn",
             "server/discover",
             "server/discover metadata",
+            "server capabilities",
             "DNS collection view",
             "tools/list",
             "tools/list metadata",
@@ -88,6 +89,10 @@ class TestLiveHandshake:
         names = {c.name for c in report.checks}
         assert "server spawn" in names
         assert _DISCOVERY_CHECK in names
+        if _MODERN_ERA:
+            capabilities = next(c for c in report.checks if c.name == "server capabilities")
+            assert capabilities.status == "ok"
+            assert "absent or false" in capabilities.detail
         assert "tools/list" in names
         assert "required tools present" in names
         assert "resources/list" in names

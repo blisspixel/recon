@@ -71,7 +71,8 @@ def test_server_options_match_the_active_sdk_generation() -> None:
     if SDK_FAMILY == "v1":
         assert options == {}
         return
-    assert set(options) == {"version", "cache_hints"}
+    assert set(options) == {"version", "subscriptions", "cache_hints"}
+    assert options["subscriptions"] is False
     assert options["version"]
     assert set(options["cache_hints"]) == {
         "prompts/list",

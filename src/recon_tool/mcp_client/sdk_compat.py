@@ -64,6 +64,13 @@ else:
             # client cannot tell which recon it is connected to and a bug report
             # cannot be tied to a release.
             "version": _recon_version,
+            # On protocol 2026-07-28 the SDK derives tools, prompts and resources
+            # listChanged plus resources.subscribe from one bit: whether
+            # subscriptions/listen is served. recon never publishes those
+            # notifications. False leaves listen unserved, so discovery
+            # advertises the flags as false. Passing a bus would turn all four
+            # on together; this SDK cannot advertise resource updates alone.
+            "subscriptions": False,
             "cache_hints": dict.fromkeys(
                 (
                     "prompts/list",
@@ -80,6 +87,45 @@ else:
 SDK_VERSION = version("mcp")
 
 
+def _mcp_release(raw: str) -> tuple[int, int]:
+    """Return the numeric major and minor from an installed package version."""
+    numbers: list[int] = []
+    for part in raw.split("."):
+        digits = ""
+        for char in part:
+            if not char.isdigit():
+                break
+            digits += char
+        if not digits:
+            break
+        numbers.append(int(digits))
+        if len(numbers) == 2:
+            break
+    major = numbers[0] if numbers else 0
+    minor = numbers[1] if len(numbers) > 1 else 0
+    return major, minor
+
+
+def change_notification_opt_out_required(family: str, raw: str) -> bool:
+    """Whether ``family`` at package version ``raw`` can hide the flags.
+
+    ``MCPServer(subscriptions=False)`` leaves the flags false from mcp 2.3.0.
+    Older v2 releases accept the argument and still advertise the flags.
+    """
+    if family != "v2":
+        return False
+    return _mcp_release(raw) >= (2, 3)
+
+
+def change_notifications_must_be_absent() -> bool:
+    """Whether a true change-notification flag is a recon defect on this SDK.
+
+    Older v2 releases still advertise the flags, so the doctor warns there
+    instead of failing the 2.0.0 compatibility floor.
+    """
+    return change_notification_opt_out_required(SDK_FAMILY, SDK_VERSION)
+
+
 def mcp_application_options() -> dict[str, Any]:
     """Return generation-specific server options with isolated nested state.
 
@@ -90,6 +136,8 @@ def mcp_application_options() -> dict[str, Any]:
     server_version = _APPLICATION_OPTIONS.get("version")
     if isinstance(server_version, str) and server_version:
         options["version"] = server_version
+    if _APPLICATION_OPTIONS.get("subscriptions") is False:
+        options["subscriptions"] = False
     cache_hints = _APPLICATION_OPTIONS.get("cache_hints")
     if isinstance(cache_hints, dict):
         options["cache_hints"] = dict(cache_hints)
@@ -223,6 +271,8 @@ __all__ = [
     "MCPApplication",
     "ToolAnnotations",
     "ToolError",
+    "change_notification_opt_out_required",
+    "change_notifications_must_be_absent",
     "mcp_application_options",
     "model_wire_dict",
 ]

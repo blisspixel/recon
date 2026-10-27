@@ -40,7 +40,12 @@ from pathlib import Path
 from typing import Any, Literal, TextIO, cast
 
 from recon_tool.mcp_client.dns_readiness import DNS_CHECK_NAME, dns_readiness_from_instructions
-from recon_tool.mcp_client.sdk_compat import SDK_FAMILY, SDK_VERSION, model_wire_dict
+from recon_tool.mcp_client.sdk_compat import (
+    SDK_FAMILY,
+    SDK_VERSION,
+    change_notifications_must_be_absent,
+    model_wire_dict,
+)
 
 # Tools we expect any healthy build to surface. These are the public-facing
 # primary tools, not internal debug helpers. If any of these go missing,
@@ -263,6 +268,8 @@ async def _discover_session(
             )
         with _protocol_phase("server/discover metadata", checks, progress):
             _append_cache_metadata_check(checks, "server/discover metadata", discovery_wire)
+        with _protocol_phase("server capabilities", checks, progress):
+            _append_capability_honesty_check(checks, discovery_wire)
         _append_dns_readiness_check(checks, discovery_wire)
         return
 
@@ -611,6 +618,103 @@ def _validate_resource_payload(uri: str, payload: dict[str, object]) -> None:
         return
 
     raise ValueError(f"{uri} is not a canonical MCP resource")
+
+
+# Flags that tell a 2026-07-28 client recon will emit change notifications.
+# Discovery may omit a flag or set it false. True is a claim the server
+# does not keep: tool, prompt and resource lists are fixed, and nothing
+# publishes resources/updated.
+_CHANGE_NOTIFICATION_FLAGS: tuple[tuple[str, str], ...] = (
+    ("prompts", "listChanged"),
+    ("resources", "listChanged"),
+    ("resources", "subscribe"),
+    ("tools", "listChanged"),
+)
+
+
+def _as_object_dict(value: object) -> dict[str, object] | None:
+    """Copy a JSON object into a string-keyed mapping, or return None."""
+    if not isinstance(value, dict):
+        return None
+    return cast(dict[str, object], value)
+
+
+def advertised_change_notifications(capabilities: object) -> tuple[str, ...]:
+    """Return ``group.flag`` entries whose discovery value is true.
+
+    Absent and false are both honest. A non-object capability section does
+    not advertise the flag.
+    """
+    fields = _as_object_dict(capabilities)
+    if fields is None:
+        return ()
+    advertised: list[str] = []
+    for group, flag in _CHANGE_NOTIFICATION_FLAGS:
+        section = _as_object_dict(fields.get(group))
+        if section is not None and section.get(flag) is True:
+            advertised.append(f"{group}.{flag}")
+    return tuple(advertised)
+
+
+def capability_honesty_check(wire: Mapping[str, object]) -> DoctorCheck:
+    """Report whether discovery claims change notifications recon does not send.
+
+    The 2026-07-28 SDK turns ``listChanged`` and ``resources.subscribe`` on
+    together when ``subscriptions/listen`` is served. recon does not publish
+    those notifications, so each flag must be absent or false. A later SDK
+    default that turns the listen method back on fails this check.
+    """
+    if "capabilities" not in wire:
+        return DoctorCheck(
+            "server capabilities",
+            "fail",
+            "server/discover omitted capabilities",
+            "Update recon-tool. Discovery must name the capability set.",
+        )
+    advertised = advertised_change_notifications(wire["capabilities"])
+    if advertised:
+        listed = ", ".join(advertised)
+        return DoctorCheck(
+            "server capabilities",
+            "fail",
+            f"advertised change notifications recon does not send: {listed}",
+            "These flags tell a client to wait for notifications this server never publishes.",
+        )
+    return DoctorCheck(
+        "server capabilities",
+        "ok",
+        "listChanged and resources.subscribe are absent or false",
+    )
+
+
+def runtime_capability_honesty_check(
+    wire: Mapping[str, object], *, opt_out_required: bool | None = None
+) -> DoctorCheck:
+    """Apply the capability check to the SDK that is actually installed.
+
+    Flags that are absent or false pass on every generation. A true flag fails
+    when this SDK can leave it false, which starts at mcp 2.3.0. Older v2
+    releases advertise the flags even when ``subscriptions=False`` is passed,
+    so the same observation is a warning and the 2.0.0 compatibility floor
+    stays green.
+    """
+    check = capability_honesty_check(wire)
+    if check.status != "fail" or "capabilities" not in wire:
+        return check
+    required = change_notifications_must_be_absent() if opt_out_required is None else opt_out_required
+    if required:
+        return check
+    return DoctorCheck(
+        "server capabilities",
+        "warn",
+        "installed MCP SDK advertises change notifications recon does not send; "
+        "mcp 2.3.0 or newer leaves those flags false",
+        "Upgrade the mcp package to 2.3.0 or newer.",
+    )
+
+
+def _append_capability_honesty_check(checks: list[DoctorCheck], wire: dict[str, object]) -> None:
+    checks.append(runtime_capability_honesty_check(wire))
 
 
 def _append_dns_readiness_check(checks: list[DoctorCheck], wire: dict[str, object]) -> None:
