@@ -24,6 +24,7 @@ SDKFamily = Literal["v1", "v2"]
 
 if TYPE_CHECKING:
     from mcp.server import MCPServer as MCPApplication
+    from mcp.server.mcpserver import Context as ToolContext
     from mcp.server.mcpserver.exceptions import ToolError
     from mcp_types import ToolAnnotations
 
@@ -31,6 +32,7 @@ if TYPE_CHECKING:
     _APPLICATION_OPTIONS: dict[str, Any] = {}
 else:
     try:
+        from mcp.server.fastmcp import Context as ToolContext
         from mcp.server.fastmcp import FastMCP as MCPApplication
         from mcp.server.fastmcp.exceptions import ToolError
         from mcp.types import ToolAnnotations
@@ -46,6 +48,7 @@ else:
             raise
         from mcp.server import CacheHint
         from mcp.server import MCPServer as MCPApplication
+        from mcp.server.mcpserver import Context as ToolContext
         from mcp.server.mcpserver.exceptions import ToolError
         from mcp_types import ToolAnnotations
 
@@ -270,6 +273,7 @@ __all__ = [
     "SDK_VERSION",
     "MCPApplication",
     "ToolAnnotations",
+    "ToolContext",
     "ToolError",
     "change_notification_opt_out_required",
     "change_notifications_must_be_absent",

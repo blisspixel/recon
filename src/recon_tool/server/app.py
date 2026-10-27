@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 from recon_tool.mcp_client.dns_readiness import advertised_dns_capability
@@ -418,15 +419,28 @@ async def resolve_single_for_tool(domain: str, request_id: str) -> TenantInfo:
     return await _resolve_validated_domain_for_tool(validated, request_id)
 
 
-async def resolve_domains_for_tool(domains: tuple[str, ...], request_id: str) -> tuple[TenantInfo, ...]:
+async def resolve_domains_for_tool(
+    domains: tuple[str, ...],
+    request_id: str,
+    *,
+    on_domain: Callable[[int, int], Awaitable[None]] | None = None,
+) -> tuple[TenantInfo, ...]:
     """Validate every domain before resolving any member of a tool request.
 
     Multi-domain tools must reject malformed input without issuing a partial
     lookup for an earlier valid argument. Resolution remains sequential after
     validation so cache, rate-limit, and failure ordering stay unchanged.
+    ``on_domain`` receives the 1-based index and the validated total before
+    each resolve. A callback error is logged and does not fail the lookup.
     """
     validated_domains = tuple(validate_domain_for_tool(domain, request_id) for domain in domains)
     resolved: list[TenantInfo] = []
-    for validated in validated_domains:
+    total = len(validated_domains)
+    for index, validated in enumerate(validated_domains, start=1):
+        if on_domain is not None:
+            try:
+                await on_domain(index, total)
+            except Exception:
+                logger.debug("domain progress callback failed", exc_info=True)
         resolved.append(await _resolve_validated_domain_for_tool(validated, request_id))
     return tuple(resolved)

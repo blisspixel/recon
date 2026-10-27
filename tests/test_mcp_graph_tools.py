@@ -140,7 +140,7 @@ def stub_chain(monkeypatch: pytest.MonkeyPatch):
 
     report = _chain_report()
 
-    async def _stub(domain: str, depth: int = 1) -> ChainReport:
+    async def _stub(domain: str, depth: int = 1, **_kwargs: object) -> ChainReport:
         assert domain == "example.com"
         assert depth == 1
         return report
@@ -161,7 +161,7 @@ class TestChainLookupDepthBound:
 
         seen: list[int] = []
 
-        async def _capture(domain: str, depth: int = 1) -> ChainReport:
+        async def _capture(domain: str, depth: int = 1, **_kwargs: object) -> ChainReport:
             seen.append(depth)
             return _chain_report()
 
@@ -180,7 +180,7 @@ class TestChainLookupDepthBound:
 
         seen: list[int] = []
 
-        async def _capture(domain: str, depth: int = 1) -> ChainReport:
+        async def _capture(domain: str, depth: int = 1, **_kwargs: object) -> ChainReport:
             seen.append(depth)
             return _chain_report()
 
@@ -267,7 +267,7 @@ class TestChainLookupCompact:
         import recon_tool.server.graph as server_graph
         from recon_tool.mcp_client.sdk_compat import ToolError
 
-        async def fail(domain: str, depth: int = 1) -> ChainReport:
+        async def fail(domain: str, depth: int = 1, **_kwargs: object) -> ChainReport:
             assert domain == "example.com"
             assert depth == 1
             raise RuntimeError("boom")

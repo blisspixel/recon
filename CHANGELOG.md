@@ -26,6 +26,14 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Added
+
+- Send MCP `notifications/progress` from `chain_lookup`, a cache-miss
+  `lookup_tenant`, `build_review_bundle`, `cluster_verification_tokens`, and
+  `compare_postures`. Messages are stage names and counts. A client that
+  resets its tool timeout on progress, or raises that timeout, can keep a
+  depth 2 or 3 chain lookup alive. (#317)
+
 ### Fixed
 
 - Ignore a `RECON_CONFIG_DIR` that is relative or still contains an unexpanded

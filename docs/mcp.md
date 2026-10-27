@@ -248,6 +248,32 @@ any of those flags again. mcp 2.0.0 through 2.2.x accept `subscriptions=False`
 and still advertise the flags, so the same doctor check warns on those
 releases and names the upgrade.
 
+## Progress
+
+`chain_lookup`, a cache-miss `lookup_tenant`, `build_review_bundle`,
+`cluster_verification_tokens`, and `compare_postures` send
+`notifications/progress` when the client includes a progress token. A request
+without a token produces none. Messages are counts and stage names:
+
+- `chain_lookup`: `depth N: completed of known`. `N` is the same integer as
+  `chain_depth`, and the seed is depth 0.
+- `cluster_verification_tokens` and `compare_postures`: `domain I of N`,
+  before each namespace is resolved, including a cache hit.
+- `lookup_tenant` and `build_review_bundle`: one line per collector stage,
+  such as `dns: started` or `certificate transparency: done`. A cache hit does
+  not collect, so `lookup_tenant` stays silent on that path. `build_review_bundle`
+  always resolves fresh.
+
+The text never includes a domain name or a resolver address. The first update
+is immediate. Later updates closer than 500 ms are dropped, not delayed, so
+nothing is sent after the tool returns. Progress values that are sent increase.
+A dropped update can make the next value skip ahead.
+
+A progress notification does not keep a client alive across one collector that
+runs longer than the client tool timeout. Codex defaults `tool_timeout_sec` to
+60. For `chain_lookup` at depth 2 or 3, enable reset-on-progress or raise that
+timeout. This server does not use the Tasks extension.
+
 ## Available Tools
 
 Start with `lookup_tenant` for a single-domain summary. Use

@@ -12,7 +12,7 @@ from typing import Any, Literal, cast
 
 from typing_extensions import TypedDict
 
-from recon_tool.mcp_client.sdk_compat import ToolError, tool_annotations
+from recon_tool.mcp_client.sdk_compat import ToolContext, ToolError, tool_annotations
 from recon_tool.models import ReconLookupError
 from recon_tool.review_bundle import (
     ReviewCollectionContext,
@@ -23,6 +23,7 @@ from recon_tool.review_input import normalize_review_coordinate
 from recon_tool.server import app as server_app
 from recon_tool.server.app import mcp
 from recon_tool.server.runtime import log_structured, log_validation_failed, rate_limit_try_acquire
+from recon_tool.server.tool_progress import ToolProgress, source_progress
 from recon_tool.validator import validate_domain
 
 logger = logging.getLogger("recon")
@@ -70,6 +71,7 @@ async def build_review_bundle(
     domain: str,
     no_ct: bool = False,
     timeout_seconds: float = 120.0,
+    ctx: ToolContext | None = None,
 ) -> ReviewBundleResult:
     """Build one fresh, evidence-linked NamespaceReviewBundle artifact.
 
@@ -114,12 +116,13 @@ async def build_review_bundle(
     started_at = datetime.now(UTC)
     started_monotonic = time.monotonic()
     try:
-        info, results = await server_app.resolve_tenant(
-            validated,
-            timeout=timeout,
-            skip_ct=no_ct,
-            active_probes=False,
-        )
+        async with source_progress(ToolProgress.from_context(ctx)):
+            info, results = await server_app.resolve_tenant(
+                validated,
+                timeout=timeout,
+                skip_ct=no_ct,
+                active_probes=False,
+            )
     except ReconLookupError as exc:
         if exc.error_type == "dns_view_unavailable":
             raise ToolError(server_app.lookup_failure_message(validated, exc)) from exc

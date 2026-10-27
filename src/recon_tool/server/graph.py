@@ -19,8 +19,8 @@ from typing import Annotated, Any, cast
 from pydantic import Field
 from typing_extensions import TypedDict
 
-from recon_tool.chain import MAX_CHAIN_DEPTH
-from recon_tool.mcp_client.sdk_compat import ToolError, tool_annotations
+from recon_tool.chain import MAX_CHAIN_DEPTH, ChainProgress
+from recon_tool.mcp_client.sdk_compat import ToolContext, ToolError, tool_annotations
 from recon_tool.models import ChainReport, InfrastructureEdge, ReconLookupError
 from recon_tool.network_policy import MCP_COLLECTION_POLICY, collection_scope
 from recon_tool.server import app as server_app
@@ -30,6 +30,7 @@ from recon_tool.server.runtime import (
     log_validation_failed,
     rate_limit_try_acquire,
 )
+from recon_tool.server.tool_progress import ToolProgress, chain_message, domain_message
 from recon_tool.validator import validate_domain
 
 logger = logging.getLogger("recon")
@@ -177,7 +178,10 @@ def _format_compact_chain_json(report: ChainReport, result_limit: int) -> str:
     ),
 )
 async def chain_lookup(
-    domain: str, depth: Annotated[int, Field(ge=1, le=MAX_CHAIN_DEPTH, strict=True)] = 1, result_limit: int = 0
+    domain: str,
+    depth: Annotated[int, Field(ge=1, le=MAX_CHAIN_DEPTH, strict=True)] = 1,
+    result_limit: int = 0,
+    ctx: ToolContext | None = None,
 ) -> str:
     """Follow all `related_domains` observations; this does not establish ownership or a corporate relationship.
 
@@ -224,6 +228,15 @@ async def chain_lookup(
     if not rate_limit_try_acquire(validated):
         raise ToolError(f"Rate limited: {validated} was looked up recently. Try again in a few seconds.")
 
+    progress = ToolProgress.from_context(ctx)
+
+    async def on_chain(snapshot: ChainProgress) -> None:
+        await progress.advance(
+            float(snapshot.completed),
+            chain_message(snapshot.depth, snapshot.completed, snapshot.known),
+            total=float(snapshot.known),
+        )
+
     try:
         from recon_tool.chain import chain_resolve
         from recon_tool.formatter import format_chain_json
@@ -231,8 +244,9 @@ async def chain_lookup(
         server_app.require_collection_policy(validated)
         # chain_resolve calls the core resolver for every queued domain rather
         # than the MCP wrapper. Keep its entire traversal in the same boundary.
+        # Progress is one line per queued name, not the nested source events.
         with collection_scope(MCP_COLLECTION_POLICY):
-            report = await chain_resolve(validated, depth=depth)
+            report = await chain_resolve(validated, depth=depth, on_progress=on_chain)
     except asyncio.CancelledError:
         raise
     except ReconLookupError as exc:
@@ -244,6 +258,8 @@ async def chain_lookup(
             request_id,
         )
         raise ToolError(server_app.internal_lookup_error(validated, request_id, exc)) from exc
+    finally:
+        progress.close()
 
     elapsed = time.monotonic() - start_time
     log_structured(
@@ -323,6 +339,7 @@ def _admit_cluster_domains(domains: list[str]) -> tuple[list[str], list[DomainTo
 async def cluster_verification_tokens(
     domains: list[str],
     peer_limit_per_domain: int = 0,
+    ctx: ToolContext | None = None,
 ) -> VerificationTokenClusterResult:
     """Cluster a list of domains by shared site-verification tokens.
 
@@ -375,21 +392,27 @@ async def cluster_verification_tokens(
     domains, errors = _admit_cluster_domains(domains)
 
     domain_tokens: dict[str, tuple[str, ...]] = {}
+    progress = ToolProgress.from_context(ctx)
+    admitted = len(domains)
 
-    for raw in domains:
-        try:
-            normalized = validate_domain(raw)
-        except ValueError:
-            normalized = raw
-        resolved = await server_app.resolve_or_cache(normalized)
-        if isinstance(resolved, str):
-            errors.append({"domain": normalized, "error": resolved})
-            continue
-        info, _results = resolved
-        from recon_tool.collection_view import collection_observable_info
+    try:
+        for index, raw in enumerate(domains, start=1):
+            await progress.advance(float(index), domain_message(index, admitted), total=float(admitted))
+            try:
+                normalized = validate_domain(raw)
+            except ValueError:
+                normalized = raw
+            resolved = await server_app.resolve_or_cache(normalized)
+            if isinstance(resolved, str):
+                errors.append({"domain": normalized, "error": resolved})
+                continue
+            info, _results = resolved
+            from recon_tool.collection_view import collection_observable_info
 
-        info = collection_observable_info(info)
-        domain_tokens[info.queried_domain] = info.site_verification_tokens
+            info = collection_observable_info(info)
+            domain_tokens[info.queried_domain] = info.site_verification_tokens
+    finally:
+        progress.close()
 
     clusters = compute_shared_tokens(domain_tokens)
 
