@@ -28,9 +28,11 @@ operator, corporate group, ownership, or control.
 
 ### Fixed
 
-- Advertise only MCP change notifications recon sends. `server/discover` leaves
-  `listChanged` and `resources.subscribe` false, and `recon mcp doctor` fails
-  if a later SDK default turns them back on. (#319)
+- Advertise only MCP change notifications recon sends. On mcp 2.3.0 and newer,
+  `server/discover` leaves `listChanged` and `resources.subscribe` false, and
+  `recon mcp doctor` fails if a later SDK default turns them back on. Older v2
+  SDKs still advertise the flags, so the same check warns and the 2.0.0
+  compatibility floor stays in place. (#319)
 
 ## [2.26.1] - 2026-10-26
 

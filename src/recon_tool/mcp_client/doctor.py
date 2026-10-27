@@ -40,7 +40,12 @@ from pathlib import Path
 from typing import Any, Literal, TextIO, cast
 
 from recon_tool.mcp_client.dns_readiness import DNS_CHECK_NAME, dns_readiness_from_instructions
-from recon_tool.mcp_client.sdk_compat import SDK_FAMILY, SDK_VERSION, model_wire_dict
+from recon_tool.mcp_client.sdk_compat import (
+    SDK_FAMILY,
+    SDK_VERSION,
+    change_notifications_must_be_absent,
+    model_wire_dict,
+)
 
 # Tools we expect any healthy build to surface. These are the public-facing
 # primary tools, not internal debug helpers. If any of these go missing,
@@ -682,8 +687,34 @@ def capability_honesty_check(wire: Mapping[str, object]) -> DoctorCheck:
     )
 
 
+def runtime_capability_honesty_check(
+    wire: Mapping[str, object], *, opt_out_required: bool | None = None
+) -> DoctorCheck:
+    """Apply the capability check to the SDK that is actually installed.
+
+    Flags that are absent or false pass on every generation. A true flag fails
+    when this SDK can leave it false, which starts at mcp 2.3.0. Older v2
+    releases advertise the flags even when ``subscriptions=False`` is passed,
+    so the same observation is a warning and the 2.0.0 compatibility floor
+    stays green.
+    """
+    check = capability_honesty_check(wire)
+    if check.status != "fail" or "capabilities" not in wire:
+        return check
+    required = change_notifications_must_be_absent() if opt_out_required is None else opt_out_required
+    if required:
+        return check
+    return DoctorCheck(
+        "server capabilities",
+        "warn",
+        "installed MCP SDK advertises change notifications recon does not send; "
+        "mcp 2.3.0 or newer leaves those flags false",
+        "Upgrade the mcp package to 2.3.0 or newer.",
+    )
+
+
 def _append_capability_honesty_check(checks: list[DoctorCheck], wire: dict[str, object]) -> None:
-    checks.append(capability_honesty_check(wire))
+    checks.append(runtime_capability_honesty_check(wire))
 
 
 def _append_dns_readiness_check(checks: list[DoctorCheck], wire: dict[str, object]) -> None:
