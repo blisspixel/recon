@@ -246,8 +246,12 @@ _IPV4_OCTET = r"(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])"
 IPV4_RE = re.compile(rf"(?<![0-9.]){_IPV4_OCTET}(?:\.{_IPV4_OCTET}){{3}}(?![0-9.])")
 
 
+# mcp-publisher reads this generated registry document from the checkout root.
+_GENERATED_ROOT_JSON = frozenset({"server.json"})
+
+
 def _is_root_domain_dump(path: str) -> bool:
-    return "/" not in path and path.casefold().endswith(".json")
+    return "/" not in path and path.casefold().endswith(".json") and path.casefold() not in _GENERATED_ROOT_JSON
 
 
 def _is_root_scan_dump(path: str) -> bool:
