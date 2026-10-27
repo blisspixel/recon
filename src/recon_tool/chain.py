@@ -17,6 +17,7 @@ import logging
 import math
 import time
 from collections import defaultdict
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, replace
 
 from recon_tool.models import ChainReport, ChainResult, ReconLookupError
@@ -26,6 +27,7 @@ logger = logging.getLogger("recon")
 
 __all__ = [
     "ChainOptions",
+    "ChainProgress",
     "chain_resolve",
     "resolve_chain",
 ]
@@ -41,6 +43,18 @@ _MAX_NEXT_LEVEL_QUEUE = MAX_CHAIN_DOMAINS * 20
 
 
 @dataclass(frozen=True, slots=True)
+class ChainProgress:
+    """How far a chain traversal has walked, without any domain name."""
+
+    depth: int
+    completed: int
+    known: int
+
+
+ChainProgressCallback = Callable[[ChainProgress], Awaitable[None]]
+
+
+@dataclass(frozen=True, slots=True)
 class ChainOptions:
     """One validated collection policy for a complete chain traversal."""
 
@@ -49,6 +63,7 @@ class ChainOptions:
     skip_ct: bool = False
     active_probes: bool = False
     timeout: float = RESOLVE_TIMEOUT
+    on_progress: ChainProgressCallback | None = None
 
     def __post_init__(self) -> None:
         if isinstance(self.timeout, bool) or not math.isfinite(self.timeout) or self.timeout <= 0:
@@ -83,6 +98,16 @@ async def _resolve_one_chain_domain(
         logger.debug("Chain: unexpected error for %s at depth %d: %s", domain, depth, exc)
         return None
     return ChainResult(domain=domain, info=info, chain_depth=depth)
+
+
+async def _notify_chain_progress(options: ChainOptions, snapshot: ChainProgress) -> None:
+    """Report one chain step. A callback error must not fail the lookup."""
+    if options.on_progress is None:
+        return
+    try:
+        await options.on_progress(snapshot)
+    except Exception:
+        logger.debug("chain progress callback failed", exc_info=True)
 
 
 async def chain_resolve(
@@ -136,7 +161,7 @@ async def resolve_chain(domain: str, options: ChainOptions) -> ChainReport:
 
         next_level: list[str] = []
 
-        for d in current_level:
+        for index, d in enumerate(current_level):
             if d in visited:
                 continue
             if len(visited) >= MAX_CHAIN_DOMAINS:
@@ -155,6 +180,9 @@ async def resolve_chain(domain: str, options: ChainOptions) -> ChainReport:
                 break
 
             visited.add(d)
+            rest = sum(1 for name in current_level[index + 1 :] if name not in visited)
+            known = max(len(visited), min(MAX_CHAIN_DOMAINS, len(visited) + rest))
+            await _notify_chain_progress(options, ChainProgress(current_depth, len(visited), known))
 
             resolved = await _resolve_one_chain_domain(
                 d,

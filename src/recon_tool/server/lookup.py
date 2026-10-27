@@ -38,7 +38,7 @@ from recon_tool.formatter.collection_status import (
     project_collection_status,
 )
 from recon_tool.formatter.layout import compact_subdomain_summary_lines, subdomain_surface_summary_items
-from recon_tool.mcp_client.sdk_compat import ToolError, tool_annotations
+from recon_tool.mcp_client.sdk_compat import ToolContext, ToolError, tool_annotations
 from recon_tool.models import ExplanationRecord, ReconLookupError, SourceResult, TenantInfo
 from recon_tool.server import app as server_app
 from recon_tool.server.app import mcp
@@ -49,6 +49,7 @@ from recon_tool.server.runtime import (
     log_validation_failed,
     rate_limit_try_acquire,
 )
+from recon_tool.server.tool_progress import ToolProgress, source_progress
 from recon_tool.validator import validate_domain
 
 logger = logging.getLogger("recon")
@@ -179,6 +180,7 @@ async def lookup_tenant(
     domain: str,
     format: str = "text",
     explain: bool = False,
+    ctx: ToolContext | None = None,
 ) -> str:
     """Return compact text by default; JSON returns a detailed serialized record.
 
@@ -241,7 +243,9 @@ async def lookup_tenant(
             info, results = cached
         else:
             try:
-                info, results = await server_app.resolve_tenant(validated)
+                # Cache hits and the rate-limit recovery path above do not collect.
+                async with source_progress(ToolProgress.from_context(ctx)):
+                    info, results = await server_app.resolve_tenant(validated)
             except ReconLookupError as exc:
                 elapsed = time.monotonic() - start_time
                 event = "no_data" if exc.error_type == "no_data" else "lookup_failed"

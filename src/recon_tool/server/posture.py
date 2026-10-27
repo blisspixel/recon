@@ -26,13 +26,14 @@ from recon_tool.exposure_models import (
     HardeningMetadataValue,
     HardeningObservationState,
 )
-from recon_tool.mcp_client.sdk_compat import ToolError, tool_annotations
+from recon_tool.mcp_client.sdk_compat import ToolContext, ToolError, tool_annotations
 from recon_tool.server import app as server_app
 from recon_tool.server.app import mcp
 from recon_tool.server.posture_simulation import simulate_fixes
 from recon_tool.server.runtime import (
     log_structured,
 )
+from recon_tool.server.tool_progress import ToolProgress, bind_domains
 
 logger = logging.getLogger("recon")
 
@@ -560,7 +561,11 @@ async def find_hardening_gaps(domain: str) -> GapReportResult:
         open_world=True,
     ),
 )
-async def compare_postures(domain_a: str, domain_b: str) -> PostureComparisonResult:
+async def compare_postures(
+    domain_a: str,
+    domain_b: str,
+    ctx: ToolContext | None = None,
+) -> PostureComparisonResult:
     """Compare the public configuration evidence of two domains side by side.
 
     This is a model-bound comparison of public observations, not an overall
@@ -581,24 +586,31 @@ async def compare_postures(domain_a: str, domain_b: str) -> PostureComparisonRes
     """
     request_id = uuid.uuid4().hex[:12]
     start_time = time.monotonic()
+    progress = ToolProgress.from_context(ctx)
+    try:
+        info_a, info_b = await server_app.resolve_domains_for_tool(
+            (domain_a, domain_b),
+            request_id,
+            on_domain=bind_domains(progress),
+        )
 
-    info_a, info_b = await server_app.resolve_domains_for_tool((domain_a, domain_b), request_id)
+        from recon_tool.exposure import compare_postures_from_infos
+        from recon_tool.formatter import format_comparison_dict
 
-    from recon_tool.exposure import compare_postures_from_infos
-    from recon_tool.formatter import format_comparison_dict
+        comparison = compare_postures_from_infos(info_a, info_b)
 
-    comparison = compare_postures_from_infos(info_a, info_b)
+        log_structured(
+            logging.INFO,
+            "postures_compared",
+            request_id=request_id,
+            domain_a=info_a.queried_domain,
+            domain_b=info_b.queried_domain,
+            elapsed_s=round(time.monotonic() - start_time, 2),
+        )
 
-    log_structured(
-        logging.INFO,
-        "postures_compared",
-        request_id=request_id,
-        domain_a=info_a.queried_domain,
-        domain_b=info_b.queried_domain,
-        elapsed_s=round(time.monotonic() - start_time, 2),
-    )
-
-    return cast(PostureComparisonResult, format_comparison_dict(comparison))
+        return cast(PostureComparisonResult, format_comparison_dict(comparison))
+    finally:
+        progress.close()
 
 
 @mcp.tool(

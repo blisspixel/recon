@@ -12,7 +12,7 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 from typer.testing import CliRunner
 
-from recon_tool.chain import MAX_CHAIN_DEPTH
+from recon_tool.chain import MAX_CHAIN_DEPTH, ChainOptions
 from recon_tool.cli import app as cli_app
 from recon_tool.mcp_client.dns_readiness import (
     DNS_CAPABILITY_PREFIX,
@@ -168,9 +168,15 @@ async def test_supported_depth_is_forwarded_unchanged(depth: int, monkeypatch: p
     info = TenantInfo(tenant_id=None, display_name="", default_domain="example.com", queried_domain="example.com")
     report = ChainReport(results=(ChainResult("example.com", info, 0),), max_depth_reached=0, truncated=False)
     collect = AsyncMock(return_value=report)
-    monkeypatch.setattr("recon_tool.chain.chain_resolve", collect)
+    monkeypatch.setattr("recon_tool.chain.resolve_chain", collect)
     await graph.chain_lookup("example.com", depth=depth)
-    collect.assert_awaited_once_with("example.com", depth=depth)
+    collect.assert_awaited_once()
+    assert collect.await_args is not None
+    assert collect.await_args.args[0] == "example.com"
+    options = collect.await_args.args[1]
+    assert isinstance(options, ChainOptions)
+    assert options.depth == depth
+    assert callable(options.on_progress)
 
 
 def test_static_doctor_warns_without_contaminating_the_config_payload(monkeypatch: pytest.MonkeyPatch) -> None:

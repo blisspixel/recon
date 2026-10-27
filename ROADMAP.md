@@ -40,13 +40,15 @@ absent.
 State at 2026-10-27: v2.26.1 is the published baseline. The MCP and packaging
 tracker #324 is the active batch. On mcp 2.3.0 and newer, discovery no
 longer advertises change notifications recon does not send (#319). A relative
-or unexpanded
-`RECON_CONFIG_DIR`, including a literal `${PLUGIN_DATA}`, is ignored instead
-of becoming a working-directory cache (#318).
+or unexpanded `RECON_CONFIG_DIR`, including a literal `${PLUGIN_DATA}`, is
+ignored instead of becoming a working-directory cache (#318). `chain_lookup`,
+a cache-miss `lookup_tenant`, `build_review_bundle`,
+`cluster_verification_tokens`, and `compare_postures` send
+`notifications/progress` with stage names and counts (#317).
 
-Next work is progress notifications (#317). Display metadata, registry
+Next work is display titles and server metadata (#320). Registry
 distribution, marketplace packaging, and additional client setup remain open
-in #320 through #323.
+in #321 through #323.
 
 When picking work back up:
 
