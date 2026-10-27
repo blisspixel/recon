@@ -502,7 +502,8 @@ recon cache show --all
 ```
 
 recon resolves its config, cache, and state directories in one order:
-`RECON_CONFIG_DIR` if set, else an existing legacy `~/.recon/`, else the XDG base
+an absolute `RECON_CONFIG_DIR` with no unexpanded `${...}` placeholder, else an
+existing legacy `~/.recon/`, else the XDG base
 directories (`$XDG_CONFIG_HOME/recon`, `$XDG_CACHE_HOME/recon`,
 `$XDG_STATE_HOME/recon`). On Windows with none of those set, that resolves to
 `%USERPROFILE%\.config\recon`, `%USERPROFILE%\.cache\recon`, and

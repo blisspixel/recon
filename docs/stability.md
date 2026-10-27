@@ -203,8 +203,9 @@ contract and its additive policy.
 ### Config / data files
 
 `~/.recon/` below is shorthand for recon's **resolved** config, cache, and
-state directories, not a literal path. Resolution order: `RECON_CONFIG_DIR` if
-set, else an existing legacy `~/.recon/`, else the XDG bases
+state directories, not a literal path. Resolution order: `RECON_CONFIG_DIR`
+when it is an absolute path and contains no unexpanded `${...}` placeholder,
+else an existing legacy `~/.recon/`, else the XDG bases
 (`$XDG_CONFIG_HOME/recon`, `$XDG_CACHE_HOME/recon`, `$XDG_STATE_HOME/recon`;
 defaults `~/.config/recon`, `~/.cache/recon`, `~/.local/state/recon`). A fresh
 install gets the XDG paths; the legacy branch exists so an existing `~/.recon/`
@@ -223,7 +224,7 @@ guarantee is on each file's schema, not on the directory it resolves to.
 | `~/.recon/profiles/*.yaml` schema | Same. Additive only. |
 | `~/.recon/cache/*.json` (TenantInfo cache) | Stable. Within the current cache version, entries lacking later additive fields remain readable and current writes include current fields. An explicit cache-version mismatch, wrong-shaped, corrupt, oversized, or numerically invalid file degrades to a clean miss. |
 | `~/.recon/ct-cache/*.json` (per-domain CT cache) | Stable. Older entries without certificate-summary or infrastructure-cluster extensions remain readable; current writes preserve those extensions. Wrong-shaped, corrupt, oversized, or numerically invalid files degrade to a clean miss. |
-| `RECON_CONFIG_DIR` environment variable | Stable. |
+| `RECON_CONFIG_DIR` environment variable | Stable for an absolute path. A relative value or an unexpanded `${...}` placeholder is ignored, with one stderr warning, and resolution continues with the legacy directory or XDG. `recon doctor` and `recon doctor --mcp` add a warn row naming the placeholder token. |
 | `RECON_DNS_VIEW`, `RECON_DNS_SERVERS`, `RECON_DNS_TLS_NAME`, `RECON_DNS_TRANSPORT` environment variables | Stable. MCP: unset or `caller-safe` binds the encrypted caller-safe view (saved servers, else a recognized host public service, else Cloudflare DNS-over-HTTPS); `none` disables DNS-dependent tools; `operator` uses host DNS for operator-authorized callers. CLI: only `RECON_DNS_VIEW=caller-safe` opts in to the same view; unset, empty, or `operator` keeps host DNS. Other values refuse collection with exit code 2. Invalid settings refuse collection (CLI exit code 2) and never fall back to host DNS. See [mcp.md](mcp.md#dns-view-isolation). |
 | `RECON_NO_ANIMATION` environment variable | Stable. Any non-empty value other than `0`, `false` or `no` turns off the animated source ladder; the static source-health line on stderr remains. Presentation only: it never changes stdout, JSON, or exit codes. |
 | `RECON_MCP_LOG_REQUESTS` environment variable | Stable. MCP: unset or unrecognized values suppress routine request-level logging (runtime level WARNING). Set to `1`, `true`, `yes`, or `on` for verbose request logging including full URLs. Warning and exception diagnostics may contain domain inputs. |

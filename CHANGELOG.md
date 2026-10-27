@@ -28,6 +28,11 @@ operator, corporate group, ownership, or control.
 
 ### Fixed
 
+- Ignore a `RECON_CONFIG_DIR` that is relative or still contains an unexpanded
+  `${...}` placeholder. Cursor and VS Code leave `${PLUGIN_DATA}` literal, and
+  recon was writing cache and limiter state into that directory in the working
+  directory. `recon doctor` and `recon doctor --mcp` warn and name the
+  placeholder. An absolute path is unchanged. (#318)
 - Advertise only MCP change notifications recon sends. On mcp 2.3.0 and newer,
   `server/discover` leaves `listChanged` and `resources.subscribe` false, and
   `recon mcp doctor` fails if a later SDK default turns them back on. Older v2

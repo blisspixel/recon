@@ -313,6 +313,10 @@ def doctor_mcp() -> None:
     # 6. recon executable on PATH (important for short GUI-client configs).
     # A missing launcher is informational: the generated config still works
     # through the interpreter fallback.
+    config_directory = config_directory_check()
+    if config_directory is not None:
+        checks.append(config_directory)
+
     recon_path = shutil.which("recon")
     if recon_path:
         checks.append(DoctorCheck("recon on PATH", "ok", recon_path))
@@ -786,6 +790,34 @@ def _doctor_fingerprint_db_check() -> DoctorCheck:
         return DoctorCheck("Fingerprint database", "fail", _fmt_exc(exc), _NEXT_REINSTALL)
 
 
+def config_directory_check() -> DoctorCheck | None:
+    """Warn when ``RECON_CONFIG_DIR`` cannot name a durable directory.
+
+    An absolute path keeps today's row set. A placeholder or relative value
+    is ignored by ``paths.py``; this row names the placeholder token and not
+    the resolved fallback path.
+    """
+    from recon_tool.paths import ignored_config_dir
+
+    ignored = ignored_config_dir()
+    if ignored is None:
+        return None
+    kind, token = ignored
+    if kind == "placeholder":
+        return DoctorCheck(
+            "Config directory",
+            "warn",
+            f"ignoring RECON_CONFIG_DIR because it contains unexpanded {token}",
+            "Set RECON_CONFIG_DIR to an absolute directory, or unset it.",
+        )
+    return DoctorCheck(
+        "Config directory",
+        "warn",
+        "ignoring RECON_CONFIG_DIR because it is not an absolute path",
+        "Set RECON_CONFIG_DIR to an absolute directory, or unset it.",
+    )
+
+
 def _doctor_custom_path(filename: str) -> Path:
     """Resolve a custom config file path in the config dir (env / legacy / XDG)."""
     from recon_tool.paths import config_dir
@@ -969,6 +1001,9 @@ async def collect_doctor_checks() -> list[DoctorCheck]:
     checks.append(await _doctor_ct_check())
     checks.append(_doctor_mcp_check())
     checks.append(_doctor_fingerprint_db_check())
+    config_directory = config_directory_check()
+    if config_directory is not None:
+        checks.append(config_directory)
     checks.append(_doctor_custom_fingerprints_check())
     checks.append(_doctor_signal_db_check())
     checks.append(_doctor_schema_fields_check())

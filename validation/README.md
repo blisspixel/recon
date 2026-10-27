@@ -248,7 +248,7 @@ single timestamped invocation:
 
 The CT budget summary counts outcomes from that run and includes persisted
 post-run limiter snapshots from the same state directory the runtime uses.
-This honors `RECON_CONFIG_DIR`, an existing legacy `~/.recon`, and XDG state
+This honors an absolute `RECON_CONFIG_DIR`, an existing legacy `~/.recon`, and XDG state
 paths for fresh installations. Snapshot counters can include earlier runs;
 they are not per-run deltas. Missing limiter state remains an empty snapshot.
 

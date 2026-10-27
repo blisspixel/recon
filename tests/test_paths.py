@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from recon_tool.paths import cache_root, config_dir, state_dir
+from recon_tool.paths import cache_root, config_dir, ignored_config_dir, state_dir
 
 
 @pytest.fixture
@@ -39,6 +39,40 @@ class TestOverride:
         monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdgcfg"))
         override = tmp_path / "override"
         monkeypatch.setenv("RECON_CONFIG_DIR", str(override))
+        assert config_dir() == override
+
+
+class TestIgnoredOverride:
+    def test_placeholder_falls_through_to_xdg(self, home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("RECON_CONFIG_DIR", "${PLUGIN_DATA}/recon")
+        assert ignored_config_dir() == ("placeholder", "${PLUGIN_DATA}")
+        assert config_dir() == home / ".config" / "recon"
+        assert cache_root() == home / ".cache" / "recon"
+        assert state_dir() == home / ".local" / "state" / "recon"
+
+    def test_placeholder_inside_absolute_path_is_ignored(
+        self, home: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        raw = tmp_path / "${PLUGIN_DATA}" / "recon"
+        monkeypatch.setenv("RECON_CONFIG_DIR", str(raw))
+        assert ignored_config_dir() == ("placeholder", "${PLUGIN_DATA}")
+        assert config_dir() == home / ".config" / "recon"
+
+    def test_placeholder_prefers_existing_legacy(self, home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        (home / ".recon").mkdir()
+        monkeypatch.setenv("RECON_CONFIG_DIR", "${PLUGIN_DATA}/recon")
+        assert config_dir() == home / ".recon"
+
+    def test_relative_path_is_ignored(self, home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("RECON_CONFIG_DIR", "cfg/recon")
+        assert ignored_config_dir() == ("relative", "")
+        assert config_dir() == home / ".config" / "recon"
+
+    def test_absolute_override_unchanged(self, home: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        del home
+        override = tmp_path / "override"
+        monkeypatch.setenv("RECON_CONFIG_DIR", str(override))
+        assert ignored_config_dir() is None
         assert config_dir() == override
 
 
