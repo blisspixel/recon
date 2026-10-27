@@ -18,7 +18,7 @@ import json
 
 from recon_tool.fingerprints import load_fingerprints
 from recon_tool.profiles import list_profiles
-from recon_tool.server.introspection import (
+from recon_tool.server.catalog_resources import (
     _resource_fingerprints,
     _resource_profiles,
     _resource_signals,

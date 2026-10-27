@@ -15,12 +15,32 @@ sites.
 
 from __future__ import annotations
 
-from importlib.metadata import version
+from importlib.metadata import metadata, version
 from typing import TYPE_CHECKING, Any, Literal
 
 from recon_tool import __version__ as _recon_version
 
 SDKFamily = Literal["v1", "v2"]
+
+# Display metadata. ``name`` stays ``recon-tool``. v1 FastMCP accepts
+# ``website_url`` and forwards it onto initialize ``serverInfo``, but its
+# constructor has no ``title`` or ``description`` parameter. v2 accepts all
+# three and copies them onto both initialize and ``server/discover``.
+SERVER_TITLE = "recon"
+SERVER_WEBSITE_URL = "https://github.com/blisspixel/recon"
+
+
+def server_description() -> str:
+    """Return the package summary advertised as ``serverInfo.description``.
+
+    The pyproject ``description`` is the one-line text. Registry listings have
+    a shorter cap and do not reuse this string.
+    """
+    summary = metadata("recon-tool")["Summary"]
+    if not summary.strip():
+        raise RuntimeError("recon-tool package metadata has no Summary")
+    return summary
+
 
 if TYPE_CHECKING:
     from mcp.server import MCPServer as MCPApplication
@@ -38,7 +58,7 @@ else:
         from mcp.types import ToolAnnotations
 
         SDK_FAMILY = "v1"
-        _APPLICATION_OPTIONS = {}
+        _APPLICATION_OPTIONS = {"website_url": SERVER_WEBSITE_URL}
     except ModuleNotFoundError as exc:
         if exc.name not in {
             "mcp.server.fastmcp",
@@ -67,6 +87,9 @@ else:
             # client cannot tell which recon it is connected to and a bug report
             # cannot be tied to a release.
             "version": _recon_version,
+            "title": SERVER_TITLE,
+            "description": server_description(),
+            "website_url": SERVER_WEBSITE_URL,
             # On protocol 2026-07-28 the SDK derives tools, prompts and resources
             # listChanged plus resources.subscribe from one bit: whether
             # subscriptions/listen is served. recon never publishes those
@@ -139,6 +162,10 @@ def mcp_application_options() -> dict[str, Any]:
     server_version = _APPLICATION_OPTIONS.get("version")
     if isinstance(server_version, str) and server_version:
         options["version"] = server_version
+    for key in ("title", "description", "website_url"):
+        value = _APPLICATION_OPTIONS.get(key)
+        if isinstance(value, str) and value:
+            options[key] = value
     if _APPLICATION_OPTIONS.get("subscriptions") is False:
         options["subscriptions"] = False
     cache_hints = _APPLICATION_OPTIONS.get("cache_hints")
@@ -271,6 +298,8 @@ def model_wire_dict(model: object) -> dict[str, Any]:
 __all__ = [
     "SDK_FAMILY",
     "SDK_VERSION",
+    "SERVER_TITLE",
+    "SERVER_WEBSITE_URL",
     "MCPApplication",
     "ToolAnnotations",
     "ToolContext",
@@ -279,4 +308,5 @@ __all__ = [
     "change_notifications_must_be_absent",
     "mcp_application_options",
     "model_wire_dict",
+    "server_description",
 ]

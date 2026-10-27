@@ -349,6 +349,7 @@ def _relevant_categories(terms: frozenset[str]) -> set[str]:
 
 
 @mcp.tool(
+    title="Analyze posture",
     annotations=tool_annotations(
         read_only=True,
         destructive=False,
@@ -450,6 +451,7 @@ async def analyze_posture(
 
 
 @mcp.tool(
+    title="Assess exposure",
     annotations=tool_annotations(
         read_only=True,
         destructive=False,
@@ -503,6 +505,7 @@ async def assess_exposure(domain: str) -> ExposureAssessmentResult:
 
 
 @mcp.tool(
+    title="Find hardening gaps",
     annotations=tool_annotations(
         read_only=True,
         destructive=False,
@@ -554,6 +557,7 @@ async def find_hardening_gaps(domain: str) -> GapReportResult:
 
 
 @mcp.tool(
+    title="Compare postures",
     annotations=tool_annotations(
         read_only=True,
         destructive=False,
@@ -614,6 +618,7 @@ async def compare_postures(
 
 
 @mcp.tool(
+    title="Test hypothesis",
     annotations=tool_annotations(
         read_only=True,
         destructive=False,
@@ -732,6 +737,7 @@ _MAX_FIXES_AGGREGATE_CHARS = 4096
 
 
 @mcp.tool(
+    title="Simulate hardening",
     annotations=tool_annotations(
         read_only=True,
         destructive=False,

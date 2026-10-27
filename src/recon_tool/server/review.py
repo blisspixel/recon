@@ -60,6 +60,7 @@ def _failure_kind(error: ReconLookupError) -> Literal["lookup", "timeout"]:
 
 
 @mcp.tool(
+    title="Build review bundle",
     annotations=tool_annotations(
         read_only=True,
         destructive=False,

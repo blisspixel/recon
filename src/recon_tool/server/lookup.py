@@ -169,6 +169,7 @@ def _lookup_tenant_cut_lines(label: str, joined: str, note: str | None) -> list[
 
 
 @mcp.tool(
+    title="Look up domain",
     annotations=tool_annotations(
         read_only=True,
         destructive=False,
