@@ -65,6 +65,18 @@ def test_write_then_check_is_clean_and_a_version_edit_is_not(tmp_path: Path) -> 
     assert any("9.9.9" in problem and "2.2.8" in problem for problem in problems)
 
 
+def test_a_plugin_name_edit_fails_agreement(tmp_path: Path) -> None:
+    root = _root(tmp_path)
+    write(root)
+    path = root / ".claude-plugin" / "marketplace.json"
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["plugins"][0]["name"] = "other"
+    path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+
+    problems = agreement_problems(root)
+    assert any("other" in problem and "recon" in problem for problem in problems)
+
+
 def test_plugin_version_must_match_pyproject(tmp_path: Path) -> None:
     root = _root(tmp_path, plugin_version="2.2.7", project_version="2.2.8")
 
