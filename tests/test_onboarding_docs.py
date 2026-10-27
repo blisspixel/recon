@@ -213,10 +213,12 @@ def test_plugin_guidance_matches_the_released_distribution() -> None:
     assert "https://github.com/blisspixel/recon/blob/main/agents/README.md" in readme
     assert "Source-checkout scaffolds" in agents
     assert "not a PyPI or GitHub Release asset" in agents
-    assert "not currently published in a plugin marketplace" in claude
-    assert "/plugin install recon@<marketplace-name>" not in claude
+    assert "claude plugin marketplace add blisspixel/recon" in claude
+    assert "claude plugin install recon@blisspixel-recon" in claude
+    assert "not currently published in a plugin marketplace" not in claude
     assert "recon mcp install --client=claude-code" in mcp
-    assert "source-checkout-only" in mcp
+    assert "claude plugin install recon@blisspixel-recon" in mcp
+    assert "source-checkout-only" not in mcp
 
 
 def test_vscode_and_claude_code_use_current_permission_schemas() -> None:

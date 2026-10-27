@@ -181,6 +181,14 @@ def test_agent_plugin_candidate_is_wired_into_local_and_ci_gates() -> None:
     assert "run: uv run python scripts/check_agent_plugin.py" in workflow
 
 
+def test_claude_marketplace_is_wired_into_local_and_ci_gates() -> None:
+    source = Path(check.__file__).read_text(encoding="utf-8")
+    workflow = _CI_WORKFLOW.read_text(encoding="utf-8")
+
+    assert '(_CORE, "claude-marketplace", [_PY, "scripts/generate_claude_marketplace.py", "--check"]),' in source
+    assert "run: uv run python scripts/generate_claude_marketplace.py --check" in workflow
+
+
 def test_ci_gate_requires_every_other_main_workflow_job() -> None:
     workflow = yaml.safe_load(_CI_WORKFLOW.read_text(encoding="utf-8"))
     jobs = workflow["jobs"]

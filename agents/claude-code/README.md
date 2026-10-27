@@ -1,6 +1,6 @@
 # recon - Claude Code plugin
 
-This source-checkout directory packages recon as a [Claude Code plugin](https://docs.claude.com/en/docs/claude-code/plugins): a local development install wires up the MCP server and ships a skill that teaches Claude *when* and *how* to use recon. It is not currently published in a plugin marketplace or attached to recon's GitHub releases.
+This directory packages recon as a [Claude Code plugin](https://docs.claude.com/en/docs/claude-code/plugins): it wires up the MCP server and ships skills that teach Claude *when* and *how* to use recon. The repository marketplace `blisspixel-recon` installs it. It is not a PyPI or GitHub Release asset.
 
 This is Claude Code's client-specific plugin format. It is not the portable
 root `plugin.json` plus `mcp.json` layout defined by the
@@ -65,21 +65,28 @@ custom fields. Claude Code does not define `autoApprove` in this configuration,
 so the installer removes that legacy field and leaves permissions to Claude
 Code's permission rules.
 
-The released setup above is recommended for ordinary use. The source-checkout
-plugin path below is for local development or evaluation when the accompanying
-recon **skill** is needed.
+The released `recon mcp install` path above registers the server without the
+skills. Use the marketplace when you want the skills as well.
 
-### 2b. Load the source-checkout Claude Code plugin
+### 2b. Install the Claude Code plugin from the marketplace
 
-**Local development / testing.** Point Claude Code at this directory directly:
+The plugin does not install the Python package. `recon` must already be on
+PATH. See [the PATH gotcha](../../docs/mcp.md#path-gotcha-for-gui-clients).
+
+```bash
+claude plugin marketplace add blisspixel/recon
+claude plugin install recon@blisspixel-recon
+```
+
+Installing both this plugin and a user-level `recon mcp install` registration
+leaves two servers. Pick one path unless that duplication is intentional. See
+[client approval policy](../../docs/mcp.md#client-approval-policy).
+
+**Local development.** Point Claude Code at this directory for one session:
 
 ```bash
 claude --plugin-dir ./agents/claude-code
 ```
-
-The plugin loads for that session without going through a marketplace. There
-is no supported marketplace install until recon publishes an actual marketplace
-entry or a versioned plugin artifact.
 
 ### 3. Try it
 

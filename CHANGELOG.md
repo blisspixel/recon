@@ -28,6 +28,12 @@ operator, corporate group, ownership, or control.
 
 ### Added
 
+- Publish a repository Claude Code marketplace named `blisspixel-recon`.
+  `claude plugin marketplace add blisspixel/recon` and
+  `claude plugin install recon@blisspixel-recon` install the existing plugin,
+  including its skills. The plugin still launches `recon` from PATH, so
+  `recon-tool` remains a separate install. The marketplace file is generated
+  from the plugin manifest and the project version. (#322)
 - Advertise MCP display metadata. On mcp 2.0.0 and newer, `server/discover`
   and initialize `serverInfo` carry title `recon`, the package description,
   and `websiteUrl` `https://github.com/blisspixel/recon`. Every tool, catalog

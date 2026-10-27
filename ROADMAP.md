@@ -50,8 +50,11 @@ a cache-miss `lookup_tenant`, `build_review_bundle`,
 description, and the project `websiteUrl`, and every tool, catalog resource,
 and the `domain_report` prompt has a display title (#320).
 
-Next work is the Claude Code marketplace (#322). Registry distribution and
-additional client setup remain open in #321 and #323.
+The repository Claude Code marketplace is `blisspixel-recon`. It installs the
+existing plugin with `claude plugin install recon@blisspixel-recon` (#322).
+
+Next work is Codex and Gemini client setup (#323). Registry distribution
+remains open in #321.
 
 When picking work back up:
 

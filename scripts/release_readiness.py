@@ -386,6 +386,27 @@ def _check_version_consistency(root: Path) -> CheckResult:
     return _result("version consistency", "pass", project_version)
 
 
+def _claude_marketplace_problems(root: Path) -> list[str]:
+    try:
+        from scripts.generate_claude_marketplace import agreement_problems
+    except ImportError:
+        from generate_claude_marketplace import agreement_problems  # type: ignore[no-redef]
+
+    return agreement_problems(root)
+
+
+def _check_claude_marketplace(root: Path) -> CheckResult:
+    problems = _claude_marketplace_problems(root)
+    if problems:
+        return _result(
+            "claude marketplace",
+            "fail",
+            "; ".join(problems),
+            "run uv run python scripts/generate_claude_marketplace.py",
+        )
+    return _result("claude marketplace", "pass", "plugin name, version, and source match")
+
+
 def _check_uv_toolchain(runner: Runner) -> CheckResult:
     result = runner(["uv", "--version"])
     if result.returncode != 0:
@@ -1233,6 +1254,7 @@ def collect_checks(
         _check_worktree(actual_runner, allow_dirty),
         _check_upstream_state(actual_runner),
         _check_version_consistency(root),
+        _check_claude_marketplace(root),
         uv_toolchain,
         uv_lock,
         _check_coverage_targets(root),

@@ -112,6 +112,22 @@ def _write_minimal_root(root: Path, version: str = "2.2.8") -> None:
     _write_file(root, "CITATION.cff", f'version: {version}\ndate-released: "2026-06-26"\n')
     _write_file(
         root,
+        "agents/claude-code/.claude-plugin/plugin.json",
+        json.dumps({"name": "recon", "version": version}) + "\n",
+    )
+    _write_file(
+        root,
+        ".claude-plugin/marketplace.json",
+        json.dumps(
+            {
+                "name": "blisspixel-recon",
+                "plugins": [{"name": "recon", "source": "./agents/claude-code", "version": version}],
+            }
+        )
+        + "\n",
+    )
+    _write_file(
+        root,
         "docs/supply-chain.md",
         "\n".join(
             [
@@ -209,6 +225,28 @@ def test_uv_lock_failure_retains_lock_specific_recovery() -> None:
     assert check.status == "fail"
     assert check.name == "uv.lock"
     assert check.action == "run uv lock and commit uv.lock"
+
+
+def test_claude_marketplace_rejects_a_plugin_version_mismatch(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path, version="2.2.8")
+    _write_file(
+        tmp_path,
+        ".claude-plugin/marketplace.json",
+        json.dumps(
+            {
+                "name": "blisspixel-recon",
+                "plugins": [{"name": "recon", "source": "./agents/claude-code", "version": "2.2.7"}],
+            }
+        )
+        + "\n",
+    )
+
+    checks = release_readiness.collect_checks(tmp_path, runner=_happy_runner)
+    check = next(item for item in checks if item.name == "claude marketplace")
+
+    assert check.status == "fail"
+    assert "2.2.7" in check.detail
+    assert "2.2.8" in check.detail
 
 
 def test_version_consistency_fails_on_mismatch(tmp_path: Path) -> None:

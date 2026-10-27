@@ -704,13 +704,22 @@ to disk or sharing data and disappear when the server exits.
 
 | Client | Config file location |
 |--------|---------------------|
-| Claude Code | Released path: `recon mcp install --client=claude-code`. The plugin under [`agents/claude-code/`](../agents/claude-code/) is source-checkout-only and adds the local skill. |
+| Claude Code | Released MCP path: `recon mcp install --client=claude-code`. Marketplace plugin path: `claude plugin marketplace add blisspixel/recon`, then `claude plugin install recon@blisspixel-recon`. The plugin still launches `recon` from PATH. |
 | Claude Desktop | `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) |
 | Cursor | `.cursor/mcp.json` in your project or `~/.cursor/mcp.json` globally |
 | VS Code + Copilot | `.vscode/mcp.json` in a workspace, or `mcp.json` in the active user profile |
 | Windsurf | `~/.codeium/windsurf/mcp_config.json` |
 | Kiro (workspace) | `.kiro/settings/mcp.json` |
 | Kiro (global) | `~/.kiro/settings/mcp.json` |
+
+The repository marketplace is [`.claude-plugin/marketplace.json`](../.claude-plugin/marketplace.json).
+It installs the existing plugin under [`agents/claude-code/`](../agents/claude-code/),
+including its skills. Install `recon-tool` first: the plugin launches `recon`
+from PATH. A source checkout can still load that directory for one session with
+`claude --plugin-dir ./agents/claude-code`. GUI PATH limits and the doubled
+registration from also running `recon mcp install` are covered under
+[PATH gotcha for GUI clients](#path-gotcha-for-gui-clients) and
+[Client approval policy](#client-approval-policy).
 
 Per-agent install scaffolds (config snippets + guidance templates) live under [`agents/`](../agents/), one folder per client.
 
