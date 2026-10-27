@@ -37,6 +37,12 @@ handlers. Exact v1.28.1 remains the tested rollback pin and uses
 `ClientSession.initialize()` plus `tools/list`. The same server registration
 and domain logic pass on both generations.
 
+`server/discover` leaves `listChanged` and `resources.subscribe` false.
+The v2 server passes `subscriptions=False`, because that SDK turns every
+change-notification flag on when `subscriptions/listen` is served, and recon
+does not publish those notifications. `recon mcp doctor` fails if the flags
+return. Catalog readers use `ttlMs: 0` and re-read after `reload_data`.
+
 Local stdio remains the default. `src/recon_tool/remote_server.py` also provides
 an optional operator-owned Streamable HTTP adapter with a read-only tool
 allow-list and deployment controls. The project does not operate a hosted

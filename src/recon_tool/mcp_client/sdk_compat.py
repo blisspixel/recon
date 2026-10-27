@@ -64,6 +64,13 @@ else:
             # client cannot tell which recon it is connected to and a bug report
             # cannot be tied to a release.
             "version": _recon_version,
+            # On protocol 2026-07-28 the SDK derives tools, prompts and resources
+            # listChanged plus resources.subscribe from one bit: whether
+            # subscriptions/listen is served. recon never publishes those
+            # notifications. False leaves listen unserved, so discovery
+            # advertises the flags as false. Passing a bus would turn all four
+            # on together; this SDK cannot advertise resource updates alone.
+            "subscriptions": False,
             "cache_hints": dict.fromkeys(
                 (
                     "prompts/list",
@@ -90,6 +97,8 @@ def mcp_application_options() -> dict[str, Any]:
     server_version = _APPLICATION_OPTIONS.get("version")
     if isinstance(server_version, str) and server_version:
         options["version"] = server_version
+    if _APPLICATION_OPTIONS.get("subscriptions") is False:
+        options["subscriptions"] = False
     cache_hints = _APPLICATION_OPTIONS.get("cache_hints")
     if isinstance(cache_hints, dict):
         options["cache_hints"] = dict(cache_hints)

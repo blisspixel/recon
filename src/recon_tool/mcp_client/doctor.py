@@ -263,6 +263,8 @@ async def _discover_session(
             )
         with _protocol_phase("server/discover metadata", checks, progress):
             _append_cache_metadata_check(checks, "server/discover metadata", discovery_wire)
+        with _protocol_phase("server capabilities", checks, progress):
+            _append_capability_honesty_check(checks, discovery_wire)
         _append_dns_readiness_check(checks, discovery_wire)
         return
 
@@ -611,6 +613,77 @@ def _validate_resource_payload(uri: str, payload: dict[str, object]) -> None:
         return
 
     raise ValueError(f"{uri} is not a canonical MCP resource")
+
+
+# Flags that tell a 2026-07-28 client recon will emit change notifications.
+# Discovery may omit a flag or set it false. True is a claim the server
+# does not keep: tool, prompt and resource lists are fixed, and nothing
+# publishes resources/updated.
+_CHANGE_NOTIFICATION_FLAGS: tuple[tuple[str, str], ...] = (
+    ("prompts", "listChanged"),
+    ("resources", "listChanged"),
+    ("resources", "subscribe"),
+    ("tools", "listChanged"),
+)
+
+
+def _as_object_dict(value: object) -> dict[str, object] | None:
+    """Copy a JSON object into a string-keyed mapping, or return None."""
+    if not isinstance(value, dict):
+        return None
+    return cast(dict[str, object], value)
+
+
+def advertised_change_notifications(capabilities: object) -> tuple[str, ...]:
+    """Return ``group.flag`` entries whose discovery value is true.
+
+    Absent and false are both honest. A non-object capability section does
+    not advertise the flag.
+    """
+    fields = _as_object_dict(capabilities)
+    if fields is None:
+        return ()
+    advertised: list[str] = []
+    for group, flag in _CHANGE_NOTIFICATION_FLAGS:
+        section = _as_object_dict(fields.get(group))
+        if section is not None and section.get(flag) is True:
+            advertised.append(f"{group}.{flag}")
+    return tuple(advertised)
+
+
+def capability_honesty_check(wire: Mapping[str, object]) -> DoctorCheck:
+    """Report whether discovery claims change notifications recon does not send.
+
+    The 2026-07-28 SDK turns ``listChanged`` and ``resources.subscribe`` on
+    together when ``subscriptions/listen`` is served. recon does not publish
+    those notifications, so each flag must be absent or false. A later SDK
+    default that turns the listen method back on fails this check.
+    """
+    if "capabilities" not in wire:
+        return DoctorCheck(
+            "server capabilities",
+            "fail",
+            "server/discover omitted capabilities",
+            "Update recon-tool. Discovery must name the capability set.",
+        )
+    advertised = advertised_change_notifications(wire["capabilities"])
+    if advertised:
+        listed = ", ".join(advertised)
+        return DoctorCheck(
+            "server capabilities",
+            "fail",
+            f"advertised change notifications recon does not send: {listed}",
+            "These flags tell a client to wait for notifications this server never publishes.",
+        )
+    return DoctorCheck(
+        "server capabilities",
+        "ok",
+        "listChanged and resources.subscribe are absent or false",
+    )
+
+
+def _append_capability_honesty_check(checks: list[DoctorCheck], wire: dict[str, object]) -> None:
+    checks.append(capability_honesty_check(wire))
 
 
 def _append_dns_readiness_check(checks: list[DoctorCheck], wire: dict[str, object]) -> None:

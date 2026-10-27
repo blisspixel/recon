@@ -26,6 +26,12 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Fixed
+
+- Advertise only MCP change notifications recon sends. `server/discover` leaves
+  `listChanged` and `resources.subscribe` false, and `recon mcp doctor` fails
+  if a later SDK default turns them back on. (#319)
+
 ## [2.26.1] - 2026-10-26
 
 Fix routine MCP request logging privacy, reject invalid encrypted DNS views,
