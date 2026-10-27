@@ -26,6 +26,16 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.27.0] - 2026-10-27
+
+Add Codex and Gemini CLI install targets, MCP progress for long lookups,
+display titles, a Claude Code marketplace, and MCP Registry metadata.
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes. `recon mcp install --client`
+and `recon doctor --client` accept `codex` and `gemini`.
+
 ### Added
 
 - Publish MCP Registry metadata for `io.github.blisspixel/recon`. `server.json`
