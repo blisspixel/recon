@@ -543,7 +543,11 @@ and executes both installed entry points without OIDC or write permissions.
 The `test` and `sbom` jobs run on separate runners that never see `dist/`.
 The `attest` job downloads only the sealed distribution and completed SBOM, and
 jobs with elevated OIDC-minted scopes do not execute project runtime
-dependencies. The provenance export job downloads the signed GitHub
+dependencies. The MCP Registry entry is a metadata pointer, not a distribution
+channel. `publish-mcp-registry` runs only after PyPI parity, checks out the
+tag, and runs a cosign-verified `mcp-publisher` binary. It does not download
+`dist/` or execute project dependencies. The artifact remains the attested
+PyPI wheel. The provenance export job downloads the signed GitHub
 attestation bundles for the wheel, sdist, and SBOM and uploads a
 `.intoto.jsonl` artifact for the GitHub Release without running project
 dependency code. PyPI publication waits

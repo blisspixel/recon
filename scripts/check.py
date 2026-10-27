@@ -89,6 +89,7 @@ _STAGES: list[tuple[str, str, list[str]]] = [
     (_CORE, "agent-portability-contract", [_PY, "-m", "validation.agent_portability_contract"]),
     (_CORE, "agent-plugin-generated", [_PY, "scripts/generate_agent_plugin.py", "--check"]),
     (_CORE, "claude-marketplace", [_PY, "scripts/generate_claude_marketplace.py", "--check"]),
+    (_CORE, "mcp-registry", [_PY, "scripts/generate_mcp_registry.py", "--check"]),
     (_CORE, "agent-plugin-candidate", [_PY, "scripts/check_agent_plugin.py"]),
     (_CORE, "workflow-pins", [_PY, "scripts/check_workflow_pins.py"]),
     (_CORE, "cost-surface", [_PY, "scripts/check_cost_surface.py"]),

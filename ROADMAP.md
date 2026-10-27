@@ -59,7 +59,13 @@ installer appends that table or, with `--force`, replaces only its span, and
 it does not write `tool_timeout_sec` or `default_tools_approval_mode`. Gemini
 uses the existing JSON merge and omits `autoApprove`.
 
-Next work is MCP Registry distribution (#321).
+`server.json` names `io.github.blisspixel/recon` and records the PyPI package
+`recon-tool`. The declared launch is `uvx --from recon-tool recon mcp`. The
+release job publishes that metadata after PyPI parity. The Registry entry is
+a pointer to the attested wheel. (#321)
+
+Next work is the feature release that publishes this batch. The live Registry
+lookup stays open until that job returns the released version.
 
 When picking work back up:
 

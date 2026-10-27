@@ -12,6 +12,8 @@ from pathlib import Path
 import pytest
 
 from scripts import check_validation_hygiene, release_readiness
+from scripts.generate_mcp_registry import MCP_NAME_LINE
+from scripts.generate_mcp_registry import write as write_registry
 from tests.test_release_recovery import release_payload
 
 _RELEASE_SHA = "a" * 40
@@ -86,6 +88,7 @@ def _write_file(root: Path, relative: str, text: str) -> None:
 
 def _write_minimal_root(root: Path, version: str = "2.2.8") -> None:
     _write_file(root, "pyproject.toml", f'[project]\nname = "recon-tool"\nversion = "{version}"\n')
+    write_registry(root)
     _write_file(root, "src/recon_tool/__init__.py", f'_FALLBACK_VERSION = "{version}"\n')
     for relative in ("scripts/check.py", ".github/workflows/ci.yml"):
         _write_file(root, relative, "pytest tests/ --cov=src/recon_tool --cov-branch --cov-fail-under=90.2\n")
@@ -98,6 +101,7 @@ def _write_minimal_root(root: Path, version: str = "2.2.8") -> None:
         "README.md",
         "\n".join(
             [
+                MCP_NAME_LINE,
                 "recon example.com",
                 "recon batch domains.txt --json",
                 "recon mcp install --client=",
@@ -243,6 +247,21 @@ def test_claude_marketplace_rejects_a_plugin_version_mismatch(tmp_path: Path) ->
 
     checks = release_readiness.collect_checks(tmp_path, runner=_happy_runner)
     check = next(item for item in checks if item.name == "claude marketplace")
+
+    assert check.status == "fail"
+    assert "2.2.7" in check.detail
+    assert "2.2.8" in check.detail
+
+
+def test_mcp_registry_rejects_a_version_mismatch(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path, version="2.2.8")
+    document = json.loads((tmp_path / "server.json").read_text(encoding="utf-8"))
+    assert isinstance(document, dict)
+    document["version"] = "2.2.7"
+    _write_file(tmp_path, "server.json", json.dumps(document) + "\n")
+
+    checks = release_readiness.collect_checks(tmp_path, runner=_happy_runner)
+    check = next(item for item in checks if item.name == "mcp registry")
 
     assert check.status == "fail"
     assert "2.2.7" in check.detail

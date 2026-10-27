@@ -62,6 +62,7 @@ _REVIEWED_DOCS = (
 )
 _GENERATED_RELEASE_FILES = (
     ROOT / ".claude-plugin" / "marketplace.json",
+    ROOT / "server.json",
     ROOT / "agents" / "agent-plugin" / "plugin.json",
     ROOT / "agents" / "agent-plugin" / "mcp.json",
     ROOT / "agents" / "agent-plugin" / "README.md",
@@ -356,6 +357,7 @@ def _bump_release_surfaces(current: str, new: str, release_date: str) -> None:
     plugin["version"] = new
     PLUGIN_MANIFEST.write_text(json.dumps(plugin, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     _run(["uv", "run", "python", "scripts/generate_claude_marketplace.py"], capture=False)
+    _run(["uv", "run", "python", "scripts/generate_mcp_registry.py"], capture=False)
 
     citation = CITATION.read_text(encoding="utf-8")
     citation, version_count = re.subn(r"^version:\s*.+$", f"version: {new}", citation, count=1, flags=re.MULTILINE)

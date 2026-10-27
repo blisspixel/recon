@@ -386,6 +386,11 @@ jobs:
         # the project version. This check does not invoke the claude binary.
         run: uv run python scripts/generate_claude_marketplace.py --check
 
+      - name: Enforce the MCP Registry metadata
+        # server.json is generated from the project version and checked against
+        # the vendored 2025-12-11 schema. This check does not publish it.
+        run: uv run python scripts/generate_mcp_registry.py --check
+
       - name: Validate schema-pinned Agent Plugins candidate
         # Uses only the byte-pinned vendored Working Draft schemas and rejects
         # unsafe launch shapes, client-only skill fields, and package drift.

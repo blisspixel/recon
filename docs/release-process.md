@@ -315,7 +315,14 @@ Triggered by any tag matching `v*` pushed to the repo. The workflow:
 9. **verify-pypi-parity**: after `publish-pypi`, downloads the sealed pair in a
    read-only job, waits for the exact two PyPI records, and requires both
    SHA-256 digests to match before GitHub publication can proceed.
-10. **github-release**: after `build`, `attest`, `export-attestations`,
+10. **publish-mcp-registry**: after `verify-pypi-parity`, checks out the tag and
+    publishes `server.json` with `mcp-publisher login github-oidc`. The binary
+    is pinned to `v1.8.1` and verified with cosign before it runs. The job does
+    not download `dist/` or execute project code. The Registry entry is a
+    metadata pointer. It does not block the human GitHub Release check, and the
+    workflow stays red until this job succeeds. The Registry is preview and can
+    reset.
+11. **github-release**: after `build`, `attest`, `export-attestations`,
     `package-smoke`, `sbom`, and `verify-pypi-parity`, verifies the human-published
     release against all four sealed files from this original run. This job has
     `contents: read` and performs no release creation, upload, edit or deletion.
@@ -482,7 +489,8 @@ yanking path and cut a corrected version. A run is recovered only after the
 strict remote readiness command passes in full.
 
 Workflow permissions are least-privilege: every job has `contents: read`;
-`attest` and `publish-pypi` receive `id-token: write` only where OIDC is needed.
+`attest`, `publish-pypi`, and `publish-mcp-registry` receive `id-token: write`
+only where OIDC is needed.
 The existing attestation export uses the workflow token for read-only evidence
 access. No publishing token is added to the final job.
 

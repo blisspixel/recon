@@ -727,6 +727,16 @@ registration from also running `recon mcp install` are covered under
 [PATH gotcha for GUI clients](#path-gotcha-for-gui-clients) and
 [Client approval policy](#client-approval-policy).
 
+The MCP Registry entry is metadata for clients that install from an index.
+`server.json` names `io.github.blisspixel/recon` and declares
+`uvx --from recon-tool recon mcp`. That command runs the `recon` console
+script from the `recon-tool` package. A client that inserts the package
+identifier between the runtime arguments and the package arguments builds
+a different command, so that insertion does not match this entry.
+`recon mcp install` remains the interpreter-bound path. The Registry
+record points at the PyPI release. It is not a second build, and the
+Registry is preview.
+
 Per-agent install scaffolds (config snippets + guidance templates) live under [`agents/`](../agents/), one folder per client.
 
 One format note: VS Code maps server names under a top-level `servers` key, not
