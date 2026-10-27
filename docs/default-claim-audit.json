@@ -1068,7 +1068,7 @@
       "agents/agent-plugin/skills/recon/SKILL.md#recon": "static.agent-guidance.v1",
       "agents/claude-code/README.md#1. Install the recon CLI": "static.agent-guidance.v1",
       "agents/claude-code/README.md#2a. (Alternative) Wire MCP without the plugin": "static.agent-guidance.v1",
-      "agents/claude-code/README.md#2b. Load the source-checkout Claude Code plugin": "static.agent-guidance.v1",
+      "agents/claude-code/README.md#2b. Install the Claude Code plugin from the marketplace": "static.agent-guidance.v1",
       "agents/claude-code/README.md#3. Try it": "static.agent-guidance.v1",
       "agents/claude-code/README.md#Approval policy": "static.agent-guidance.v1",
       "agents/claude-code/README.md#Choosing the MCP launch command": "static.agent-guidance.v1",
