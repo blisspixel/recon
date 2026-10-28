@@ -37,8 +37,8 @@ absent.
 
 ## Resume here
 
-State at 2026-10-27: v2.26.1 is the published baseline. The MCP and packaging
-tracker #324 is the active batch. On mcp 2.3.0 and newer, discovery no
+State at 2026-10-27: v2.27.0 is the published baseline. The MCP and packaging
+tracker #324 is closed with this batch. On mcp 2.3.0 and newer, discovery no
 longer advertises change notifications recon does not send (#319). A relative
 or unexpanded `RECON_CONFIG_DIR`, including a literal `${PLUGIN_DATA}`, is
 ignored instead of becoming a working-directory cache (#318). `chain_lookup`,
@@ -64,8 +64,8 @@ uses the existing JSON merge and omits `autoApprove`.
 release job publishes that metadata after PyPI parity. The Registry entry is
 a pointer to the attested wheel. (#321)
 
-Next work is the feature release that publishes this batch. The live Registry
-lookup stays open until that job returns the released version.
+v2.27.0 is published to PyPI and GitHub. The MCP Registry lookup for
+`io.github.blisspixel/recon` returns that version, and #321 is closed.
 
 When picking work back up:
 
