@@ -67,8 +67,10 @@ What is next, and why:
    pages do not print the exact grammar. A later pass the same day checked
    eight undated CRM and marketing rules and left them undated for the same
    reason. The older Dynamics authenticate-domains article now redirects, and
-   a search-index copy of it is not a current basis. That work does not cut a
-   release.
+   a search-index copy of it is not a current basis. A later pass the same
+   day dated the Emma account-validation TXT and the Eloqua tracking-domain
+   CNAME from pages that print the grammar, and left six other CRM rules
+   undated. That work does not cut a release.
    The next round uses a new question list and the rules that are still due.
    The closed 5,199-row drift round remains a measurement contract. It does
    not promote rules. Start at [catalog maintenance](docs/catalog-maintenance.md).

@@ -215,8 +215,8 @@ upload or GitHub write itself.
 
 The versioned [public ledger](catalog-freshness-ledger.json) starts with the
 eight documented additions checked on 2026-10-23. Later rows record the
-2026-10-28 checks. It is a bounded review record,
-not a claim that every rule was reviewed that month. Private monthly receipts
+2026-10-28 checks, including a later CRM pass the same day. It is a bounded
+review record, not a claim that every rule was reviewed that month. Private monthly receipts
 bind due rules to their exact claim/catalog digest, prior/new reference, actual
 source check/review date, disposition, next review and bounded proposal queue.
 The offline freshness auditor and weekly Provider drift smoke do not establish
@@ -428,6 +428,32 @@ allowlist, not as a customer DNS CNAME target. The Customer.io rule cites the
 docs index. Domain authentication places records on an account-specific
 subdomain and names `customeriomail.com` for default tracked links. It does
 not document a CNAME whose target is under `customer.io`.
+
+### Documented reference check, 2026-10-28, later CRM pass
+
+A later pass the same day checked eight more undated CRM rules. Two received
+a `verified` date because the current vendor page prints the grammar. Six
+stay undated. No new detection, DNS record type, or collection path was
+added. This note does not cut a release.
+
+The [Oracle Eloqua first-party cookie tracking guide](https://docs.oracle.com/en/cloud/saas/marketing/eloqua-user/Help/EloquaAsynchronousTrackingScripts/Tasks/BasicPageTrackingFirst.htm)
+says the tracking domain CNAME points at `s[SiteID].t.eloqua.com`. The
+existing suffix rule observes that documented target. It does not prove
+landing pages, forms, or active campaigns. Pages that say to create a CNAME
+without printing another target were not folded into this rule.
+
+The [Emma DKIM setup guide](https://help.myemma.com/s/article/DomainKeys-Identified-Mail-DKIM)
+shows an apex TXT whose value begins with `e2ma-verification=` and an
+account-specific validation hash. The rule observes that record. It does not
+prove sending is active. The same guide's DKIM CNAME targets and SPF include
+are separate records and were not added.
+
+Demandbase, Drift, Gong, both HubSpot TXT rules, and iContact stay undated.
+Their cited pages do not print the catalog grammar. Separate shapes seen on
+those pages were not added. Those include Drift MX hosts under
+`driftmail.net`, a Gong branded-URL CNAME with no named target, and iContact
+DKIM CNAME hosts. HubSpot content-domain CNAMEs remain the existing dated
+`hubspot.net` rule.
 
 ## Executable path
 

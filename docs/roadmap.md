@@ -807,7 +807,10 @@ verification rules whose current vendor pages state the token grammar and
 left six undated because the cited pages do not. A later pass the same day
 checked eight undated CRM and marketing rules and left them undated for the
 same reason. The older Dynamics authenticate-domains article now redirects,
-and a search-index copy of it is not a current basis. The 2026-10 documentation
+and a search-index copy of it is not a current basis. A later pass the same
+day dated the Emma account-validation TXT and the Eloqua tracking-domain
+CNAME from pages that print the grammar, and left six other CRM rules
+undated. That work does not cut a release. The 2026-10 documentation
 pass read the IANA DNS parameter update and left collection on the existing
 record types. Agent portability remains a separate maintainer track and does
 not appear here as a product milestone:
