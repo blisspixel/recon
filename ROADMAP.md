@@ -64,7 +64,11 @@ What is next, and why:
    gitignored private roots when an operator supplies them. The 2026-10-28
    pass dated the Anthropic and Mistral apex TXT rules from current vendor
    pages and left six other AI rules undated, because those cited
-   pages do not print the exact grammar. That pass does not cut a release.
+   pages do not print the exact grammar. A later pass the same day checked
+   eight undated CRM and marketing rules and left them undated for the same
+   reason. The older Dynamics authenticate-domains article now redirects, and
+   a search-index copy of it is not a current basis. That work does not cut a
+   release.
    The next round uses a new question list and the rules that are still due.
    The closed 5,199-row drift round remains a measurement contract. It does
    not promote rules. Start at [catalog maintenance](docs/catalog-maintenance.md).

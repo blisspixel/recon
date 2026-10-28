@@ -804,7 +804,10 @@ new temporary question list, keeps that list private, and publishes only a
 disclosure-safe pattern with synthetic fixtures. It does not publish a claim
 that a named organization uses a service. The 2026-10-28 pass dated two AI
 verification rules whose current vendor pages state the token grammar and
-left six undated because the cited pages do not. The 2026-10 documentation
+left six undated because the cited pages do not. A later pass the same day
+checked eight undated CRM and marketing rules and left them undated for the
+same reason. The older Dynamics authenticate-domains article now redirects,
+and a search-index copy of it is not a current basis. The 2026-10 documentation
 pass read the IANA DNS parameter update and left collection on the existing
 record types. Agent portability remains a separate maintainer track and does
 not appear here as a product milestone:

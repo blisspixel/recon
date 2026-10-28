@@ -64,7 +64,9 @@ Submit the monthly review receipt before editing catalog YAML. The review
 command rejects an admission whose catalog digest no longer matches. A page
 that says to publish a DNS record, without printing the exact grammar, stays
 deferred and does not receive a `verified` date. A second official record
-shape is a separate rule: do not fold it into the rule under review.
+shape is a separate rule: do not fold it into the rule under review. A retired
+page, a redirect to a page that does not print the grammar, and a search-index
+snippet of that retired page are not a current basis.
 
 On interruption preserve the original run. Without durable item starts, retain
 unknown starts rather than calling unfinished items unattempted. Declare a

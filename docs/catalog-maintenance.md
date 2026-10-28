@@ -214,7 +214,8 @@ upload or GitHub write itself.
 ## Monthly due work and review receipts
 
 The versioned [public ledger](catalog-freshness-ledger.json) starts with the
-eight documented additions checked on 2026-10-23. It is a bounded review record,
+eight documented additions checked on 2026-10-23. Later rows record the
+2026-10-28 checks. It is a bounded review record,
 not a claim that every rule was reviewed that month. Private monthly receipts
 bind due rules to their exact claim/catalog digest, prior/new reference, actual
 source check/review date, disposition, next review and bounded proposal queue.
@@ -399,6 +400,34 @@ value. That second shape is not part of this rule.
 Six other undated AI rules were checked against their cited pages and stay
 undated. Those pages do not print the catalog grammar. No new detection, DNS
 record type, or collection path was added.
+
+### Documented reference check, 2026-10-28, CRM and marketing
+
+A later pass the same day checked eight undated CRM and marketing rules. None
+of the cited pages print the catalog grammar, so none received a `verified`
+date. No new detection, DNS record type, or collection path was added.
+
+The Dynamics 365 Marketing rule cites the marketing index. The current
+[Customer Insights - Journeys domain-authentication guide](https://learn.microsoft.com/en-us/dynamics365/customer-insights/journeys/domain-authentication),
+updated 2026-10-13, tells the operator to copy an ownership TXT from the
+product wizard and does not print `d365mktkey=`. The older authenticate-domains
+article now redirects to the outbound-marketing removal notes, which also do
+not print that prefix. A search-index copy of the retired article is not a
+current basis. Separate DKIM and envelope-from records described only on that
+retired article were not added.
+
+The 6sense rules cite the support index. It does not document a customer CNAME
+into `6sense.com` or `6sense.io`, or a TXT value that begins with `6sense`.
+The Apollo rule cites the knowledge-base index. Current mailbox-authentication
+articles cover SPF, DKIM, and DMARC and do not print
+`apollo-domain-verification=`. The Braze rule cites the docs index. Current
+email setup names records supplied in the dashboard and ESP or CDN targets,
+not a CNAME into `braze.com`. The Clearbit rule cites the help-center index.
+The content-security-policy article lists `clearbit.com` hosts for a browser
+allowlist, not as a customer DNS CNAME target. The Customer.io rule cites the
+docs index. Domain authentication places records on an account-specific
+subdomain and names `customeriomail.com` for default tracked links. It does
+not document a CNAME whose target is under `customer.io`.
 
 ## Executable path
 
