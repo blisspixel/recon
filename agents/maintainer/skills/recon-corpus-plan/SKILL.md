@@ -21,6 +21,9 @@ Determine whether the user needs candidate discovery, independent evaluation,
 or forward-time drift. Record the proposed source, dated revision and digest,
 selection rule, sample-size budget, strata, and what the result cannot estimate.
 Do not invent a list of organizations or infer corporate ownership from domains.
+Make a new list for the question in front of you. Do not reuse an older
+round's membership as this round's sample, and do not turn that list into a
+standing roster.
 When only a question is supplied, propose a source and sampling design; a live
 download or target lookup is a separate action, not part of an offline plan.
 
