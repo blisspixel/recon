@@ -47,12 +47,23 @@ the package.
 What is next, and why:
 
 1. The monthly fingerprint-freshness loop. The resolver and detection engine
-   are feature-complete, so catalog currency is the durable detection work.
-   Promote a rule only with a current public or disclosure-safe basis, a real
-   `verified` date, synthetic positive and lookalike fixtures, and provenance
-   tests. The closed 5,199-row drift round remains a measurement contract. It
-   does not promote rules. Start at
-   [catalog maintenance](docs/catalog-maintenance.md).
+   are feature-complete, so the durable work is a fresh look at public
+   patterns, not another product surface. Each round makes a new temporary
+   list of questions. That list is unique to the round, it is not a reused
+   roster of organizations, and it is not committed. Research public vendor
+   documents and standards for a new or changed pattern on the records recon
+   already reads. The maintainer skills `recon-catalog-maintenance`,
+   `recon-corpus-plan`, `recon-catalog-round`, and
+   `recon-fingerprint-triage` are the procedure. Refine a skill when a round
+   shows that the instructions are wrong or incomplete. Promote a rule only
+   with a current public or disclosure-safe basis, a real `verified` date,
+   synthetic positive and lookalike fixtures, and provenance tests. GitHub
+   receives that pattern. It does not receive a statement that a named
+   organization uses a service, and it does not receive an apex, a tenant
+   identifier, an opaque token, or a per-domain row. Those stay in the
+   gitignored private roots when an operator supplies them. The closed
+   5,199-row drift round remains a measurement contract. It does not promote
+   rules. Start at [catalog maintenance](docs/catalog-maintenance.md).
 
 2. Two upstream dependency blockers, and only when upstream ships the fix.
    PyYAML 6.0.3 has no cp315 wheel, so Python 3.15 builds it from source.
@@ -70,6 +81,15 @@ Not next, and why:
 
 - Another package release. v2.27.0 is the current build. This note does not
   change behavior, so it does not cut a version.
+- A new DNS record-type collector. IANA's parameter table, last updated
+  2026-10-16, added temporary `DELEG` and `DELEGPARAM` registrations.
+  `HTTPS`, `SVCB`, `DSYNC`, `RESINFO`, `HHIT`, and `BRID` were already
+  assigned. `RESINFO` describes the recursive resolver, not the queried
+  name. `DELEG` is a parent-zone delegation draft. `HHIT` and `BRID` are
+  remote-identification records. `HTTPS` and `SVCB` are service-binding
+  records, often published by a CDN that NS or CNAME rules already name.
+  Querying a new type is a new collector. The 2026-10 documentation pass
+  did not find a miss the current records cannot answer.
 - Antigravity CLI (`agy`). `--client=gemini` writes the Gemini CLI file
   `~/.gemini/settings.json`. `agy` is a separate client and reads global
   `~/.gemini/config/mcp_config.json` and workspace `.agents/mcp_config.json`.

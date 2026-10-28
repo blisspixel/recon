@@ -799,9 +799,13 @@ available from the completed priority 2 matrix.
 The immediate product execution slice is the fingerprint-freshness loop.
 v2.27.0 published progress notifications, capability honesty, display titles,
 the Claude Code marketplace, Codex and Gemini CLI install targets, and MCP
-Registry metadata. That release did not change this slice. Agent portability
-remains a separate maintainer track and does not appear here as a product
-milestone:
+Registry metadata. That release did not change this slice. A round makes a
+new temporary question list, keeps that list private, and publishes only a
+disclosure-safe pattern with synthetic fixtures. It does not publish a claim
+that a named organization uses a service. The 2026-10 documentation pass
+read the IANA DNS parameter update and left collection on the existing
+record types. Agent portability remains a separate maintainer track and does
+not appear here as a product milestone:
 
 1. Preserve the shipped v2.14 rank, regional,
    [vendor-seed](../validation/2026-08-14-catalog-vendor-seed-round.md), and

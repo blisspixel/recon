@@ -52,6 +52,14 @@ next review, keeping completed, no-change, blocked, skipped and overdue states
 distinct. Resume immutable submissions; reconcile an outstanding proposal with
 GitHub before retrying it. No recurring job is activated by these instructions.
 
+Each round starts a new temporary list. Do not reuse an older round's
+membership as this round's question, and do not keep the list as a standing
+roster. The list stays under the ignored private roots. A public commit may
+carry a disclosure-safe pattern, a provider-owned reference, a `verified`
+date, and reserved synthetic fixtures. It must not say that a named
+organization uses a service, and it must not include an apex, a tenant
+identifier, an opaque token, or a per-domain row.
+
 On interruption preserve the original run. Without durable item starts, retain
 unknown starts rather than calling unfinished items unattempted. Declare a
 separate budgeted retry. Never expand scope, overwrite failed results, refresh
