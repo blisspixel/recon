@@ -294,6 +294,34 @@
       "reviewed_on": "2026-10-23",
       "source_checked_on": "2026-10-23",
       "reason": "Primary configuration guidance checked 2026-10-23. https://docs.railway.com/networking/domains/working-with-domains Published routing or owner-qualified nonempty verification marker only. Does not establish active deployment, account ownership, completed verification or authoritative DNS delegation. Offline positive, lookalike, missing/failed-source, duplicate and provenance regressions cover the applicable paths. No private target collection."
+    },
+    {
+      "rule": {
+        "source": "ai.yaml",
+        "slug": "anthropic",
+        "detection_type": "txt",
+        "pattern": "^anthropic-domain-verification"
+      },
+      "before": "0c28c950b0b0154061b53cf7b284fe73f092d6a15e0cbaaba8cae8ef9591c578",
+      "after": "8fb8caa06f4456e49aa2c7f05f47e3af06c4221e7be0df9ccd3c9fd0f108492e",
+      "disposition": "semantic",
+      "reviewed_on": "2026-10-28",
+      "source_checked_on": "2026-10-28",
+      "reason": "First-party SSO guide checked 2026-10-28: https://support.claude.com/en/articles/13132885-set-up-single-sign-on-sso. Apex TXT value begins with anthropic-domain-verification-. Documented for Team, Enterprise, and Console setup. Verification alone does not enforce SSO or prove active use. The previous API getting-started reference does not document this record."
+    },
+    {
+      "rule": {
+        "source": "ai.yaml",
+        "slug": "mistral",
+        "detection_type": "txt",
+        "pattern": "^mistral-domain-verification="
+      },
+      "before": "80d35b545b15f7b4031fd62abeb2e68f01fe05b5c9332d6df6c814dd3326ec03",
+      "after": "fe894a38db4ff564033442580168582f3aba0797edcfc6b490ee36a7c664bc76",
+      "disposition": "semantic",
+      "reviewed_on": "2026-10-28",
+      "source_checked_on": "2026-10-28",
+      "reason": "First-party verify-domain guide checked 2026-10-28: https://docs.mistral.ai/admin/set-up-organization/verify-domain. Apex TXT uses the mistral-domain-verification= prefix as a precondition for email-domain authentication, SAML SSO, and other enterprise access features. It does not prove those features are enabled. A separate SSO quickstart documents a different record and was not added."
     }
   ]
 }

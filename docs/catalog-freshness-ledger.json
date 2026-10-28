@@ -1,5 +1,5 @@
 {
-  "catalog_digest": "3b406b8315290a0dec794f8f7bfd38c43e70e05cdc946e6a958caac4703b3904",
+  "catalog_digest": "ef44a3a64fe65b04d41a6162024fee3c064689afdffe11bf239132a2a0a6a749",
   "reviews": [
     {
       "basis": "First-party documentation checked for the exact role and grammar; bounded synthetic family tests preserve namespace provenance. See docs/catalog-maintenance.md documented family review, 2026-10-23.",
@@ -96,8 +96,104 @@
       "rule_id": "surface.yaml/convex/cname_target/^convex\\.domains\\.?$",
       "source_checked_on": "2026-10-23",
       "source_status": "checked"
+    },
+    {
+      "basis": "First-party SSO guide checked 2026-10-28. The apex TXT value begins with anthropic-domain-verification-. The guide covers Team plans, Enterprise plans, and Console organizations. Verification alone does not enforce SSO or prove active use. The previous API getting-started page does not document this record.",
+      "disposition": "narrowed",
+      "new_reference": "https://support.claude.com/en/articles/13132885-set-up-single-sign-on-sso",
+      "next_review": "2026-11-28",
+      "prior_reference": "https://docs.anthropic.com/en/api/getting-started",
+      "review_digest": "8fb8caa06f4456e49aa2c7f05f47e3af06c4221e7be0df9ccd3c9fd0f108492e",
+      "reviewed_on": "2026-10-28",
+      "rule_id": "ai.yaml/anthropic/txt/^anthropic-domain-verification",
+      "source_checked_on": "2026-10-28",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Cited page checked 2026-10-28. It redirects to the stable AutoGen docs, which do not document an autogen-domain-verification= TXT. Verification date not advanced.",
+      "disposition": "deferred",
+      "new_reference": "https://microsoft.github.io/autogen/",
+      "next_review": "2026-11-28",
+      "prior_reference": "https://microsoft.github.io/autogen/",
+      "review_digest": "ed97c734d2b68a3ee28dafe82238b94ad6709299c273b6432790e183b40546ad",
+      "reviewed_on": "2026-10-28",
+      "rule_id": "ai.yaml/autogen/txt/^autogen-domain-verification=",
+      "source_checked_on": "2026-10-28",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Cited docs index checked 2026-10-28. It does not document the dify-domain-verification= grammar. Verification date not advanced.",
+      "disposition": "deferred",
+      "new_reference": "https://docs.dify.ai/",
+      "next_review": "2026-11-28",
+      "prior_reference": "https://docs.dify.ai/",
+      "review_digest": "4ca4e84b9391698661ab623b0d9295b227eb3f6133eb14704481eada7fef21c1",
+      "reviewed_on": "2026-10-28",
+      "rule_id": "ai.yaml/dify/txt/^dify-domain-verification=",
+      "source_checked_on": "2026-10-28",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Cited cloud page checked 2026-10-28. It names the LangSmith product host and does not document a CNAME ending in .p.api.smith.langchain.com. Verification date not advanced.",
+      "disposition": "deferred",
+      "new_reference": "https://docs.langchain.com/langsmith/cloud",
+      "next_review": "2026-11-28",
+      "prior_reference": "https://docs.langchain.com/langsmith/cloud",
+      "review_digest": "a3266b698cec6af9c48d4f8ad0356f527d8ecc378d3480e41d69e4cb28d863fe",
+      "reviewed_on": "2026-10-28",
+      "rule_id": "ai.yaml/langsmith/cname/\\.p\\.api\\.smith\\.langchain\\.com$",
+      "source_checked_on": "2026-10-28",
+      "source_status": "checked"
+    },
+    {
+      "basis": "First-party verify-domain guide checked 2026-10-28. The apex TXT example uses the mistral-domain-verification= prefix and is a precondition for email-domain authentication, SAML SSO, and other enterprise access features. It does not prove those features are enabled. A separate SSO quickstart documents a different TXT name and value; that shape is not added here.",
+      "disposition": "narrowed",
+      "new_reference": "https://docs.mistral.ai/admin/set-up-organization/verify-domain",
+      "next_review": "2026-11-28",
+      "prior_reference": "https://docs.mistral.ai/",
+      "review_digest": "fe894a38db4ff564033442580168582f3aba0797edcfc6b490ee36a7c664bc76",
+      "reviewed_on": "2026-10-28",
+      "rule_id": "ai.yaml/mistral/txt/^mistral-domain-verification=",
+      "source_checked_on": "2026-10-28",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Cited docs index checked 2026-10-28. It does not document the n8n-domain-verification= grammar. Verification date not advanced.",
+      "disposition": "deferred",
+      "new_reference": "https://docs.n8n.io/",
+      "next_review": "2026-11-28",
+      "prior_reference": "https://docs.n8n.io/",
+      "review_digest": "ba7bca600604b331081df90df4405829240580c430e514afdb75b5861f329b0e",
+      "reviewed_on": "2026-10-28",
+      "rule_id": "ai.yaml/n8n/txt/^n8n-domain-verification=",
+      "source_checked_on": "2026-10-28",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Cited help article checked 2026-10-28. It says to publish an apex TXT for identity and SSO and does not print the openai-domain-verification= prefix. Verification date not advanced.",
+      "disposition": "deferred",
+      "new_reference": "https://help.openai.com/en/articles/8871611-domain-verification",
+      "next_review": "2026-11-28",
+      "prior_reference": "https://help.openai.com/en/articles/8871611-domain-verification",
+      "review_digest": "ed6314341c3960faccfcb531d83cc1399e5381207db9c097f1dc7d9ef2561d5e",
+      "reviewed_on": "2026-10-28",
+      "rule_id": "ai.yaml/openai/txt/^openai-domain-verification=",
+      "source_checked_on": "2026-10-28",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Cited docs index checked 2026-10-28. It does not document the perplexity-domain-verification= grammar. Verification date not advanced.",
+      "disposition": "deferred",
+      "new_reference": "https://docs.perplexity.ai/",
+      "next_review": "2026-11-28",
+      "prior_reference": "https://docs.perplexity.ai/",
+      "review_digest": "0d02f7c3c86aade6cbda9116802634033fc0e729285599d0297439538734f6b9",
+      "reviewed_on": "2026-10-28",
+      "rule_id": "ai.yaml/perplexity/txt/^perplexity-domain-verification=",
+      "source_checked_on": "2026-10-28",
+      "source_status": "checked"
     }
   ],
   "schema_version": 1,
-  "scope": "Eight documented additions, not a complete catalog review"
+  "scope": "Documented checks through 2026-10-28, not a complete catalog review"
 }

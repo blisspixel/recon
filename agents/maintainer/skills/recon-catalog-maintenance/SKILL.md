@@ -60,6 +60,12 @@ date, and reserved synthetic fixtures. It must not say that a named
 organization uses a service, and it must not include an apex, a tenant
 identifier, an opaque token, or a per-domain row.
 
+Submit the monthly review receipt before editing catalog YAML. The review
+command rejects an admission whose catalog digest no longer matches. A page
+that says to publish a DNS record, without printing the exact grammar, stays
+deferred and does not receive a `verified` date. A second official record
+shape is a separate rule: do not fold it into the rule under review.
+
 On interruption preserve the original run. Without durable item starts, retain
 unknown starts rather than calling unfinished items unattempted. Declare a
 separate budgeted retry. Never expand scope, overwrite failed results, refresh

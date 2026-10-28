@@ -381,6 +381,25 @@ forwarding destinations, DKIM selector expansion, Domain Connect owners and
 Cloudflare Tunnel remain outside this addition batch. No collection scope or
 bare-domain invocation changed.
 
+### Documented reference check, 2026-10-28
+
+The [Claude SSO guide](https://support.claude.com/en/articles/13132885-set-up-single-sign-on-sso)
+documents an apex TXT whose value begins with `anthropic-domain-verification-`
+for Team plans, Enterprise plans, and Console organizations. Verification is
+the domain-claim step. It does not by itself enforce SSO or prove active use.
+The previous API getting-started reference does not document this record.
+
+The [Mistral verify-domain guide](https://docs.mistral.ai/admin/set-up-organization/verify-domain)
+documents an apex TXT using the `mistral-domain-verification=` prefix. The
+guide requires that record before email-domain authentication, SAML SSO, and
+other enterprise access features. The record does not prove those features
+are enabled. A separate SSO quickstart documents a different TXT name and
+value. That second shape is not part of this rule.
+
+Six other undated AI rules were checked against their cited pages and stay
+undated. Those pages do not print the catalog grammar. No new detection, DNS
+record type, or collection path was added.
+
 ## Executable path
 
 Run from the checkout root. The strict plan schemas and specialized rank,
