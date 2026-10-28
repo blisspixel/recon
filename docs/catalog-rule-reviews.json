@@ -322,6 +322,34 @@
       "reviewed_on": "2026-10-28",
       "source_checked_on": "2026-10-28",
       "reason": "First-party verify-domain guide checked 2026-10-28: https://docs.mistral.ai/admin/set-up-organization/verify-domain. Apex TXT uses the mistral-domain-verification= prefix as a precondition for email-domain authentication, SAML SSO, and other enterprise access features. It does not prove those features are enabled. A separate SSO quickstart documents a different record and was not added."
+    },
+    {
+      "rule": {
+        "source": "crm-marketing.yaml",
+        "slug": "eloqua",
+        "detection_type": "cname",
+        "pattern": "eloqua.com"
+      },
+      "before": "7ec6ed0c1a4151c50c6f0597a9b076bdca3f367103af1c4b3b751bf740572aad",
+      "after": "7602d31d6e302e95b78ab6f0bca06a1c638871cd2fb2a7628b1ffdd7e6d5829d",
+      "disposition": "semantic",
+      "reviewed_on": "2026-10-28",
+      "source_checked_on": "2026-10-28",
+      "reason": "First-party cookie tracking guide checked 2026-10-28: https://docs.oracle.com/en/cloud/saas/marketing/eloqua-user/Help/EloquaAsynchronousTrackingScripts/Tasks/BasicPageTrackingFirst.htm. The tracking domain CNAME points at s[SiteID].t.eloqua.com. The suffix rule observes that documented target. It does not prove landing pages, forms, or active campaigns."
+    },
+    {
+      "rule": {
+        "source": "crm-marketing.yaml",
+        "slug": "emma",
+        "detection_type": "txt",
+        "pattern": "^e2ma-verification="
+      },
+      "before": "ccdbe521ad1c9944e756d301be1a80a9f254bca0fefedb054cd351c94e2a20d5",
+      "after": "abebcb2f1d189ebde029aa0562e37a2a90372d2de4455f03ee82c9f31f134e1f",
+      "disposition": "semantic",
+      "reviewed_on": "2026-10-28",
+      "source_checked_on": "2026-10-28",
+      "reason": "DKIM setup guide checked 2026-10-28: https://help.myemma.com/s/article/DomainKeys-Identified-Mail-DKIM. The apex TXT value begins with e2ma-verification= and an account-specific validation hash. It does not prove sending is active. The same guide's DKIM CNAME targets and SPF include were not added."
     }
   ]
 }

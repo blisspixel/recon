@@ -1,5 +1,5 @@
 {
-  "catalog_digest": "ef44a3a64fe65b04d41a6162024fee3c064689afdffe11bf239132a2a0a6a749",
+  "catalog_digest": "d184a5db5eadad149389754d29b030dad9236f0d7a41118c7b3800fcbad61d10",
   "reviews": [
     {
       "basis": "First-party documentation checked for the exact role and grammar; bounded synthetic family tests preserve namespace provenance. See docs/catalog-maintenance.md documented family review, 2026-10-23.",
@@ -288,8 +288,104 @@
       "rule_id": "crm-marketing.yaml/d365-marketing/txt/^d365mktkey=",
       "source_checked_on": "2026-10-28",
       "source_status": "checked"
+    },
+    {
+      "basis": "Cited help index checked 2026-10-28. It does not document a customer CNAME into demandbase.com. Current tag and browser articles name demandbase.com as a script or cookie host, not as a customer DNS CNAME target. Verification date not advanced.",
+      "disposition": "deferred",
+      "new_reference": "https://help.demandbase.com/",
+      "next_review": "2026-11-28",
+      "prior_reference": "https://help.demandbase.com/",
+      "review_digest": "d6fb35c9a72e395d0667e0435fe9ff9611c08789efc31cb37fe2a0d96fc5320d",
+      "reviewed_on": "2026-10-28",
+      "rule_id": "crm-marketing.yaml/demandbase/cname/demandbase.com",
+      "source_checked_on": "2026-10-28",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Cited quick-start guide checked 2026-10-28. It does not document a customer CNAME into drift.com. Current email setup documents MX targets under driftmail.net. That separate record was not added. Verification date not advanced.",
+      "disposition": "deferred",
+      "new_reference": "https://devdocs.drift.com/docs/quick-start-guide",
+      "next_review": "2026-11-28",
+      "prior_reference": "https://devdocs.drift.com/docs/quick-start-guide",
+      "review_digest": "60192bb9373f2c2c8c2b1563c43469dfe65e8eb09f025914d00d2e0845746b21",
+      "reviewed_on": "2026-10-28",
+      "rule_id": "crm-marketing.yaml/drift/cname/drift.com",
+      "source_checked_on": "2026-10-28",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Current first-party cookie tracking guide checked 2026-10-28. It says the tracking domain CNAME points at s[SiteID].t.eloqua.com. The rule stays a suffix match for that documented target. It does not prove landing pages, forms, or active campaigns. The cited docs index does not print the target.",
+      "disposition": "narrowed",
+      "new_reference": "https://docs.oracle.com/en/cloud/saas/marketing/eloqua-user/Help/EloquaAsynchronousTrackingScripts/Tasks/BasicPageTrackingFirst.htm",
+      "next_review": "2026-11-28",
+      "prior_reference": "https://docs.oracle.com/en/cloud/saas/marketing/eloqua-user/",
+      "review_digest": "7602d31d6e302e95b78ab6f0bca06a1c638871cd2fb2a7628b1ffdd7e6d5829d",
+      "reviewed_on": "2026-10-28",
+      "rule_id": "crm-marketing.yaml/eloqua/cname/eloqua.com",
+      "source_checked_on": "2026-10-28",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Current DKIM setup guide checked 2026-10-28. It shows an apex TXT whose value begins with e2ma-verification= and an account-specific validation hash. The record does not prove sending is active. The same guide's DKIM CNAME targets and SPF include are separate records and were not added. The cited support index does not print the prefix.",
+      "disposition": "narrowed",
+      "new_reference": "https://help.myemma.com/s/article/DomainKeys-Identified-Mail-DKIM",
+      "next_review": "2026-11-28",
+      "prior_reference": "https://support.myemma.com/",
+      "review_digest": "abebcb2f1d189ebde029aa0562e37a2a90372d2de4455f03ee82c9f31f134e1f",
+      "reviewed_on": "2026-10-28",
+      "rule_id": "crm-marketing.yaml/emma/txt/^e2ma-verification=",
+      "source_checked_on": "2026-10-28",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Cited help index checked 2026-10-28. Current email-domain, authentication, and branded-URL articles do not print gong-domain-verification=. Branded URLs ask support to create a CNAME and do not name the target. Verification date not advanced.",
+      "disposition": "deferred",
+      "new_reference": "https://help.gong.io/",
+      "next_review": "2026-11-28",
+      "prior_reference": "https://help.gong.io/",
+      "review_digest": "bc37fe799465acf78afa9be65cbe07be198a53c6e8d6e2e1709d4563ec7ff0a8",
+      "reviewed_on": "2026-10-28",
+      "rule_id": "crm-marketing.yaml/gong/txt/^gong-domain-verification=",
+      "source_checked_on": "2026-10-28",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Cited connect-a-domain article checked 2026-10-28. It describes content-domain CNAME records and does not print hubspot-developer-verification=. Current developer docs say to copy a TXT value from the product and do not print that prefix. Verification date not advanced.",
+      "disposition": "deferred",
+      "new_reference": "https://knowledge.hubspot.com/website-pages/connect-a-domain-to-hubspot",
+      "next_review": "2026-11-28",
+      "prior_reference": "https://knowledge.hubspot.com/website-pages/connect-a-domain-to-hubspot",
+      "review_digest": "f0ec7409929f36dd8541b356814c02c4137b554d5e1fd9e9c44d417487b771dd",
+      "reviewed_on": "2026-10-28",
+      "rule_id": "crm-marketing.yaml/hubspot/txt/^hubspot-developer-verification=",
+      "source_checked_on": "2026-10-28",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Cited connect-a-domain article checked 2026-10-28. It describes content-domain CNAME records and does not print hubspot-domain-verification=. Current developer docs say to copy a TXT value from the product and do not print that prefix. Verification date not advanced.",
+      "disposition": "deferred",
+      "new_reference": "https://knowledge.hubspot.com/website-pages/connect-a-domain-to-hubspot",
+      "next_review": "2026-11-28",
+      "prior_reference": "https://knowledge.hubspot.com/website-pages/connect-a-domain-to-hubspot",
+      "review_digest": "f9d06df87c5d4123dc3c4e42065f3c2637486f70e2f0b3f14994c4b4b664d119",
+      "reviewed_on": "2026-10-28",
+      "rule_id": "crm-marketing.yaml/hubspot/txt/^hubspot-domain-verification=",
+      "source_checked_on": "2026-10-28",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Cited help index checked 2026-10-28. It does not print a TXT value that begins with iContact. Current DKIM articles say to paste the TXT value supplied in the product and name CNAME hosts such as icontact.k1._domainkey. Those CNAME hosts are a separate shape and were not added. The TXT rule remains an undated catch-all. Verification date not advanced.",
+      "disposition": "deferred",
+      "new_reference": "https://www.icontact.com/help",
+      "next_review": "2026-11-28",
+      "prior_reference": "https://www.icontact.com/help",
+      "review_digest": "4c744a1dcccabd0eeae08c61dd7aaf8d602a2c6ddb715a35feaf0b66ec68e328",
+      "reviewed_on": "2026-10-28",
+      "rule_id": "crm-marketing.yaml/icontact/txt/^iContact",
+      "source_checked_on": "2026-10-28",
+      "source_status": "checked"
     }
   ],
   "schema_version": 1,
-  "scope": "Documented checks through 2026-10-28, including a same-day CRM and marketing pass, not a complete catalog review"
+  "scope": "Documented checks through 2026-10-28, including a same-day CRM and marketing pass and a later CRM freshness pass, not a complete catalog review"
 }

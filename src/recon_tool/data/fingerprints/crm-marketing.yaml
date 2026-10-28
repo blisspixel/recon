@@ -395,13 +395,14 @@ fingerprints:
   detections:
   - type: cname
     pattern: eloqua.com
-    reference: https://docs.oracle.com/en/cloud/saas/marketing/eloqua-user/
+    reference: https://docs.oracle.com/en/cloud/saas/marketing/eloqua-user/Help/EloquaAsynchronousTrackingScripts/Tasks/BasicPageTrackingFirst.htm
+    verified: '2026-10-28'
     description: >-
-      CNAME pointing into eloqua.com (Eloqua is Oracle's
-      marketing-automation platform, part of Oracle CX after
-      the 2012 acquisition). Indicates the domain hosts
-      Eloqua-served landing pages, forms, or tracking
-      endpoints.
+      CNAME whose target is under eloqua.com. Oracle's current
+      first-party cookie tracking guide says the tracking domain
+      CNAME points at `s[SiteID].t.eloqua.com`. This observes that
+      documented tracking-domain target. It does not prove landing
+      pages, forms, or active campaigns.
 - name: Clearbit
   slug: clearbit
   category: Sales Intelligence
@@ -534,14 +535,15 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^e2ma-verification=
-    reference: https://support.myemma.com/
+    reference: https://help.myemma.com/s/article/DomainKeys-Identified-Mail-DKIM
+    verified: '2026-10-28'
     description: >-
-      Emma email marketing domain-verification TXT (the
-      `e2ma-verification=` prefix; e2ma is Emma's legacy
-      internal name). Emma is now part of Marigold, which
-      consolidated Emma, Campaign Monitor, and other
-      mid-market email vendors. Indicates the domain is
-      registered with an Emma account.
+      Emma account-validation TXT. The current DKIM setup guide
+      shows an apex TXT whose value begins with `e2ma-verification=`
+      and an account-specific validation hash. This observes that
+      record. It does not prove sending is active. The same guide's
+      DKIM CNAME targets and SPF include are separate records and
+      are not part of this rule.
 - name: iContact Email Marketing
   slug: icontact
   category: Sales & Marketing

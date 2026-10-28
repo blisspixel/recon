@@ -40,6 +40,15 @@ Tool surface changes: no CLI command or flag changes.
   SSO is enforced or that a product is in active use. Six other undated AI
   rules stay undated because their cited pages do not print the exact
   grammar.
+- Date the Emma account-validation TXT and the Eloqua tracking-domain
+  CNAME from the current vendor pages, and point each rule at that page.
+  The Emma record is an apex TXT whose value begins with
+  `e2ma-verification=` and an account-specific hash. It does not prove
+  sending is active. The Eloqua record observes a CNAME whose target is
+  under `eloqua.com`, documented as pointing at `s[SiteID].t.eloqua.com`.
+  It does not prove landing pages, forms, or active campaigns. Six other
+  undated CRM rules in this pass stay undated because their cited pages
+  do not print the exact grammar.
 
 ## [2.27.0] - 2026-10-27
 
