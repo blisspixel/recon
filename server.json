@@ -3,7 +3,7 @@
   "name": "io.github.blisspixel/recon",
   "title": "recon",
   "description": "Public DNS, certificate transparency, and identity observations.",
-  "version": "2.26.1",
+  "version": "2.27.0",
   "repository": {
     "url": "https://github.com/blisspixel/recon",
     "source": "github",
@@ -15,7 +15,7 @@
       "registryType": "pypi",
       "registryBaseUrl": "https://pypi.org",
       "identifier": "recon-tool",
-      "version": "2.26.1",
+      "version": "2.27.0",
       "runtimeHint": "uvx",
       "runtimeArguments": [
         {
