@@ -37,51 +37,53 @@ absent.
 
 ## Resume here
 
-State at 2026-10-27: v2.27.0 is the published baseline. The MCP and packaging
-tracker #324 is closed with this batch. On mcp 2.3.0 and newer, discovery no
-longer advertises change notifications recon does not send (#319). A relative
-or unexpanded `RECON_CONFIG_DIR`, including a literal `${PLUGIN_DATA}`, is
-ignored instead of becoming a working-directory cache (#318). `chain_lookup`,
-a cache-miss `lookup_tenant`, `build_review_bundle`,
-`cluster_verification_tokens`, and `compare_postures` send
-`notifications/progress` with stage names and counts (#317).
+State at 2026-10-27: v2.27.0 is the published build. Tag `v2.27.0` is
+`9c213f79`. PyPI, the GitHub Release, and the MCP Registry entry
+`io.github.blisspixel/recon` report that version. No issues are open. The
+packaging batch and tracker #324 are closed. Shipped behavior is in the
+changelog. A documentation commit after the tag does not move the tag or
+the package.
 
-`server/discover` on mcp 2.0.0 and newer carries title `recon`, the package
-description, and the project `websiteUrl`, and every tool, catalog resource,
-and the `domain_report` prompt has a display title (#320).
+What is next, and why:
 
-The repository Claude Code marketplace is `blisspixel-recon`. It installs the
-existing plugin with `claude plugin install recon@blisspixel-recon` (#322).
+1. The monthly fingerprint-freshness loop. The resolver and detection engine
+   are feature-complete, so catalog currency is the durable detection work.
+   Promote a rule only with a current public or disclosure-safe basis, a real
+   `verified` date, synthetic positive and lookalike fixtures, and provenance
+   tests. The closed 5,199-row drift round remains a measurement contract. It
+   does not promote rules. Start at
+   [catalog maintenance](docs/catalog-maintenance.md).
 
-Codex and Gemini CLI are `recon mcp install` and `recon doctor --client`
-targets (#323). Codex uses `[mcp_servers.recon]` in `config.toml`. The
-installer appends that table or, with `--force`, replaces only its span, and
-it does not write `tool_timeout_sec` or `default_tools_approval_mode`. Gemini
-uses the existing JSON merge and omits `autoApprove`.
+2. Two upstream dependency blockers, and only when upstream ships the fix.
+   PyYAML 6.0.3 has no cp315 wheel, so Python 3.15 builds it from source.
+   Stable pip still vendors an urllib3 without the proxy TLS and chunk-size
+   fixes, so the mitigation recorded on closed issue 187 stays. Do not add a
+   local pin or drop the audit to make the refresh look finished. See
+   [the October review](docs/maintenance-review-2026-10-08.md).
 
-`server.json` names `io.github.blisspixel/recon` and records the PyPI package
-`recon-tool`. The declared launch is `uvx --from recon-tool recon mcp`. The
-release job publishes that metadata after PyPI parity. The Registry entry is
-a pointer to the attested wheel. (#321)
+3. Black-box defects before any new surface. None are open. A new collector,
+   score, inference path, or set-level review bundle needs a named operator
+   handoff that the existing surfaces cannot solve. Output truthfulness
+   outranks another feature release.
 
-v2.27.0 is published to PyPI and GitHub. The MCP Registry lookup for
-`io.github.blisspixel/recon` returns that version, and #321 is closed.
+Not next, and why:
 
-When picking work back up:
+- Another package release. v2.27.0 is the current build. This note does not
+  change behavior, so it does not cut a version.
+- Antigravity CLI (`agy`). `--client=gemini` writes the Gemini CLI file
+  `~/.gemini/settings.json`. `agy` is a separate client and reads global
+  `~/.gemini/config/mcp_config.json` and workspace `.agents/mcp_config.json`.
+  There is no open issue for that client, and adding it would not correct the
+  installer that shipped.
+- Agent Plugins promotion, a project-operated service, and an overall
+  security rating. The gates are in
+  [What Is Deliberately Not Next](#what-is-deliberately-not-next).
 
-1. Sync `main`, run `uv run python scripts/check.py`, and triage any new issues
-   before starting anything else. If the changelog's Unreleased section has
-   accumulated user-visible changes, batch them into the next release through
-   the [release process](docs/release-process.md).
-2. Recheck upstream blockers during the next dependency refresh: a PyYAML cp315
-   wheel (6.0.3 still has none, so 3.15 builds from source) and a stable pip
-   whose vendored urllib3 carries the proxy TLS and chunk-size fixes (see
-   [the October review](docs/maintenance-review-2026-10-08.md); closed issue
-   187 records the current mitigation).
-3. Run the monthly fingerprint-freshness loop through the catalog maintenance
-   entry point shipped in v2.23.
-4. Otherwise continue the ordered work below. Black-box defects come first, and
-   new surfaces still need a named operator handoff.
+When picking work back up, sync `main` and run
+`uv run python scripts/check.py` before starting anything else. If Unreleased
+has user-visible changes, batch them through the
+[release process](docs/release-process.md). Otherwise run the freshness loop,
+or wait for the upstream blockers above.
 
 ## Current release and next steps
 
