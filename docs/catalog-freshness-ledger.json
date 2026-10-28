@@ -192,8 +192,104 @@
       "rule_id": "ai.yaml/perplexity/txt/^perplexity-domain-verification=",
       "source_checked_on": "2026-10-28",
       "source_status": "checked"
+    },
+    {
+      "basis": "Cited support index checked 2026-10-28. It does not document a customer CNAME into 6sense.com. Onboarding describes a 6sense-hosted tenant hostname. AI Email supplies SPF and DKIM as CNAMEs and does not name a 6sense.com target. Verification date not advanced.",
+      "disposition": "deferred",
+      "new_reference": "https://support.6sense.com/",
+      "next_review": "2026-11-28",
+      "prior_reference": "https://support.6sense.com/",
+      "review_digest": "680d038dd9d2fbf23da546180e0c3d993dfb4b1a843881aeaa2783ea3a02d7e8",
+      "reviewed_on": "2026-10-28",
+      "rule_id": "crm-marketing.yaml/6sense/cname/6sense.com",
+      "source_checked_on": "2026-10-28",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Cited support index checked 2026-10-28. It does not document a customer CNAME into 6sense.io. Verification date not advanced.",
+      "disposition": "deferred",
+      "new_reference": "https://support.6sense.com/",
+      "next_review": "2026-11-28",
+      "prior_reference": "https://support.6sense.com/",
+      "review_digest": "3c41e152e5c9eaeee1b8462272c4cac4ea24d0d96b7097bc3ac88ad951e21491",
+      "reviewed_on": "2026-10-28",
+      "rule_id": "crm-marketing.yaml/6sense/cname/6sense.io",
+      "source_checked_on": "2026-10-28",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Cited support index checked 2026-10-28. It does not document a TXT value that begins with 6sense. The rule remains an undated catch-all. Verification date not advanced.",
+      "disposition": "deferred",
+      "new_reference": "https://support.6sense.com/",
+      "next_review": "2026-11-28",
+      "prior_reference": "https://support.6sense.com/",
+      "review_digest": "ac981df9c36e83b38a3afb4848c083a197cc557bb2c4910195adcd0315d1bc96",
+      "reviewed_on": "2026-10-28",
+      "rule_id": "crm-marketing.yaml/6sense/txt/^6sense",
+      "source_checked_on": "2026-10-28",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Cited knowledge-base index checked 2026-10-28. Current mailbox-authentication articles cover SPF, DKIM, and DMARC. They do not print apollo-domain-verification=. Contact-email verification articles are not a DNS token. Verification date not advanced.",
+      "disposition": "deferred",
+      "new_reference": "https://knowledge.apollo.io/",
+      "next_review": "2026-11-28",
+      "prior_reference": "https://knowledge.apollo.io/",
+      "review_digest": "a438ca6d33b860126510d7348e006f65fa43a395510690e36906271c982ae667",
+      "reviewed_on": "2026-10-28",
+      "rule_id": "crm-marketing.yaml/apollo/txt/^apollo-domain-verification=",
+      "source_checked_on": "2026-10-28",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Cited docs index checked 2026-10-28. Current email setup names dashboard-supplied TXT and CNAME records and ESP or CDN targets, not a CNAME into braze.com. SMS custom domains use A and AAAA records for new domains. Older CNAME guidance does not name braze.com as the target. Verification date not advanced.",
+      "disposition": "deferred",
+      "new_reference": "https://www.braze.com/docs/",
+      "next_review": "2026-11-28",
+      "prior_reference": "https://www.braze.com/docs/",
+      "review_digest": "21fcd22de4fa45469d93063bfc0bf9f984d649f862fd63ec0ffd9b18bfc0700d",
+      "reviewed_on": "2026-10-28",
+      "rule_id": "crm-marketing.yaml/braze/cname/braze.com",
+      "source_checked_on": "2026-10-28",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Cited help-center index checked 2026-10-28. The content-security-policy article lists clearbit.com hosts as a browser allowlist, not as a customer DNS CNAME target. No cited page documents a CNAME into clearbit.com. Verification date not advanced.",
+      "disposition": "deferred",
+      "new_reference": "https://help.clearbit.com/hc/en-us",
+      "next_review": "2026-11-28",
+      "prior_reference": "https://help.clearbit.com/hc/en-us",
+      "review_digest": "fd93fe741452774c0a16f0a3e85fda3a3a470954a7c5fa1b6be77dcf8e22e956",
+      "reviewed_on": "2026-10-28",
+      "rule_id": "crm-marketing.yaml/clearbit/cname/clearbit.com",
+      "source_checked_on": "2026-10-28",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Cited docs index checked 2026-10-28. Domain authentication places DNS records on an account-specific subdomain. Branded link tracking uses a CNAME shown in the product, and default tracked links use customeriomail.com. The pages do not document a CNAME whose target is under customer.io. That other host was not added. Verification date not advanced.",
+      "disposition": "deferred",
+      "new_reference": "https://customer.io/docs/",
+      "next_review": "2026-11-28",
+      "prior_reference": "https://customer.io/docs/",
+      "review_digest": "3ca9a938bf9f44f8fdd85c244fa6e331777082408557563d3b5f5dbadff3fdc0",
+      "reviewed_on": "2026-10-28",
+      "rule_id": "crm-marketing.yaml/customerio/cname/customer.io",
+      "source_checked_on": "2026-10-28",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Cited marketing index checked 2026-10-28. It does not print d365mktkey=. The current Customer Insights - Journeys domain-authentication guide, updated 2026-10-13, says to copy an ownership TXT from the wizard and does not print that prefix. The older authenticate-domains URL redirects to the outbound-marketing removal notes, which also do not print it. A search-index copy of the retired page is not a current basis. Verification date not advanced. Separate DKIM and envelope-from shapes were not added.",
+      "disposition": "deferred",
+      "new_reference": "https://learn.microsoft.com/en-us/dynamics365/marketing/",
+      "next_review": "2026-11-28",
+      "prior_reference": "https://learn.microsoft.com/en-us/dynamics365/marketing/",
+      "review_digest": "3c4c66f49305ff870e6fa90d2240c09fce60817858979424c157450fff1eb279",
+      "reviewed_on": "2026-10-28",
+      "rule_id": "crm-marketing.yaml/d365-marketing/txt/^d365mktkey=",
+      "source_checked_on": "2026-10-28",
+      "source_status": "checked"
     }
   ],
   "schema_version": 1,
-  "scope": "Documented checks through 2026-10-28, not a complete catalog review"
+  "scope": "Documented checks through 2026-10-28, including a same-day CRM and marketing pass, not a complete catalog review"
 }
