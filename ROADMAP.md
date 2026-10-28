@@ -61,9 +61,13 @@ What is next, and why:
    receives that pattern. It does not receive a statement that a named
    organization uses a service, and it does not receive an apex, a tenant
    identifier, an opaque token, or a per-domain row. Those stay in the
-   gitignored private roots when an operator supplies them. The closed
-   5,199-row drift round remains a measurement contract. It does not promote
-   rules. Start at [catalog maintenance](docs/catalog-maintenance.md).
+   gitignored private roots when an operator supplies them. The 2026-10-28
+   pass dated the Anthropic and Mistral apex TXT rules from current vendor
+   pages and left six other AI rules undated, because those cited
+   pages do not print the exact grammar. That pass does not cut a release.
+   The next round uses a new question list and the rules that are still due.
+   The closed 5,199-row drift round remains a measurement contract. It does
+   not promote rules. Start at [catalog maintenance](docs/catalog-maintenance.md).
 
 2. Two upstream dependency blockers, and only when upstream ships the fix.
    PyYAML 6.0.3 has no cp315 wheel, so Python 3.15 builds it from source.
@@ -100,10 +104,12 @@ Not next, and why:
   [What Is Deliberately Not Next](#what-is-deliberately-not-next).
 
 When picking work back up, sync `main` and run
-`uv run python scripts/check.py` before starting anything else. If Unreleased
-has user-visible changes, batch them through the
-[release process](docs/release-process.md). Otherwise run the freshness loop,
-or wait for the upstream blockers above.
+`uv run python scripts/check.py` before starting anything else. The Unreleased
+catalog note from the 2026-10-28 freshness pass does not by itself cut a
+release. If Unreleased has other user-visible behavior changes, batch them
+through the [release process](docs/release-process.md). Otherwise continue the
+freshness loop on rules that are still due, or wait for the upstream blockers
+above.
 
 ## Current release and next steps
 

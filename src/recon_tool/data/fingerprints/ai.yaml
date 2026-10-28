@@ -29,12 +29,14 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^anthropic-domain-verification
+    verified: '2026-10-28'
     description: >-
-      Anthropic domain-verification TXT for Claude for Work / Claude
-      Enterprise tenant claim. Indicates an Anthropic workspace is
-      bound to the domain. Does not by itself prove the workspace is
-      in active use; verification is the SSO and provisioning hook.
-    reference: https://docs.anthropic.com/en/api/getting-started
+      Anthropic domain-verification TXT. The vendor documents an apex
+      TXT whose value begins with `anthropic-domain-verification-` for
+      Team plans, Enterprise plans, and Console organizations. The
+      record is the domain-claim step for SSO setup. It does not by
+      itself enforce SSO or prove the workspace is in active use.
+    reference: https://support.claude.com/en/articles/13132885-set-up-single-sign-on-sso
 - name: Mistral AI
   slug: mistral
   category: AI & Generative
@@ -42,13 +44,14 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^mistral-domain-verification=
+    verified: '2026-10-28'
     description: >-
-      Mistral AI enterprise domain-verification TXT
-      (`mistral-domain-verification=` prefix). Indicates the domain
-      is registered with a Mistral tenant for SAML SSO. Does not
-      indicate which Mistral product line is in use; the verification
-      is shared across the enterprise surface.
-    reference: https://docs.mistral.ai/
+      Mistral domain-verification TXT (`mistral-domain-verification=`
+      prefix) at the domain apex. The vendor documents this record as
+      a precondition for email-domain authentication, SAML SSO, and
+      other enterprise access features. It does not identify a product
+      line or prove that those features are enabled.
+    reference: https://docs.mistral.ai/admin/set-up-organization/verify-domain
 - name: Perplexity Enterprise
   slug: perplexity
   category: AI & Generative

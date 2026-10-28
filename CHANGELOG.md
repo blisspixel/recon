@@ -26,6 +26,21 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
+### Changed
+
+- Date the Anthropic and Mistral apex domain-verification TXT rules from
+  the current vendor pages, and point each rule at that page. The Anthropic
+  record is documented for Team, Enterprise, and Console SSO setup. The
+  Mistral record is documented as a precondition for email-domain
+  authentication and enterprise access features. Neither record proves that
+  SSO is enforced or that a product is in active use. Six other undated AI
+  rules stay undated because their cited pages do not print the exact
+  grammar.
+
 ## [2.27.0] - 2026-10-27
 
 Add Codex and Gemini CLI install targets, MCP progress for long lookups,

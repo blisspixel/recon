@@ -802,8 +802,10 @@ the Claude Code marketplace, Codex and Gemini CLI install targets, and MCP
 Registry metadata. That release did not change this slice. A round makes a
 new temporary question list, keeps that list private, and publishes only a
 disclosure-safe pattern with synthetic fixtures. It does not publish a claim
-that a named organization uses a service. The 2026-10 documentation pass
-read the IANA DNS parameter update and left collection on the existing
+that a named organization uses a service. The 2026-10-28 pass dated two AI
+verification rules whose current vendor pages state the token grammar and
+left six undated because the cited pages do not. The 2026-10 documentation
+pass read the IANA DNS parameter update and left collection on the existing
 record types. Agent portability remains a separate maintainer track and does
 not appear here as a product milestone:
 
