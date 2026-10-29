@@ -1,6 +1,6 @@
 # recon - Claude Code plugin
 
-This directory packages recon as a [Claude Code plugin](https://docs.claude.com/en/docs/claude-code/plugins): it wires up the MCP server and ships skills that teach Claude *when* and *how* to use recon. The repository marketplace `blisspixel-recon` installs it. It is not a PyPI or GitHub Release asset.
+This directory packages recon as a [Claude Code plugin](https://docs.claude.com/en/docs/claude-code/plugins): it wires up the MCP server and ships skills that teach Claude *when* and *how* to use recon. The repository marketplace `pueo-labs-recon` installs it. It is not a PyPI or GitHub Release asset.
 
 This is Claude Code's client-specific plugin format. It is not the portable
 root `plugin.json` plus `mcp.json` layout defined by the
@@ -74,8 +74,8 @@ The plugin does not install the Python package. `recon` must already be on
 PATH. See [the PATH gotcha](../../docs/mcp.md#path-gotcha-for-gui-clients).
 
 ```bash
-claude plugin marketplace add blisspixel/recon
-claude plugin install recon@blisspixel-recon
+claude plugin marketplace add pueo-labs/recon
+claude plugin install recon@pueo-labs-recon
 ```
 
 Installing both this plugin and a user-level `recon mcp install` registration
@@ -87,6 +87,23 @@ leaves two servers. Pick one path unless that duplication is intentional. See
 ```bash
 claude --plugin-dir ./agents/claude-code
 ```
+
+### Marketplace migration
+
+If you installed from the former `blisspixel-recon` marketplace, remove that
+plugin registration and marketplace before adding the new one. Use the same
+installation scope you originally selected (user by default); keep the
+`recon-tool` Python installation and any intentional client settings.
+
+```bash
+claude plugin uninstall recon@blisspixel-recon
+claude plugin marketplace remove blisspixel-recon
+claude plugin marketplace add pueo-labs/recon
+claude plugin install recon@pueo-labs-recon
+```
+
+Restart Claude Code and check `/mcp` afterward. A GitHub repository redirect
+does not rename an already registered marketplace.
 
 ### 3. Try it
 

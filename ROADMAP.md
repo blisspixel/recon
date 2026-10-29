@@ -44,6 +44,12 @@ packaging batch and tracker #324 are closed. Shipped behavior is in the
 changelog. A documentation commit after the tag does not move the tag or
 the package.
 
+The 2026-10-29 repository transfer prepares `pueo-labs/recon` and the
+`io.github.pueo-labs/recon` registry identity without a version bump or release.
+The existing v2.27.0 package and old registry entry are unchanged. Complete the
+[external transfer checklist](docs/release-process.md#repository-transfer-checklist)
+before a separately authorized release and registry migration.
+
 What is next, and why:
 
 1. The monthly fingerprint-freshness loop. The resolver and detection engine

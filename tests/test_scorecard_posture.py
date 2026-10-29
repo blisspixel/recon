@@ -408,6 +408,10 @@ def test_openssf_docs_do_not_turn_live_api_state_into_commit_promise() -> None:
 
     assert "durable status promise" in openssf
     documented_shas = set(re.findall(r"\b[0-9a-f]{7,40}\b", scorecard_text))
+    # Immutable signer identities are not a live Scorecard status promise.
+    historical_signer_sha = "9c213f79cfa92eb2e40e76d605a2f9d6a341e4d9"
+    assert historical_signer_sha in documented_shas
+    documented_shas.remove(historical_signer_sha)
     assert documented_shas == set(release_readiness._LEGACY_SBOM_ATTESTATION_EXCEPTIONS.values())
 
 

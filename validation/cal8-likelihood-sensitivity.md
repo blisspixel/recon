@@ -1,9 +1,9 @@
 # CAL8 historical likelihood-perturbation sensitivity record
 
 Status: historical result. The table below was produced on 2026-06-04 at commit
-[`76b31c72`](https://github.com/blisspixel/recon/commit/76b31c7207f826ac75eb15db30e05fb3d5361bb9),
+[`76b31c72`](https://github.com/pueo-labs/recon/commit/76b31c7207f826ac75eb15db30e05fb3d5361bb9),
 before CAL14 declarative missingness shipped at commit
-[`957e1f6d`](https://github.com/blisspixel/recon/commit/957e1f6d109faf04ceb80c7eabe90105c5c4ddca).
+[`957e1f6d`](https://github.com/pueo-labs/recon/commit/957e1f6d109faf04ceb80c7eabe90105c5c4ddca).
 It does not describe the current network's numerical output.
 
 The likelihoods in `src/recon_tool/data/bayesian_network.yaml` are manually

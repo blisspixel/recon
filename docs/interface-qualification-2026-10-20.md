@@ -1,7 +1,7 @@
 # Linux interface qualification, 2026-10-20
 
-This bounded pass addresses [#238](https://github.com/blisspixel/recon/issues/238)
-and [#239](https://github.com/blisspixel/recon/issues/239), starting from
+This bounded pass addresses [#238](https://github.com/pueo-labs/recon/issues/238)
+and [#239](https://github.com/pueo-labs/recon/issues/239), starting from
 `34f565c2`. It uses synthetic `alpha.invalid` observations and local collection
 fixtures. No evaluated-target data or external-domain inventory is included.
 
@@ -90,6 +90,6 @@ explicit skips elsewhere. Full-gate and hosted-CI evidence belongs to the
 associated pull request. Release status belongs to the dated changelog and
 verified release channels.
 
-[#240](https://github.com/blisspixel/recon/issues/240) remains open: Node 26's
+[#240](https://github.com/pueo-labs/recon/issues/240) remains open: Node 26's
 [upstream LTS date](https://github.com/nodejs/Release/blob/main/schedule.json)
 is 2026-10-28, after this qualification date. The Node 24 pins remain unchanged.

@@ -177,7 +177,7 @@ def test_maintainer_uv_pin_is_consistent_across_readiness_and_quick_starts() -> 
     assert f'_PINNED_UV_VERSION = "{_REPRODUCIBLE_UV_VERSION}"' in readiness
 
     readme = (_REPO_ROOT / "README.md").read_text(encoding="utf-8")
-    assert "https://github.com/blisspixel/recon/blob/main/CONTRIBUTING.md" in readme
+    assert "https://github.com/pueo-labs/recon/blob/main/CONTRIBUTING.md" in readme
     for relative in ("CONTRIBUTING.md", "docs/release-process.md"):
         text = (_REPO_ROOT / relative).read_text(encoding="utf-8")
         assert f"uv self update {_REPRODUCIBLE_UV_VERSION}" in text, relative

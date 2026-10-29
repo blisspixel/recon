@@ -18,7 +18,7 @@ from recon_tool.models import EvidenceRecord
 _NON_SUBSTANTIVE_PREFIXES = ("SPF complexity:",)
 _EDGE_SERVICE_PREFIXES = ("DNS:", "CDN:", "WAF:")
 _DOC_HINT = (
-    "Next step: see https://github.com/blisspixel/recon/blob/main/docs/weak-areas.md for passive-only blind spots. "
+    "Next step: see https://github.com/pueo-labs/recon/blob/main/docs/weak-areas.md for passive-only blind spots. "
     "For an operator-supplied domain set, run `recon batch <candidates.txt>`; "
     "for bounded related-host discovery, run `recon <domain> --chain --depth 2`."
 )

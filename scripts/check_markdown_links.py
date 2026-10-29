@@ -213,7 +213,7 @@ def _canonical_repository_path(parsed: SplitResult) -> Path | None:
     if (
         len(parts) >= 6
         and parts[0] == ""
-        and parts[1].casefold() == "blisspixel"
+        and parts[1].casefold() == "pueo-labs"
         and parts[2].casefold() == "recon"
         and parts[3].casefold() in {"blob", "tree"}
         and parts[4] == "main"

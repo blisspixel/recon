@@ -245,7 +245,7 @@ def _download(url: str, *, maximum_bytes: int, opener: OpenUrl) -> FrozenSource:
         headers={
             "Accept": "text/html",
             "Accept-Encoding": "identity",
-            "User-Agent": "recon-validation/2.14 (+https://github.com/blisspixel/recon)",
+            "User-Agent": "recon-validation/2.14 (+https://github.com/pueo-labs/recon)",
         },
         method="GET",
     )

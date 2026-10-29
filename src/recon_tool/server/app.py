@@ -78,7 +78,7 @@ def _encrypted_dns_hint() -> str:
     return (
         " If this network blocks outbound encrypted DNS (DNS-over-HTTPS or DNS-over-TLS), "
         "save a resolver it permits in the MCP server's RECON_DNS_* settings: "
-        "https://github.com/blisspixel/recon/blob/main/docs/mcp.md#dns-view-isolation."
+        "https://github.com/pueo-labs/recon/blob/main/docs/mcp.md#dns-view-isolation."
     )
 
 
@@ -94,7 +94,7 @@ def lookup_failure_message(domain: str, error: ReconLookupError) -> str:
         return (
             "DNS-dependent lookup unavailable: the MCP server's DNS view is disabled or misconfigured; "
             "fix or remove its RECON_DNS_* settings. "
-            "See https://github.com/blisspixel/recon/blob/main/docs/mcp.md#dns-view-isolation."
+            "See https://github.com/pueo-labs/recon/blob/main/docs/mcp.md#dns-view-isolation."
         )
     return f"Lookup failed for {domain} ({error.error_type}). Try again."
 

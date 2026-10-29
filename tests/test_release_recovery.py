@@ -153,7 +153,7 @@ def test_numeric_release_id_must_be_positive_before_transport(release_id: int) -
 
 def test_numeric_release_id_must_match_response() -> None:
     def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
-        assert cmd[-1] == "repos/blisspixel/recon/releases/42"
+        assert cmd[-1] == "repos/pueo-labs/recon/releases/42"
         return subprocess.CompletedProcess(cmd, 0, json.dumps(release_payload()), "")
 
     with pytest.raises(recovery.RecoveryError, match="release ID does not match"):
@@ -179,7 +179,7 @@ def test_numeric_asset_transport_preserves_raw_bytes_and_stops_at_bounds(
                 "--method",
                 "GET",
                 "--allow-escape-sequences",
-                "repos/blisspixel/recon/releases/assets/2",
+                "repos/pueo-labs/recon/releases/assets/2",
                 "--header",
                 "Accept: application/octet-stream",
             ]
@@ -233,3 +233,23 @@ def test_numeric_asset_transport_preserves_raw_bytes_and_stops_at_bounds(
         assert (tmp_path / "asset.bin").stat().st_size <= len(payload)
         if scenario in {"timeout", "oversized"}:
             assert killed
+
+
+@pytest.mark.parametrize(
+    ("version", "source_sha", "expected"),
+    [
+        ("2.6.3", "2751dc11c64001272750df29477d6b9052407261", "blisspixel/recon"),
+        ("2.27.0", "9c213f79cfa92eb2e40e76d605a2f9d6a341e4d9", "blisspixel/recon"),
+        ("2.28.0", "9c213f79cfa92eb2e40e76d605a2f9d6a341e4d9", "pueo-labs/recon"),
+    ],
+)
+def test_release_signer_requires_exact_version_and_digest(version: str, source_sha: str, expected: str) -> None:
+    assert recovery.release_signer_repository(version, source_sha) == expected
+    assert recovery.RELEASE_REPOSITORY == "pueo-labs/recon"
+    assert recovery.RELEASE_MAINTAINER == "blisspixel"
+
+
+@pytest.mark.parametrize("version", ["2.6.3", "2.27.0"])
+def test_historical_signer_mismatch_does_not_fall_back(version: str) -> None:
+    with pytest.raises(recovery.RecoveryError, match="exact historical source digest"):
+        recovery.release_signer_repository(version, "a" * 40)

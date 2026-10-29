@@ -143,7 +143,7 @@ def test_release_surface_generation_updates_installers_and_artifacts(
     supply_chain.write_text(
         "\n".join(
             (
-                "git clone --branch v2.6.3 --single-branch https://github.com/blisspixel/recon.git recon-2.6.3",
+                "git clone --branch v2.6.3 --single-branch https://github.com/pueo-labs/recon.git recon-2.6.3",
                 "cd recon-2.6.3",
                 "VERSION=2.6.3",
                 '$Version = "2.6.3"',

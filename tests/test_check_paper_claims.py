@@ -55,9 +55,7 @@ def test_paper_claim_audit_rejects_missing_latest_public_proof(tmp_path: Path, r
 def test_paper_claim_audit_rejects_missing_readme_navigation(tmp_path: Path) -> None:
     _copy_paper_docs(tmp_path)
     readme = tmp_path / "README.md"
-    text = readme.read_text(encoding="utf-8").replace(
-        "https://github.com/blisspixel/recon/blob/main/docs/README.md", ""
-    )
+    text = readme.read_text(encoding="utf-8").replace("https://github.com/pueo-labs/recon/blob/main/docs/README.md", "")
     readme.write_text(text, encoding="utf-8")
 
     issues = collect_issues(tmp_path)

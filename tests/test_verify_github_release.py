@@ -33,9 +33,20 @@ def sealed(tmp_path: Path) -> tuple[Path, Path, Path]:
 
 
 class ReleaseTransport:
-    def __init__(self, directories: tuple[Path, Path, Path], scenario: str = "complete") -> None:
+    def __init__(
+        self,
+        directories: tuple[Path, Path, Path],
+        scenario: str = "complete",
+        *,
+        version: str = VERSION,
+        source_sha: str = SHA,
+        signer: str = "pueo-labs/recon",
+    ) -> None:
+        self.version = version
+        self.source_sha = source_sha
+        self.signer = signer
         self.files = {path.name: path for directory in directories for path in directory.iterdir()}
-        self.payload = release_payload()
+        self.payload = release_payload(version)
         assets = self.payload["assets"]
         assert isinstance(assets, list)
         for asset in assets:
@@ -50,11 +61,14 @@ class ReleaseTransport:
         stdout = ""
         code = 0
         if cmd == ["git", "rev-parse", "HEAD"] or cmd[:3] == ["git", "rev-list", "-n"]:
-            stdout = SHA
+            stdout = self.source_sha
         elif cmd[:2] == ["git", "ls-remote"]:
-            stdout = f"{'b' * 40 if self.scenario == 'moved-tag' else SHA}\trefs/tags/v{VERSION}\n"
+            stdout = f"{'b' * 40 if self.scenario == 'moved-tag' else self.source_sha}\trefs/tags/v{self.version}\n"
         elif cmd[:2] == ["gh", "api"]:
-            assert cmd[-1] in (f"repos/blisspixel/recon/releases/tags/v{VERSION}", "repos/blisspixel/recon/releases/1")
+            assert cmd[-1] in (
+                f"repos/pueo-labs/recon/releases/tags/v{self.version}",
+                "repos/pueo-labs/recon/releases/1",
+            )
             self.metadata_reads += 1
             payload = deepcopy(self.payload)
             overrides: dict[str, dict[str, object]] = {
@@ -77,9 +91,10 @@ class ReleaseTransport:
                 content = bytes([content[0] ^ 1]) + content[1:]
             (Path(cmd[cmd.index("--dir") + 1]) / name).write_bytes(content)
         elif cmd[:3] == ["gh", "attestation", "verify"]:
-            assert cmd[cmd.index("--source-digest") + 1] == SHA
-            assert cmd[cmd.index("--source-ref") + 1] == f"refs/tags/v{VERSION}"
-            assert cmd[cmd.index("--signer-workflow") + 1] == "blisspixel/recon/.github/workflows/release.yml"
+            assert cmd[cmd.index("--repo") + 1] == self.signer
+            assert cmd[cmd.index("--source-digest") + 1] == self.source_sha
+            assert cmd[cmd.index("--source-ref") + 1] == f"refs/tags/v{self.version}"
+            assert cmd[cmd.index("--signer-workflow") + 1] == f"{self.signer}/.github/workflows/release.yml"
             assert "--deny-self-hosted-runners" in cmd
             code = 1 if self.scenario == "provenance" else 0
         else:
@@ -277,3 +292,27 @@ def test_cli_missing_release_returns_actionable_nonzero_handoff(
     assert "Human handoff" in output.err
     assert "original failed github-release job" in output.err
     assert "No release or asset was changed" in output.err
+
+
+@pytest.mark.parametrize(
+    ("version", "source_sha", "signer"),
+    [
+        ("2.27.0", "9c213f79cfa92eb2e40e76d605a2f9d6a341e4d9", "blisspixel/recon"),
+        ("2.28.0", "a" * 40, "pueo-labs/recon"),
+    ],
+)
+def test_provenance_uses_pinned_signer_not_download_location(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, version: str, source_sha: str, signer: str
+) -> None:
+    wheel, sdist, sbom, bundle = expected_release_assets(version)
+    for directory, names in (("dist", (wheel, sdist)), ("sbom", (sbom,)), ("provenance", (bundle,))):
+        target = tmp_path / directory
+        target.mkdir()
+        for name in names:
+            content = _completed_sbom(version) if name == sbom else f"sealed {name}"
+            (target / name).write_text(content, encoding="utf-8")
+    directories = tmp_path / "dist", tmp_path / "sbom", tmp_path / "provenance"
+    transport = ReleaseTransport(directories, version=version, source_sha=source_sha, signer=signer)
+    _parity_probe(monkeypatch)
+    verify.verify_release(version, source_sha, verify.ArtifactDirectories(*directories), runner=transport)
+    assert sum(cmd[:3] == ["gh", "attestation", "verify"] for cmd in transport.commands) == 3

@@ -24,8 +24,8 @@ tranches from current maintenance and upstream-blocked work.
 
 ### Dependency refresh, issue 197
 
-[Issue 197](https://github.com/blisspixel/recon/issues/197) tracks the failed
-grouped proposal in [PR 195](https://github.com/blisspixel/recon/pull/195).
+[Issue 197](https://github.com/pueo-labs/recon/issues/197) tracks the failed
+grouped proposal in [PR 195](https://github.com/pueo-labs/recon/pull/195).
 Re-resolve selected packages with uv 0.11.17 rather than copying that proposal's
 lockfile. Current stable metadata was checked on 2026-10-08.
 
@@ -65,7 +65,7 @@ Primary sources:
 
 ### Upstream pip transport, issue 187
 
-[Issue 187](https://github.com/blisspixel/recon/issues/187) remains blocked.
+[Issue 187](https://github.com/pueo-labs/recon/issues/187) remains blocked.
 [PyPI](https://pypi.org/project/pip/) lists pip 26.2.2 as the stable release
 as of 2026-10-22. Its bundled certifi is refreshed to 2026.10.19, but its
 vendored urllib3 remains 2.7.0; installing urllib3 2.8.0 separately does

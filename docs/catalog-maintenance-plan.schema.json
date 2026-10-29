@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/blisspixel/recon/blob/main/docs/catalog-maintenance-plan.schema.json",
+  "$id": "https://github.com/pueo-labs/recon/blob/main/docs/catalog-maintenance-plan.schema.json",
   "title": "Private maintenance admission around the existing round contract",
   "type": "object",
   "additionalProperties": false,

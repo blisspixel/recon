@@ -19,13 +19,13 @@ The short product overview is in [README.md](../README.md).
 **macOS or Linux:**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/blisspixel/recon/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/pueo-labs/recon/main/scripts/install.sh | bash
 ```
 
 **Windows (PowerShell):**
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/blisspixel/recon/main/scripts/install.ps1 | iex"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/pueo-labs/recon/main/scripts/install.ps1 | iex"
 ```
 
 The helper installs the exact recon version recorded in the script. It preserves
@@ -43,7 +43,7 @@ to get the latest published version. GitHub Release and PyPI carry the same
 release artifacts; the package manager downloads the package from PyPI.
 
 To inspect a fixed script first, download a
-[release tag](https://github.com/blisspixel/recon/releases/latest), review its
+[release tag](https://github.com/pueo-labs/recon/releases/latest), review its
 helper, then run `bash scripts/install.sh` or
 `powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1` locally.
 
@@ -200,7 +200,7 @@ recon --version
 ## Install from a Git Checkout
 
 ```bash
-git clone https://github.com/blisspixel/recon.git
+git clone https://github.com/pueo-labs/recon.git
 cd recon
 pip install -e .
 ```

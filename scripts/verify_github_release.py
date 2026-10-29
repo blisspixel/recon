@@ -21,6 +21,7 @@ try:
         Runner,
         expected_release_assets,
         load_release_metadata,
+        release_signer_repository,
         validate_release_recovery,
     )
     from scripts.finalize_sbom import SbomError, validate_completed_sbom
@@ -38,6 +39,7 @@ except ImportError:
         Runner,
         expected_release_assets,
         load_release_metadata,
+        release_signer_repository,
         validate_release_recovery,
     )
     from finalize_sbom import SbomError, validate_completed_sbom  # type: ignore[no-redef]
@@ -91,6 +93,7 @@ def _sealed_files(version: str, dist_dir: Path, sbom_dir: Path, provenance_dir: 
 
 def _verify_provenance(version: str, source_sha: str, sealed: dict[str, Path], runner: Runner) -> None:
     wheel, sdist, sbom, bundle = expected_release_assets(version)
+    signer = release_signer_repository(version, source_sha)
     for subject in (wheel, sdist, sbom):
         result = runner(
             [
@@ -101,9 +104,9 @@ def _verify_provenance(version: str, source_sha: str, sealed: dict[str, Path], r
                 "--bundle",
                 str(sealed[bundle]),
                 "--repo",
-                RELEASE_REPOSITORY,
+                signer,
                 "--signer-workflow",
-                f"{RELEASE_REPOSITORY}/.github/workflows/release.yml",
+                f"{signer}/.github/workflows/release.yml",
                 "--source-ref",
                 f"refs/tags/v{version}",
                 "--source-digest",

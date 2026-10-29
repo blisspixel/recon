@@ -86,7 +86,7 @@ for environment updates and verification. CI installs each matrix interpreter
 with setup-python.
 
 ```bash
-git clone https://github.com/blisspixel/recon.git
+git clone https://github.com/pueo-labs/recon.git
 cd recon
 uv self update 0.13.5      # select the repository's reproducible uv release
 uv --version                # must report uv 0.13.5
@@ -171,7 +171,7 @@ Useful starting points include:
 For a bounded change, open a pull request against `main` with its supporting
 evidence and verification. If you would like to help regularly, including
 independent review or a future maintainer role, open a privacy-safe
-[idea issue](https://github.com/blisspixel/recon/issues/new/choose) describing
+[idea issue](https://github.com/pueo-labs/recon/issues/new/choose) describing
 your interests. The maintainer can help identify a manageable first task.
 
 recon currently has one maintainer. A sustained review role can grow from

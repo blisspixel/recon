@@ -291,7 +291,7 @@ def _validate_skill(path: Path, skill_id: str, version: str) -> None:
     if frontmatter["license"] != "Apache-2.0":
         raise CandidateError(f"{skill_id} license must be Apache-2.0")
     metadata = frontmatter["metadata"]
-    if metadata != {"author": "blisspixel", "version": version}:
+    if metadata != {"author": "pueo-labs", "version": version}:
         raise CandidateError(f"{skill_id} metadata or version has drifted")
     lowered = body.lower()
     if "portable agent plugins conformance" in lowered:

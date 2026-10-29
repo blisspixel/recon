@@ -21,7 +21,7 @@ def test_surface_inventory_promotion_decision_is_documented() -> None:
     assert "Do not promote `docs/surface-inventory.json` or `recon://surface-inventory`" in adr
     assert "v2.3 stable surface" in adr
     assert "concrete external consumer" in adr
-    assert "https://github.com/blisspixel/recon/blob/main/docs/schema.md" in readme
+    assert "https://github.com/pueo-labs/recon/blob/main/docs/schema.md" in readme
     assert "not stable runtime API contracts" in _compact(schema)
     assert "0007-surface-inventory-discovery-context.md" in schema
     assert "ADR-0007" in roadmap

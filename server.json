@@ -1,15 +1,15 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.blisspixel/recon",
+  "name": "io.github.pueo-labs/recon",
   "title": "recon",
   "description": "Public DNS, certificate transparency, and identity observations.",
   "version": "2.27.0",
   "repository": {
-    "url": "https://github.com/blisspixel/recon",
+    "url": "https://github.com/pueo-labs/recon",
     "source": "github",
     "id": "1207478328"
   },
-  "websiteUrl": "https://github.com/blisspixel/recon",
+  "websiteUrl": "https://github.com/pueo-labs/recon",
   "packages": [
     {
       "registryType": "pypi",

@@ -1,8 +1,8 @@
 {
-  "name": "blisspixel-recon",
+  "name": "pueo-labs-recon",
   "description": "Public-metadata domain intelligence: recon MCP server plus usage and triage skills.",
   "owner": {
-    "name": "blisspixel"
+    "name": "pueo-labs"
   },
   "plugins": [
     {

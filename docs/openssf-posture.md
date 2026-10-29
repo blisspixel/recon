@@ -11,7 +11,7 @@ while the Best Practices Badge is an account-backed project questionnaire.
   release `HEAD` after CI and publication completed.
 - Scorecard version: `v5.6.0`.
 - Score: `8.4`.
-- Public source: `https://api.securityscorecards.dev/projects/github.com/blisspixel/recon`.
+- Public source: `https://api.securityscorecards.dev/projects/github.com/pueo-labs/recon`.
 
 The public API is authoritative for the exact commit behind the badge. Docs-only
 commits can move `main` after a snapshot is written, so this file records the

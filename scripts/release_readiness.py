@@ -37,6 +37,7 @@ try:
         RecoveryError,
         download_release_asset,
         load_release_metadata,
+        release_signer_repository,
         validate_release_recovery,
     )
     from scripts.finalize_sbom import SbomError, validate_completed_sbom
@@ -51,6 +52,7 @@ except ImportError:
         RecoveryError,
         download_release_asset,
         load_release_metadata,
+        release_signer_repository,
         validate_release_recovery,
     )
     from finalize_sbom import SbomError, validate_completed_sbom  # type: ignore[no-redef]
@@ -97,7 +99,6 @@ _REQUIRED_SCORECARD_MINIMUMS = {
     "SAST": 10,
 }
 _PYPI_PACKAGE = "recon-tool"
-_PYPI_ATTESTATION_REPOSITORY = "https://github.com/blisspixel/recon"
 _PYPI_ATTESTATIONS_SPEC = "pypi-attestations==0.0.29"
 _COMMAND_TIMEOUT_SECONDS = 120
 _MAX_RELEASE_ASSET_BYTES = 64 * 1024 * 1024
@@ -564,9 +565,9 @@ def _check_readme_usage(root: Path) -> CheckResult:
         "recon example.com",
         "recon batch domains.txt --json",
         "recon mcp install --client=",
-        "https://github.com/blisspixel/recon/blob/main/CONTRIBUTING.md",
-        "https://github.com/blisspixel/recon/blob/main/docs/getting-started.md",
-        "https://github.com/blisspixel/recon/blob/main/docs/README.md",
+        "https://github.com/pueo-labs/recon/blob/main/CONTRIBUTING.md",
+        "https://github.com/pueo-labs/recon/blob/main/docs/getting-started.md",
+        "https://github.com/pueo-labs/recon/blob/main/docs/README.md",
     )
     missing = [f"README.md: {anchor}" for anchor in anchors if anchor not in text]
     contributor_anchors = (
@@ -1089,7 +1090,8 @@ def _load_pypi_release_urls(runner: Runner, version: str) -> dict[str, str] | Ch
 def _check_pypi_attestations(root: Path, runner: Runner) -> CheckResult:
     try:
         version = _read_project_version(root)
-    except (OSError, ValueError, tomllib.TOMLDecodeError) as exc:
+        signer = release_signer_repository(version, _release_tag_sha(runner, version))
+    except (OSError, ValueError, tomllib.TOMLDecodeError, _ReleaseEvidenceError) as exc:
         return _result("PyPI attestations", "fail", str(exc))
     urls = _load_pypi_release_urls(runner, version)
     if isinstance(urls, CheckResult):
@@ -1108,7 +1110,7 @@ def _check_pypi_attestations(root: Path, runner: Runner) -> CheckResult:
                 "verify",
                 "pypi",
                 "--repository",
-                _PYPI_ATTESTATION_REPOSITORY,
+                f"https://github.com/{signer}",
                 url,
             ]
         )
@@ -1153,6 +1155,7 @@ def _check_github_attestations(root: Path, runner: Runner) -> CheckResult:
         assets = _ReleaseAssetClient(runner, repo, version, directory)
         try:
             source_digest = _release_tag_sha(runner, version)
+            signer = release_signer_repository(version, source_digest)
             attests_sbom = _release_requires_sbom_attestation(version, source_digest)
             subjects = (*distribution_subjects, sbom_name) if attests_sbom else distribution_subjects
             required_assets = (*distribution_subjects, bundle_name, sbom_name)
@@ -1161,10 +1164,10 @@ def _check_github_attestations(root: Path, runner: Runner) -> CheckResult:
             validate_completed_sbom(downloaded[sbom_name], version)
         except SbomError as exc:
             return _result("GitHub attestations", "fail", f"release SBOM validation failed: {exc}")
-        except _ReleaseEvidenceError as exc:
+        except (_ReleaseEvidenceError, RecoveryError) as exc:
             return _result("GitHub attestations", "fail", str(exc))
         bundle = downloaded[bundle_name]
-        signer_workflow = f"{repo}/.github/workflows/release.yml"
+        signer_workflow = f"{signer}/.github/workflows/release.yml"
         source_ref = f"refs/tags/v{version}"
         for subject in subjects:
             artifact = downloaded[subject]
@@ -1177,7 +1180,7 @@ def _check_github_attestations(root: Path, runner: Runner) -> CheckResult:
                     "--bundle",
                     str(bundle),
                     "--repo",
-                    repo,
+                    signer,
                     "--signer-workflow",
                     signer_workflow,
                     "--source-ref",
@@ -1239,8 +1242,8 @@ def _check_release_channel_parity(root: Path, runner: Runner) -> CheckResult:
 
 
 def _load_github_release_payload(runner: Runner, repo: str, version: str) -> dict[str, object] | CheckResult:
-    if repo != "blisspixel/recon":
-        return _result("GitHub release", "fail", "release repository must be blisspixel/recon")
+    if repo != "pueo-labs/recon":
+        return _result("GitHub release", "fail", "release repository must be pueo-labs/recon")
     try:
         return load_release_metadata(runner, version)
     except RecoveryError as exc:

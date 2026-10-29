@@ -129,7 +129,7 @@ they killed 33 survivors (`posterior` / `interval` / `entropy_reduction(_nats)` 
 sort-key sign), taking the surface to 9.4%.
 
 Round 5 is the authoritative Cycle 60 run at commit `0c473d7`:
-[GitHub Actions run 29154457989](https://github.com/blisspixel/recon/actions/runs/29154457989).
+[GitHub Actions run 29154457989](https://github.com/pueo-labs/recon/actions/runs/29154457989).
 The semantic-integrity refactor produced 801 jobs; the configured operator
 filter skipped 139 and left 662 tested mutants. The first sweep at `8cb0347`
 killed 578 and left 84 survivors, a 12.69 percent survival rate that correctly
@@ -142,7 +142,7 @@ outside the helper's documented probability domain; invalid inputs were not
 used to improve the score.
 
 Round 6 is the authoritative narrowed-filter run at commit `aac9245`:
-[GitHub Actions run 29160654831](https://github.com/blisspixel/recon/actions/runs/29160654831).
+[GitHub Actions run 29160654831](https://github.com/pueo-labs/recon/actions/runs/29160654831).
 It narrows the filter rather than changing the score floor. Six postponed
 annotation unions are marked line by line and account for 66 inert mutants;
 the explicit identity-comparison policy accounts for the other 18 skipped

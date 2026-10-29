@@ -1073,6 +1073,7 @@
       "agents/claude-code/README.md#Approval policy": "static.agent-guidance.v1",
       "agents/claude-code/README.md#Choosing the MCP launch command": "static.agent-guidance.v1",
       "agents/claude-code/README.md#Install": "static.agent-guidance.v1",
+      "agents/claude-code/README.md#Marketplace migration": "static.agent-guidance.v1",
       "agents/claude-code/README.md#Skill vs MCP server: what each adds": "static.agent-guidance.v1",
       "agents/claude-code/README.md#What this plugin does *not* do": "static.agent-guidance.v1",
       "agents/claude-code/README.md#What's inside": "static.agent-guidance.v1",

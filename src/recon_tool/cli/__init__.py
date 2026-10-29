@@ -939,14 +939,14 @@ def run() -> None:
                 f"[{ERROR}]recon hit an unexpected error and could not create a crash log.[/{ERROR}]\n"
                 "Confirm the system temporary directory is writable, then rerun the command. "
                 "If the failure persists, report the command shape and exit code 4 at "
-                "https://github.com/blisspixel/recon/issues without including private inputs."
+                "https://github.com/pueo-labs/recon/issues without including private inputs."
             )
         else:
             where = f"[link={crash_path.as_uri()}]{escape(str(crash_path))}[/link]"
             get_err_console().print(
                 f"[{ERROR}]recon hit an unexpected error.[/{ERROR}] Details written to {where}\n"
                 "Review and redact the log before sharing it at "
-                "https://github.com/blisspixel/recon/issues; it may contain local paths, "
+                "https://github.com/pueo-labs/recon/issues; it may contain local paths, "
                 "domain inputs, configuration values, or exception details."
             )
         raise SystemExit(EXIT_INTERNAL) from None

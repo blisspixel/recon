@@ -14,13 +14,29 @@ from pathlib import Path
 
 MAX_RELEASE_JSON_BYTES = 1024 * 1024
 MAX_RELEASE_ASSET_BYTES = 64 * 1024 * 1024
-RELEASE_REPOSITORY = "blisspixel/recon"
+RELEASE_REPOSITORY = "pueo-labs/recon"
 RELEASE_MAINTAINER = "blisspixel"
+# Only these reviewed immutable releases retain the pre-transfer signer.
+# Other historical releases must be verified from their reviewed source tags.
+_HISTORICAL_SIGNERS = {
+    "2.6.3": "2751dc11c64001272750df29477d6b9052407261",
+    "2.27.0": "9c213f79cfa92eb2e40e76d605a2f9d6a341e4d9",
+}
 Runner = Callable[[list[str]], subprocess.CompletedProcess[str]]
 
 
 class RecoveryError(ValueError):
     """Release evidence is incomplete or conflicts with the human handoff."""
+
+
+def release_signer_repository(version: str, source_sha: str) -> str:
+    """Select a pinned historical signer, never retry with a weaker identity."""
+    historical_sha = _HISTORICAL_SIGNERS.get(version)
+    if historical_sha is not None:
+        if source_sha != historical_sha:
+            raise RecoveryError("release signer does not match the exact historical source digest")
+        return "blisspixel/recon"
+    return RELEASE_REPOSITORY
 
 
 def expected_release_assets(version: str) -> tuple[str, ...]:

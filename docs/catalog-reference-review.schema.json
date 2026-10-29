@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/blisspixel/recon/blob/main/docs/catalog-reference-review.schema.json",
+  "$id": "https://github.com/pueo-labs/recon/blob/main/docs/catalog-reference-review.schema.json",
   "title": "Bounded catalog reference review input",
   "type": "object",
   "additionalProperties": false,

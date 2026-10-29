@@ -225,7 +225,7 @@ def test_relocated_package_keeps_documentation_references_resolvable(
     assert candidate.validate_candidate(root)[0] == _project_version()
     _, triage = candidate._parse_skill(root / "skills" / "recon-fingerprint-triage" / "SKILL.md")
     for doc in ("fingerprints", "catalog-strategy"):
-        assert f"https://github.com/blisspixel/recon/blob/v{_project_version()}/docs/{doc}.md" in triage
+        assert f"https://github.com/pueo-labs/recon/blob/v{_project_version()}/docs/{doc}.md" in triage
     assert "`docs/catalog-maintenance.md`" in triage
     assert f"/blob/v{_project_version()}/docs/catalog-maintenance.md" not in triage
 
@@ -384,7 +384,7 @@ def test_active_docs_publish_offline_candidate_state_and_client_gate() -> None:
     assert all("client" in document for document in normalized)
     assert all("conformance claim" in document or "compatibility claim" in document for document in normalized)
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    assert "https://github.com/blisspixel/recon/blob/main/agents/README.md" in readme
+    assert "https://github.com/pueo-labs/recon/blob/main/agents/README.md" in readme
     normalized.append(" ".join(readme.lower().split()))
     stale_phrases = (
         "build the schema-pinned portable candidate",

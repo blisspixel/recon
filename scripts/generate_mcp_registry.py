@@ -27,17 +27,17 @@ REGISTRY_PATH = Path("server.json")
 SCHEMA_PATH = Path("scripts/data/mcp-registry-server-2025-12-11.schema.json")
 SCHEMA_URL = "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json"
 
-SERVER_NAME = "io.github.blisspixel/recon"
+SERVER_NAME = "io.github.pueo-labs/recon"
 TITLE = "recon"
 DESCRIPTION = "Public DNS, certificate transparency, and identity observations."
-WEBSITE_URL = "https://github.com/blisspixel/recon"
-REPOSITORY_URL = "https://github.com/blisspixel/recon"
+WEBSITE_URL = "https://github.com/pueo-labs/recon"
+REPOSITORY_URL = "https://github.com/pueo-labs/recon"
 REPOSITORY_SOURCE = "github"
 REPOSITORY_ID = "1207478328"
 PACKAGE_IDENTIFIER = "recon-tool"
 REGISTRY_TYPE = "pypi"
 REGISTRY_BASE_URL = "https://pypi.org"
-MCP_NAME_LINE = "<!-- mcp-name: io.github.blisspixel/recon -->"
+MCP_NAME_LINE = "<!-- mcp-name: io.github.pueo-labs/recon -->"
 DECLARED_ARGV = ("uvx", "--from", "recon-tool", "recon", "mcp")
 
 

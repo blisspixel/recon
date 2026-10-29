@@ -57,7 +57,7 @@ directory, these commands select the exact version tag and its commit instead
 of mutable branch content:
 
 ```bash
-git clone --branch v2.27.0 --single-branch https://github.com/blisspixel/recon.git recon-2.27.0
+git clone --branch v2.27.0 --single-branch https://github.com/pueo-labs/recon.git recon-2.27.0
 cd recon-2.27.0
 ```
 
@@ -71,13 +71,21 @@ historical exception to commit
 SBOM structure. Every later release must also verify the SBOM as an attestation
 subject.
 
+Repository transfers do not rewrite signed provenance. Download from the current
+`pueo-labs/recon` repository, but verify pre-transfer artifacts against their
+original `blisspixel/recon` certificate identity. The recipes below select that
+identity only for the exact reviewed v2.27.0 or v2.6.3 source digest. Future
+releases require `pueo-labs/recon`; verification never retries another identity.
+For other historical releases, use their reviewed exact-tag instructions.
+See the [GitHub CLI verification rules](https://cli.github.com/manual/gh_attestation_verify).
+
 ### macOS or Linux
 
 ```bash
 set -euo pipefail
 
 VERSION=2.27.0
-REPO=blisspixel/recon
+REPO=pueo-labs/recon
 LEGACY_SBOM_ATTESTATION_SHA=2751dc11c64001272750df29477d6b9052407261
 MAX_RELEASE_ASSET_BYTES=$((64 * 1024 * 1024))
 VERIFY_DIR="$(mktemp -d)"
@@ -102,6 +110,19 @@ esac
 if [ "${#SOURCE_SHA}" -ne 40 ] && [ "${#SOURCE_SHA}" -ne 64 ]; then
   echo "FAIL: source digest must contain 40 or 64 hexadecimal characters." >&2
   exit 1
+fi
+ATTESTATION_REPO="$REPO"
+case "$VERSION" in
+  2.27.0) EXPECTED_SIGNER_SHA=9c213f79cfa92eb2e40e76d605a2f9d6a341e4d9 ;;
+  2.6.3) EXPECTED_SIGNER_SHA="$LEGACY_SBOM_ATTESTATION_SHA" ;;
+  *) EXPECTED_SIGNER_SHA="" ;;
+esac
+if [ -n "$EXPECTED_SIGNER_SHA" ]; then
+  if [ "$SOURCE_SHA" != "$EXPECTED_SIGNER_SHA" ]; then
+    echo "FAIL: historical signer requires the exact reviewed source digest." >&2
+    exit 1
+  fi
+  ATTESTATION_REPO=blisspixel/recon
 fi
 gh auth status
 
@@ -170,8 +191,8 @@ fi
 for artifact in "${ATTESTATION_ARTIFACTS[@]}"; do
   gh attestation verify "${artifact}" \
     --bundle "${EVIDENCE_DIR}/recon-tool-${VERSION}.intoto.jsonl" \
-    --repo "${REPO}" \
-    --signer-workflow "${REPO}/.github/workflows/release.yml" \
+    --repo "${ATTESTATION_REPO}" \
+    --signer-workflow "${ATTESTATION_REPO}/.github/workflows/release.yml" \
     --source-ref "refs/tags/v${VERSION}" \
     --source-digest "${SOURCE_SHA}" \
     --deny-self-hosted-runners
@@ -181,7 +202,7 @@ URL_COUNT=0
 while IFS= read -r file_url; do
   [ -n "${file_url}" ] || { echo "FAIL: empty PyPI URL." >&2; exit 1; }
   uvx --from "pypi-attestations==0.0.29" pypi-attestations verify pypi \
-    --repository "https://github.com/${REPO}" \
+    --repository "https://github.com/${ATTESTATION_REPO}" \
     "${file_url}"
   URL_COUNT=$((URL_COUNT + 1))
 done < "${URL_FILE}"
@@ -218,7 +239,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $Version = "2.27.0"
-$Repo = "blisspixel/recon"
+$Repo = "pueo-labs/recon"
 $LegacySbomAttestationSha = "2751dc11c64001272750df29477d6b9052407261"
 $MaxReleaseAssetBytes = 64 * 1024 * 1024
 $VerifyDir = Join-Path ([IO.Path]::GetTempPath()) ("recon-verify-" + [guid]::NewGuid())
@@ -254,6 +275,18 @@ try {
     $SourceSha = ((Invoke-Native "source digest" "git" @("rev-parse", "HEAD")) -join "`n").Trim().ToLowerInvariant()
     if ($SourceSha -notmatch '^[0-9a-f]{40}([0-9a-f]{24})?$') {
         throw "Source digest must be a full 40- or 64-character commit SHA."
+    }
+    $AttestationRepo = $Repo
+    $ExpectedSignerSha = switch ($Version) {
+        "2.27.0" { "9c213f79cfa92eb2e40e76d605a2f9d6a341e4d9" }
+        "2.6.3" { $LegacySbomAttestationSha }
+        default { "" }
+    }
+    if ($ExpectedSignerSha) {
+        if ($SourceSha -ne $ExpectedSignerSha) {
+            throw "Historical signer requires the exact reviewed source digest."
+        }
+        $AttestationRepo = "blisspixel/recon"
     }
     Invoke-Native "GitHub authentication" "gh" @("auth", "status") | Out-Host
 
@@ -315,8 +348,8 @@ try {
     foreach ($Artifact in $AttestationArtifacts) {
         Invoke-Native "GitHub attestation verification" "gh" @(
             "attestation", "verify", $Artifact, "--bundle", $Bundle,
-            "--repo", $Repo,
-            "--signer-workflow", "$Repo/.github/workflows/release.yml",
+            "--repo", $AttestationRepo,
+            "--signer-workflow", "$AttestationRepo/.github/workflows/release.yml",
             "--source-ref", "refs/tags/v$Version", "--source-digest", $SourceSha,
             "--deny-self-hosted-runners"
         ) | Out-Host
@@ -327,7 +360,7 @@ try {
     foreach ($FileUrl in $Urls) {
         Invoke-Native "PyPI attestation verification" "uvx" @(
             "--from", "pypi-attestations==0.0.29", "pypi-attestations", "verify", "pypi",
-            "--repository", "https://github.com/$Repo", $FileUrl
+            "--repository", "https://github.com/$AttestationRepo", $FileUrl
         ) | Out-Host
     }
 
@@ -469,7 +502,7 @@ To verify a published release yourself:
 ```bash
 # 1. Check out the exact tag.
 VERSION=2.27.0  # replace with the release being verified
-git clone https://github.com/blisspixel/recon
+git clone https://github.com/pueo-labs/recon
 cd recon
 git checkout "v${VERSION}"
 
@@ -521,9 +554,13 @@ wheel's direct PyPI file URL and run the reviewed verifier version:
 
 ```bash
 uvx --from "pypi-attestations==0.0.29" pypi-attestations verify pypi \
-  --repository https://github.com/blisspixel/recon \
+  --repository https://github.com/pueo-labs/recon \
   <wheel-url>
 ```
+
+Use `https://github.com/blisspixel/recon` instead for a reviewed pre-transfer
+artifact; its signed publisher identity is immutable. Do not try both identities
+until one passes.
 
 That command downloads the wheel and provenance JSON from PyPI, checks that the
 Trusted Publisher identity matches the repository argument, and cryptographically
@@ -669,8 +706,8 @@ The remaining Scorecard limits are intentional or process-bound:
 ### Solo-maintainer review exception
 
 On 2026-10-23 the maintainer accepted the independent-review risks represented
-by [Branch-Protection alert 1](https://github.com/blisspixel/recon/security/code-scanning/1)
-and [Code-Review alert 59](https://github.com/blisspixel/recon/security/code-scanning/59)
+by [Branch-Protection alert 1](https://github.com/pueo-labs/recon/security/code-scanning/1)
+and [Code-Review alert 59](https://github.com/pueo-labs/recon/security/code-scanning/59)
 for the current solo-maintainer workflow. This is a governance exception,
 not independent human review or a claim that the reported risks were removed.
 Automated checks do not count as another human reviewer, and the original
