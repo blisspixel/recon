@@ -164,13 +164,14 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^klaviyo-site-verification=
-    reference: https://help.klaviyo.com/hc/en-us/articles/115005082927
+    reference: https://help.klaviyo.com/hc/en-us/articles/115000357752
+    verified: '2026-10-29'
     description: >-
-      Klaviyo site-verification TXT (Klaviyo is an e-commerce-
-      focused email and SMS marketing platform). Indicates the
-      domain is registered with a Klaviyo account, typically
-      for branded sending domains and SMS short-link tracking.
-      Common in Shopify and other e-commerce stacks.
+      Klaviyo branded-sending domain-ownership TXT. The current
+      setup guide shows an apex TXT whose value begins with
+      `klaviyo-site-verification=` and a public API key placeholder.
+      This observes that record. It does not prove NS delegation,
+      static DKIM CNAMEs, SMS, or that sending is active.
 - name: Kartra
   slug: kartra
   category: CRM & Marketing
@@ -178,12 +179,14 @@ fingerprints:
   detections:
   - type: cname
     pattern: kartra.com
-    reference: https://support.kartra.com/
+    reference: https://support.kartra.com/support/solutions/articles/153000169884-manually-connect-a-custom-domain
+    verified: '2026-10-29'
     description: >-
-      CNAME pointing into kartra.com (Kartra is an all-in-one
-      marketing platform offering landing pages, email,
-      checkout, and membership sites). Indicates the domain
-      hosts at least one Kartra-served page or funnel.
+      CNAME whose target is under kartra.com. The current manual
+      custom-domain guide documents a CNAME from www or a subdomain
+      to `username.kartra.com`. This observes that documented target.
+      It does not prove pages, funnels, checkout, or memberships,
+      and it does not show that the apex itself is hosted there.
 - name: LiveRamp
   slug: liveramp
   category: CRM & Marketing
@@ -325,13 +328,15 @@ fingerprints:
   detections:
   - type: cname
     pattern: iterable.com
-    reference: https://support.iterable.com/hc/en-us
+    reference: https://support.iterable.com/hc/en-us/articles/4403865896724-Link-Shortening-and-Click-Tracking-for-RCS-SMS-and-WhatsApp
+    verified: '2026-10-29'
     description: >-
-      CNAME pointing into iterable.com (Iterable is a
-      cross-channel marketing-automation platform).
-      Indicates the domain uses Iterable for marketing sends,
-      typically with a branded tracking or link-rewrite
-      subdomain.
+      CNAME whose target is under iterable.com. The current shortlink
+      guide documents a CNAME to `links.iterable.com` or
+      `links.eu.iterable.com`. This observes that documented target.
+      It does not prove email, SMS, RCS, or WhatsApp sends are active.
+      A separate HTTPS setup uses a CloudFront CNAME and is not part
+      of this rule.
 - name: Customer.io
   slug: customerio
   category: CRM & Marketing

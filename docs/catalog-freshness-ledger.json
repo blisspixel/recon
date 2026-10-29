@@ -1,5 +1,5 @@
 {
-  "catalog_digest": "d184a5db5eadad149389754d29b030dad9236f0d7a41118c7b3800fcbad61d10",
+  "catalog_digest": "1567ab7abcea59cc11cff4c8c8fcf3b4f48f45f75c7401d05a2ac5dbe0324f29",
   "reviews": [
     {
       "basis": "First-party documentation checked for the exact role and grammar; bounded synthetic family tests preserve namespace provenance. See docs/catalog-maintenance.md documented family review, 2026-10-23.",
@@ -384,8 +384,104 @@
       "rule_id": "crm-marketing.yaml/icontact/txt/^iContact",
       "source_checked_on": "2026-10-28",
       "source_status": "checked"
+    },
+    {
+      "basis": "Cited article 179 checked 2026-10-29. The URL now serves a custom data attributes article and does not document a CNAME into intercom.io. Current Help Center guides name custom.intercom.help and regional intercomhelpcenter.com hosts. Those are a different target and were not added. Verification date not advanced.",
+      "disposition": "deferred",
+      "new_reference": "https://www.intercom.com/help/en/articles/179-set-up-a-custom-domain",
+      "next_review": "2026-11-29",
+      "prior_reference": "https://www.intercom.com/help/en/articles/179-set-up-a-custom-domain",
+      "review_digest": "0247b9e7ddca86838a790acfb33a021cf9d88d9dc7455b45da6dbee8c2ced4d9",
+      "reviewed_on": "2026-10-29",
+      "rule_id": "crm-marketing.yaml/intercom/cname/intercom.io",
+      "source_checked_on": "2026-10-29",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Cited article 179 checked 2026-10-29. The URL now serves a custom data attributes article and does not print intercom-domain-verification=. Current email authentication articles say to copy CNAME and DMARC values from the product and do not print that prefix. Verification date not advanced.",
+      "disposition": "deferred",
+      "new_reference": "https://www.intercom.com/help/en/articles/179-set-up-a-custom-domain",
+      "next_review": "2026-11-29",
+      "prior_reference": "https://www.intercom.com/help/en/articles/179-set-up-a-custom-domain",
+      "review_digest": "9d5f043d3469f6dd06e61124592729fc689aee32e20e9418f1345fc549072c52",
+      "reviewed_on": "2026-10-29",
+      "rule_id": "crm-marketing.yaml/intercom/txt/^intercom-domain-verification=",
+      "source_checked_on": "2026-10-29",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Current shortlink guide checked 2026-10-29. It documents a CNAME to links.iterable.com or links.eu.iterable.com. The rule stays a suffix match for that documented target. It does not prove email, SMS, RCS, or WhatsApp sends are active. A separate HTTPS guide documents a CloudFront CNAME and was not added. The cited help index does not print the target.",
+      "disposition": "narrowed",
+      "new_reference": "https://support.iterable.com/hc/en-us/articles/4403865896724-Link-Shortening-and-Click-Tracking-for-RCS-SMS-and-WhatsApp",
+      "next_review": "2026-11-29",
+      "prior_reference": "https://support.iterable.com/hc/en-us",
+      "review_digest": "b9124d84f504bba9a4a651360886d7dba1ea3d24a8269fcc8316ccc9a04e919d",
+      "reviewed_on": "2026-10-29",
+      "rule_id": "crm-marketing.yaml/iterable/cname/iterable.com",
+      "source_checked_on": "2026-10-29",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Current manual custom-domain article checked 2026-10-29. It documents a CNAME from www or a subdomain to username.kartra.com. The rule stays a suffix match for that documented target. It does not prove pages, funnels, checkout, or memberships, and it does not show that the apex itself is hosted there. The cited support index does not print the target.",
+      "disposition": "narrowed",
+      "new_reference": "https://support.kartra.com/support/solutions/articles/153000169884-manually-connect-a-custom-domain",
+      "next_review": "2026-11-29",
+      "prior_reference": "https://support.kartra.com/",
+      "review_digest": "d6e0e31a9bfb44e87a6b74c7a9fbc8cf7c39ec3993c04a502e840b5142beb22e",
+      "reviewed_on": "2026-10-29",
+      "rule_id": "crm-marketing.yaml/kartra/cname/kartra.com",
+      "source_checked_on": "2026-10-29",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Current branded-sending setup article checked 2026-10-29. It prints an apex TXT whose value begins with klaviyo-site-verification= and a public API key placeholder. The record is the branded-sending domain-ownership TXT. It does not prove NS delegation, static DKIM CNAMEs, SMS, or that sending is active. The cited article now redirects to an integration guide that does not print the prefix.",
+      "disposition": "narrowed",
+      "new_reference": "https://help.klaviyo.com/hc/en-us/articles/115000357752",
+      "next_review": "2026-11-29",
+      "prior_reference": "https://help.klaviyo.com/hc/en-us/articles/115005082927",
+      "review_digest": "3088ab1631815bb888a793d871378c752d06a4cb6547f79c273c1daea0327934",
+      "reviewed_on": "2026-10-29",
+      "rule_id": "crm-marketing.yaml/klaviyo/txt/^klaviyo-site-verification=",
+      "source_checked_on": "2026-10-29",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Cited docs index checked 2026-10-29. It does not print liveramp-site-verification=. The current SSO guide says a site-verification token is sent to add as a DNS TXT and does not print that prefix. Verification date not advanced.",
+      "disposition": "deferred",
+      "new_reference": "https://docs.liveramp.com/",
+      "next_review": "2026-11-29",
+      "prior_reference": "https://docs.liveramp.com/",
+      "review_digest": "66c2e2b6ee40a11b3e768e7eec700b2d74d297240efb6d23a44cd4523f2ab2a8",
+      "reviewed_on": "2026-10-29",
+      "rule_id": "crm-marketing.yaml/liveramp/txt/^liveramp-site-verification=",
+      "source_checked_on": "2026-10-29",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Cited help index checked 2026-10-29. It does not print mailerlite-domain-verification=. The current domain-authentication guide says to paste the domain-verification TXT Name and Value from the product and does not print that prefix. A DKIM CNAME under mlsend.com is a separate shape and was not added. Verification date not advanced.",
+      "disposition": "deferred",
+      "new_reference": "https://www.mailerlite.com/help",
+      "next_review": "2026-11-29",
+      "prior_reference": "https://www.mailerlite.com/help",
+      "review_digest": "4e7b5c843876cf2f1828571b465a91050d90dfa0d917c65e8c279eb71759111c",
+      "reviewed_on": "2026-10-29",
+      "rule_id": "crm-marketing.yaml/mailerlite/txt/^mailerlite-domain-verification=",
+      "source_checked_on": "2026-10-29",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Cited set-up-your-domain URL checked 2026-10-29 and returned page not found. A current docs search did not find mktosvc.com printed as a customer CNAME target. The already dated mktoweb.com landing-page rule was not reopened, and separate email-tracking hosts were not folded into this rule. Verification date not advanced.",
+      "disposition": "deferred",
+      "new_reference": "https://experienceleague.adobe.com/docs/marketo/using/product-docs/administration/setup-and-login/set-up-your-domain.html",
+      "next_review": "2026-11-29",
+      "prior_reference": "https://experienceleague.adobe.com/docs/marketo/using/product-docs/administration/setup-and-login/set-up-your-domain.html",
+      "review_digest": "055101b2989fe4447c65554b5fb0c7dba4f0642e7c18df788f82793b8e8f08c0",
+      "reviewed_on": "2026-10-29",
+      "rule_id": "crm-marketing.yaml/marketo/cname/mktosvc.com",
+      "source_checked_on": "2026-10-29",
+      "source_status": "checked"
     }
   ],
   "schema_version": 1,
-  "scope": "Documented checks through 2026-10-28, including a same-day CRM and marketing pass and a later CRM freshness pass, not a complete catalog review"
+  "scope": "Documented checks through 2026-10-29, including the 2026-10-28 CRM passes and a 2026-10-29 marketing reference check, not a complete catalog review"
 }
