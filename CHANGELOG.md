@@ -49,6 +49,19 @@ Tool surface changes: no CLI command or flag changes.
   It does not prove landing pages, forms, or active campaigns. Six other
   undated CRM rules in this pass stay undated because their cited pages
   do not print the exact grammar.
+- Date the Klaviyo branded-sending TXT, the Kartra custom-domain CNAME,
+  and the Iterable tracking-domain CNAME from the current vendor pages,
+  and point each rule at that page. The Klaviyo record is an apex TXT
+  whose value begins with `klaviyo-site-verification=` and a public API
+  key placeholder. It does not prove NS delegation, static DKIM CNAMEs,
+  SMS, or that sending is active. The Kartra record observes a CNAME
+  whose target is under `kartra.com`, documented as `username.kartra.com`.
+  It does not prove pages, funnels, checkout, or memberships. The Iterable
+  record observes a CNAME whose target is under `iterable.com`, documented
+  as `links.iterable.com` or `links.eu.iterable.com`. It does not prove
+  email, SMS, RCS, or WhatsApp sends are active. Five other undated
+  marketing rules in this pass stay undated because their cited pages do
+  not print the exact grammar.
 
 ## [2.27.0] - 2026-10-27
 

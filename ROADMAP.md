@@ -70,7 +70,12 @@ What is next, and why:
    a search-index copy of it is not a current basis. A later pass the same
    day dated the Emma account-validation TXT and the Eloqua tracking-domain
    CNAME from pages that print the grammar, and left six other CRM rules
-   undated. That work does not cut a release.
+   undated. The 2026-10-29 pass dated the Klaviyo branded-sending TXT, the
+   Kartra custom-domain CNAME, and the Iterable tracking-domain CNAME from
+   pages that print the grammar, and left five other marketing rules
+   undated. The cited Intercom article now serves a different article, so
+   that URL is not a current basis for either Intercom rule. That work does
+   not cut a release.
    The next round uses a new question list and the rules that are still due.
    The closed 5,199-row drift round remains a measurement contract. It does
    not promote rules. Start at [catalog maintenance](docs/catalog-maintenance.md).

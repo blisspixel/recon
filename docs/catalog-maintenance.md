@@ -215,7 +215,8 @@ upload or GitHub write itself.
 
 The versioned [public ledger](catalog-freshness-ledger.json) starts with the
 eight documented additions checked on 2026-10-23. Later rows record the
-2026-10-28 checks, including a later CRM pass the same day. It is a bounded
+2026-10-28 checks, including a later CRM pass the same day, and the
+2026-10-29 marketing reference check. It is a bounded
 review record, not a claim that every rule was reviewed that month. Private monthly receipts
 bind due rules to their exact claim/catalog digest, prior/new reference, actual
 source check/review date, disposition, next review and bounded proposal queue.
@@ -454,6 +455,51 @@ those pages were not added. Those include Drift MX hosts under
 `driftmail.net`, a Gong branded-URL CNAME with no named target, and iContact
 DKIM CNAME hosts. HubSpot content-domain CNAMEs remain the existing dated
 `hubspot.net` rule.
+
+### Documented reference check, 2026-10-29
+
+This pass checked eight undated marketing rules. Three received a
+`verified` date because the current vendor page prints the grammar. Five
+stay undated. No new detection, DNS record type, or collection path was
+added. This note does not cut a release.
+
+The [Klaviyo branded-sending guide](https://help.klaviyo.com/hc/en-us/articles/115000357752)
+prints an apex TXT whose value begins with `klaviyo-site-verification=`
+and a public API key placeholder. The rule observes that record. It does
+not prove NS delegation, static DKIM CNAMEs, SMS, or that sending is
+active. The previously cited article now redirects to an integration
+guide that does not print the prefix. Those other DNS shapes were not
+added.
+
+The [Kartra manual custom-domain article](https://support.kartra.com/support/solutions/articles/153000169884-manually-connect-a-custom-domain)
+documents a CNAME from `www` or a subdomain to `username.kartra.com`.
+The existing suffix rule observes that documented target. It does not
+prove pages, funnels, checkout, or memberships, and it does not show
+that the apex itself is hosted there. The cited support index does not
+print the target.
+
+The [Iterable shortlink guide](https://support.iterable.com/hc/en-us/articles/4403865896724-Link-Shortening-and-Click-Tracking-for-RCS-SMS-and-WhatsApp)
+documents a CNAME to `links.iterable.com` or `links.eu.iterable.com`.
+The existing suffix rule observes that documented target. It does not
+prove email, SMS, RCS, or WhatsApp sends are active. A separate HTTPS
+guide documents a CloudFront CNAME and was not added. The cited help
+index does not print the target.
+
+Both Intercom rules stay undated. Cited article 179 now serves a custom
+data attributes article. It does not document a CNAME into `intercom.io`
+or print `intercom-domain-verification=`. Current Help Center hosts
+under `intercom.help` and `intercomhelpcenter.com` are a different
+target and were not added.
+
+LiveRamp, MailerLite, and the Marketo `mktosvc.com` rule stay undated.
+The LiveRamp docs index and the current SSO guide do not print
+`liveramp-site-verification=`. The MailerLite help index and the current
+domain-authentication guide say to paste a domain-verification TXT from
+the product and do not print `mailerlite-domain-verification=`. A DKIM
+CNAME under `mlsend.com` is a separate shape and was not added. The
+cited Marketo set-up-your-domain URL returned page not found, and a
+current docs search did not find `mktosvc.com` printed as a customer
+CNAME target. The already dated `mktoweb.com` rule was not reopened.
 
 ## Executable path
 

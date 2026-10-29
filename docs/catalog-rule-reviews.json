@@ -350,6 +350,48 @@
       "reviewed_on": "2026-10-28",
       "source_checked_on": "2026-10-28",
       "reason": "DKIM setup guide checked 2026-10-28: https://help.myemma.com/s/article/DomainKeys-Identified-Mail-DKIM. The apex TXT value begins with e2ma-verification= and an account-specific validation hash. It does not prove sending is active. The same guide's DKIM CNAME targets and SPF include were not added."
+    },
+    {
+      "rule": {
+        "source": "crm-marketing.yaml",
+        "slug": "klaviyo",
+        "detection_type": "txt",
+        "pattern": "^klaviyo-site-verification="
+      },
+      "before": "f492e5b44d3f8480348e4e0c0aba31b1186a52192e6a43a316b007e10b69ff69",
+      "after": "3088ab1631815bb888a793d871378c752d06a4cb6547f79c273c1daea0327934",
+      "disposition": "semantic",
+      "reviewed_on": "2026-10-29",
+      "source_checked_on": "2026-10-29",
+      "reason": "First-party branded-sending guide checked 2026-10-29: https://help.klaviyo.com/hc/en-us/articles/115000357752. The apex TXT value begins with klaviyo-site-verification= and a public API key placeholder. It is the branded-sending domain-ownership record. It does not prove NS delegation, static DKIM CNAMEs, SMS, or that sending is active. The previous article now redirects to an integration guide that does not print the prefix."
+    },
+    {
+      "rule": {
+        "source": "crm-marketing.yaml",
+        "slug": "kartra",
+        "detection_type": "cname",
+        "pattern": "kartra.com"
+      },
+      "before": "e753e6b6016bd933f5c28e92ed2ef8a0c27230985609f1356456fa32eae0493d",
+      "after": "d6e0e31a9bfb44e87a6b74c7a9fbc8cf7c39ec3993c04a502e840b5142beb22e",
+      "disposition": "semantic",
+      "reviewed_on": "2026-10-29",
+      "source_checked_on": "2026-10-29",
+      "reason": "First-party manual custom-domain article checked 2026-10-29: https://support.kartra.com/support/solutions/articles/153000169884-manually-connect-a-custom-domain. The CNAME target is username.kartra.com. The suffix rule observes that documented target. It does not prove pages, funnels, checkout, or memberships."
+    },
+    {
+      "rule": {
+        "source": "crm-marketing.yaml",
+        "slug": "iterable",
+        "detection_type": "cname",
+        "pattern": "iterable.com"
+      },
+      "before": "1e2fe09311dc68b8cb1541077d4bd58884dc0d82aded33df040d8b1205207232",
+      "after": "b9124d84f504bba9a4a651360886d7dba1ea3d24a8269fcc8316ccc9a04e919d",
+      "disposition": "semantic",
+      "reviewed_on": "2026-10-29",
+      "source_checked_on": "2026-10-29",
+      "reason": "First-party shortlink guide checked 2026-10-29: https://support.iterable.com/hc/en-us/articles/4403865896724-Link-Shortening-and-Click-Tracking-for-RCS-SMS-and-WhatsApp. The CNAME points at links.iterable.com or links.eu.iterable.com. The suffix rule observes that documented target. It does not prove email, SMS, RCS, or WhatsApp sends are active. A separate HTTPS CloudFront CNAME was not added."
     }
   ]
 }
