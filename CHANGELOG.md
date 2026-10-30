@@ -67,6 +67,14 @@ Tool surface changes: no CLI command or flag changes.
   email, SMS, RCS, or WhatsApp sends are active. Five other undated
   marketing rules in this pass stay undated because their cited pages do
   not print the exact grammar.
+- Date the Account Engagement tracker-domain CNAME and the Salesforce
+  application SPF include from the current vendor pages, and point each
+  rule at that page. The Pardot record observes a CNAME whose target is
+  under `pardot.com`, documented as pointing at `go.pardot.com`. It does
+  not prove landing pages, campaigns, or first-party tracking. The
+  Salesforce record observes `include:_spf.salesforce.com`. It does not
+  prove messages are being sent. Six other undated rules in this pass
+  stay undated because their cited pages do not print the exact grammar.
 
 ## [2.27.0] - 2026-10-27
 

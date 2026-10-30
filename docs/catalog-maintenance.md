@@ -216,7 +216,8 @@ upload or GitHub write itself.
 The versioned [public ledger](catalog-freshness-ledger.json) starts with the
 eight documented additions checked on 2026-10-23. Later rows record the
 2026-10-28 checks, including a later CRM pass the same day, and the
-2026-10-29 marketing reference check. It is a bounded
+2026-10-29 marketing reference check, and the 2026-10-30 Salesforce and
+advertising reference check. It is a bounded
 review record, not a claim that every rule was reviewed that month. Private monthly receipts
 bind due rules to their exact claim/catalog digest, prior/new reference, actual
 source check/review date, disposition, next review and bounded proposal queue.
@@ -500,6 +501,37 @@ CNAME under `mlsend.com` is a separate shape and was not added. The
 cited Marketo set-up-your-domain URL returned page not found, and a
 current docs search did not find `mktosvc.com` printed as a customer
 CNAME target. The already dated `mktoweb.com` rule was not reopened.
+
+### Documented reference check, 2026-10-30
+
+This pass checked eight undated advertising, sales, and Salesforce rules.
+Two received a `verified` date because the current vendor page prints the
+grammar. Six stay undated. No new detection, DNS record type, or
+collection path was added. This note does not cut a release.
+
+The [Salesforce SPF include guide](https://help.salesforce.com/s/articleView?id=xcloud.emailadmin_spf_include_salesforce.htm&language=en_US&type=5)
+prints `include:_spf.salesforce.com` for mail sent from the Salesforce
+application. The exact include rule observes that record. It does not
+prove messages are being sent. The same guide says other `salesforce.com`
+SPF records are not this include, so the broader `salesforce.com` suffix
+stays undated.
+
+The [Account Engagement tracker-domain guide](https://help.salesforce.com/s/articleView?id=mktg.pardot_admin_first_party_cookie_add_tracker_domain.htm&language=en_US&type=5)
+documents a CNAME pointing at `go.pardot.com`. The existing suffix rule
+observes that documented target. It does not prove landing pages,
+campaigns, or first-party tracking. The cited older domain-management URL
+is not the page that prints the target.
+
+Meta, both Outreach rules, the broader Salesforce SPF suffix, the `00D`
+TXT pattern, and `salesforce-domain-verification=` stay undated. The
+current Meta domain guide says to add a TXT supplied by the product and
+does not print `facebook-domain-verification=`. An HTML meta tag with
+that name is a different record and was not added. The Outreach help
+index does not print an `outreach.io` SPF include or a TXT value that
+begins with `outreach`. Current Salesforce email-domain articles use
+DKIM or an authorized-domain token and do not print either TXT grammar.
+A token host under a Salesforce-owned name is a separate shape and was
+not added.
 
 ## Executable path
 

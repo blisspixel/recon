@@ -80,8 +80,10 @@ What is next, and why:
    Kartra custom-domain CNAME, and the Iterable tracking-domain CNAME from
    pages that print the grammar, and left five other marketing rules
    undated. The cited Intercom article now serves a different article, so
-   that URL is not a current basis for either Intercom rule. That work does
-   not cut a release.
+   that URL is not a current basis for either Intercom rule. The 2026-10-30
+   pass dated the Account Engagement tracker-domain CNAME and the Salesforce
+   `_spf.salesforce.com` include from pages that print the grammar, and left
+   six other rules undated. That work does not cut a release.
    The next round uses a new question list and the rules that are still due.
    The closed 5,199-row drift round remains a measurement contract. It does
    not promote rules. Start at [catalog maintenance](docs/catalog-maintenance.md).
