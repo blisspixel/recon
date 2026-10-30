@@ -1,5 +1,5 @@
 {
-  "catalog_digest": "1567ab7abcea59cc11cff4c8c8fcf3b4f48f45f75c7401d05a2ac5dbe0324f29",
+  "catalog_digest": "1235f557eaafc07845a381d977fb972a86debd589461a232a286a5ff27fa234f",
   "reviews": [
     {
       "basis": "First-party documentation checked for the exact role and grammar; bounded synthetic family tests preserve namespace provenance. See docs/catalog-maintenance.md documented family review, 2026-10-23.",
@@ -480,8 +480,104 @@
       "rule_id": "crm-marketing.yaml/marketo/cname/mktosvc.com",
       "source_checked_on": "2026-10-29",
       "source_status": "checked"
+    },
+    {
+      "basis": "Cited domain-verification index and the current verifying-your-domain article checked 2026-10-30. Both say to add a DNS TXT supplied by the product and do not print facebook-domain-verification=. A troubleshooting article prints an HTML meta tag name with that string. That tag is a different record and was not added. Verification date not advanced.",
+      "disposition": "deferred",
+      "new_reference": "https://developers.facebook.com/docs/sharing/domain-verification",
+      "next_review": "2026-11-30",
+      "prior_reference": "https://developers.facebook.com/docs/sharing/domain-verification",
+      "review_digest": "b7a5fa18c0e6458eb1b793f7d1facabe4444cb2b97f0f0f42b9769baef43be54",
+      "reviewed_on": "2026-10-30",
+      "rule_id": "crm-marketing.yaml/meta/txt/^facebook-domain-verification=",
+      "source_checked_on": "2026-10-30",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Cited help index and the current SPF, DKIM, and DMARC overview checked 2026-10-30. They describe the customer's own SPF record and do not print an include whose target is outreach.io. Verification date not advanced.",
+      "disposition": "deferred",
+      "new_reference": "https://support.outreach.io/hc/en-us",
+      "next_review": "2026-11-30",
+      "prior_reference": "https://support.outreach.io/hc/en-us",
+      "review_digest": "401c022cbda40bbcb07ed699a38e2afaa01ec0e547dcdf4ea23ffbb94c7949b8",
+      "reviewed_on": "2026-10-30",
+      "rule_id": "crm-marketing.yaml/outreach/spf/outreach.io",
+      "source_checked_on": "2026-10-30",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Cited help index checked 2026-10-30. It does not print a TXT value that begins with outreach. Current branded-URL setup says to copy a CNAME value from the product and does not name an outreach.io target. That CNAME was not added. Verification date not advanced.",
+      "disposition": "deferred",
+      "new_reference": "https://support.outreach.io/hc/en-us",
+      "next_review": "2026-11-30",
+      "prior_reference": "https://support.outreach.io/hc/en-us",
+      "review_digest": "d8e70b44ff451383b10c8598bc36762da7b6fd48d8b2331eb474063c1a6ddb89",
+      "reviewed_on": "2026-10-30",
+      "rule_id": "crm-marketing.yaml/outreach/txt/^outreach",
+      "source_checked_on": "2026-10-30",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Current Account Engagement tracker-domain guide checked 2026-10-30. It documents a CNAME pointing at go.pardot.com. The rule stays a suffix match for that documented target. It does not prove landing pages, campaigns, or first-party tracking. The cited older domain-management URL is not the page that prints the target.",
+      "disposition": "narrowed",
+      "new_reference": "https://help.salesforce.com/s/articleView?id=mktg.pardot_admin_first_party_cookie_add_tracker_domain.htm&language=en_US&type=5",
+      "next_review": "2026-11-30",
+      "prior_reference": "https://help.salesforce.com/s/articleView?id=sf.pardot_domain_management.htm",
+      "review_digest": "323be989fd93e4383dbe2bcce9e825104d1c29e08cb9b00b964a9f367bf99f2c",
+      "reviewed_on": "2026-10-30",
+      "rule_id": "crm-marketing.yaml/pardot/cname/pardot.com",
+      "source_checked_on": "2026-10-30",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Current include-Salesforce SPF guide checked 2026-10-30. It prints include:_spf.salesforce.com and says to use that include when sending mail from the Salesforce application. The rule observes that include. It does not prove messages are being sent. The same guide says other salesforce.com SPF records are not this include. The cited domain overview does not print the include.",
+      "disposition": "narrowed",
+      "new_reference": "https://help.salesforce.com/s/articleView?id=xcloud.emailadmin_spf_include_salesforce.htm&language=en_US&type=5",
+      "next_review": "2026-11-30",
+      "prior_reference": "https://help.salesforce.com/s/articleView?id=sf.domain_name_overview.htm",
+      "review_digest": "e84c5ff0336e789dfe8bc7144dbc0cb19c16a4e53aea5ff9f7928f4dc03898c9",
+      "reviewed_on": "2026-10-30",
+      "rule_id": "crm-marketing.yaml/salesforce/spf/_spf.salesforce.com",
+      "source_checked_on": "2026-10-30",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Cited domain overview checked 2026-10-30. It does not print a generic salesforce.com SPF include. The current include guide says to use only include:_spf.salesforce.com and says other salesforce.com SPF records are not the application sending include. That separate exact include is its own rule. Verification date not advanced.",
+      "disposition": "deferred",
+      "new_reference": "https://help.salesforce.com/s/articleView?id=sf.domain_name_overview.htm",
+      "next_review": "2026-11-30",
+      "prior_reference": "https://help.salesforce.com/s/articleView?id=sf.domain_name_overview.htm",
+      "review_digest": "851dfee79044f6fcc150b38aa0cdd5d31837c8b5112be4ae2ecf6c0706bd0c01",
+      "reviewed_on": "2026-10-30",
+      "rule_id": "crm-marketing.yaml/salesforce/spf/salesforce.com",
+      "source_checked_on": "2026-10-30",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Cited domain overview and current email-domain verification articles checked 2026-10-30. They do not print a TXT value that begins with 00D and an equals sign. A verification FAQ mentions an 18-digit org id inside a different DNS name. That name is a separate shape and was not added. Verification date not advanced.",
+      "disposition": "deferred",
+      "new_reference": "https://help.salesforce.com/s/articleView?id=sf.domain_name_overview.htm",
+      "next_review": "2026-11-30",
+      "prior_reference": "https://help.salesforce.com/s/articleView?id=sf.domain_name_overview.htm",
+      "review_digest": "747513977a6e13c7ade9e05768de85ee1c2b524a4a7b95ee8c3caecf3ffd5628",
+      "reviewed_on": "2026-10-30",
+      "rule_id": "crm-marketing.yaml/salesforce/txt/^00D[A-Za-z0-9]{12,15}=",
+      "source_checked_on": "2026-10-30",
+      "source_status": "checked"
+    },
+    {
+      "basis": "Cited domain overview and current email-domain verification articles checked 2026-10-30. They say to verify with DKIM or an authorized-domain token and do not print salesforce-domain-verification=. A token host under a Salesforce-owned name is a separate shape and was not added. Verification date not advanced.",
+      "disposition": "deferred",
+      "new_reference": "https://help.salesforce.com/s/articleView?id=sf.domain_name_overview.htm",
+      "next_review": "2026-11-30",
+      "prior_reference": "https://help.salesforce.com/s/articleView?id=sf.domain_name_overview.htm",
+      "review_digest": "860ff2dd8afc945620640298f516348f3dbceae32753b1c96903955a6b3547c6",
+      "reviewed_on": "2026-10-30",
+      "rule_id": "crm-marketing.yaml/salesforce/txt/^salesforce-domain-verification=",
+      "source_checked_on": "2026-10-30",
+      "source_status": "checked"
     }
   ],
   "schema_version": 1,
-  "scope": "Documented checks through 2026-10-29, including the 2026-10-28 CRM passes and a 2026-10-29 marketing reference check, not a complete catalog review"
+  "scope": "Documented checks through 2026-10-30, including the 2026-10-29 marketing reference check and a 2026-10-30 Salesforce and advertising reference check, not a complete catalog review"
 }

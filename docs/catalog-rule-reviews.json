@@ -392,6 +392,34 @@
       "reviewed_on": "2026-10-29",
       "source_checked_on": "2026-10-29",
       "reason": "First-party shortlink guide checked 2026-10-29: https://support.iterable.com/hc/en-us/articles/4403865896724-Link-Shortening-and-Click-Tracking-for-RCS-SMS-and-WhatsApp. The CNAME points at links.iterable.com or links.eu.iterable.com. The suffix rule observes that documented target. It does not prove email, SMS, RCS, or WhatsApp sends are active. A separate HTTPS CloudFront CNAME was not added."
+    },
+    {
+      "rule": {
+        "source": "crm-marketing.yaml",
+        "slug": "pardot",
+        "detection_type": "cname",
+        "pattern": "pardot.com"
+      },
+      "before": "c8cf968a650eebb87c8ec71335dcae1d12b6a64ae32c7567c0b998647e5af86e",
+      "after": "323be989fd93e4383dbe2bcce9e825104d1c29e08cb9b00b964a9f367bf99f2c",
+      "disposition": "semantic",
+      "reviewed_on": "2026-10-30",
+      "source_checked_on": "2026-10-30",
+      "reason": "First-party Account Engagement tracker-domain guide checked 2026-10-30: https://help.salesforce.com/s/articleView?id=mktg.pardot_admin_first_party_cookie_add_tracker_domain.htm&language=en_US&type=5. The CNAME points at go.pardot.com. The suffix rule observes that documented target. It does not prove landing pages, campaigns, or first-party tracking."
+    },
+    {
+      "rule": {
+        "source": "crm-marketing.yaml",
+        "slug": "salesforce",
+        "detection_type": "spf",
+        "pattern": "_spf.salesforce.com"
+      },
+      "before": "34a7579433cc280f7f5756fff8f55a481af49551eeff434f819232ce9c255b2f",
+      "after": "e84c5ff0336e789dfe8bc7144dbc0cb19c16a4e53aea5ff9f7928f4dc03898c9",
+      "disposition": "semantic",
+      "reviewed_on": "2026-10-30",
+      "source_checked_on": "2026-10-30",
+      "reason": "First-party include guide checked 2026-10-30: https://help.salesforce.com/s/articleView?id=xcloud.emailadmin_spf_include_salesforce.htm&language=en_US&type=5. The SPF include is include:_spf.salesforce.com for mail sent from the Salesforce application. It does not prove messages are being sent. Other salesforce.com SPF records are a separate rule and were not folded in."
     }
   ]
 }

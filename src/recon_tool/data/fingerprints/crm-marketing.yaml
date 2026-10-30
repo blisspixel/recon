@@ -41,12 +41,15 @@ fingerprints:
       Cloud sends through the platform, automated workflows).
   - type: spf
     pattern: _spf.salesforce.com
-    reference: https://help.salesforce.com/s/articleView?id=sf.domain_name_overview.htm
+    reference: https://help.salesforce.com/s/articleView?id=xcloud.emailadmin_spf_include_salesforce.htm&language=en_US&type=5
+    verified: '2026-10-30'
     description: >-
-      Alternative Salesforce SPF include (`_spf.salesforce.com`).
-      Same outbound-authorization semantics as the bare
-      `salesforce.com` include; some tenant configurations use
-      the underscored form.
+      SPF include `_spf.salesforce.com`. The current Salesforce
+      include guide says to add `include:_spf.salesforce.com` when
+      sending mail from the Salesforce application. This observes
+      that include. It does not prove messages are being sent.
+      The same guide says other salesforce.com SPF records are a
+      separate case and are not part of this rule.
 - name: Salesforce Marketing Cloud
   slug: salesforce-mc
   category: CRM & Marketing
@@ -286,13 +289,13 @@ fingerprints:
   detections:
   - type: cname
     pattern: pardot.com
-    reference: https://help.salesforce.com/s/articleView?id=sf.pardot_domain_management.htm
+    reference: https://help.salesforce.com/s/articleView?id=mktg.pardot_admin_first_party_cookie_add_tracker_domain.htm&language=en_US&type=5
+    verified: '2026-10-30'
     description: >-
-      CNAME pointing into pardot.com (Pardot is Salesforce's
-      B2B marketing-automation product, rebranded to Marketing
-      Cloud Account Engagement in 2022 but the pardot.com
-      hostname is still in service). Indicates the domain
-      hosts Pardot-served landing pages or tracking endpoints.
+      CNAME whose target is under pardot.com. The current Account
+      Engagement tracker-domain guide documents a CNAME pointing at
+      `go.pardot.com`. This observes that documented target. It does
+      not prove landing pages, campaigns, or first-party tracking.
 - name: Drift Chat
   slug: drift
   category: Sales Intelligence
