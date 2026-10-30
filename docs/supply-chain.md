@@ -662,7 +662,12 @@ The repository also runs supply-chain posture checks outside the release flow:
   closed instead of hanging indefinitely.
 - Secret scanning and push protection are enabled for the repository. The
   gitleaks workflow runs on pull requests, pushes to `main`, and a weekly
-  full-history schedule with read-only repository permissions.
+  full-history schedule with read-only repository permissions. It runs the
+  [MIT-licensed Gitleaks CLI](https://github.com/gitleaks/gitleaks/blob/v8.30.1/LICENSE)
+  directly, with a version and SHA-256 pin checked before execution, rather than
+  the separately licensed organization Action. Every run scans all fetched Git
+  history, fails on findings or scanner errors, and retains a fully redacted
+  SARIF report for seven days. No license secret or scanner write token is needed.
 - `.github/CODEOWNERS` routes all repository paths to the maintainer account so
   external pull requests have a clear review owner.
 

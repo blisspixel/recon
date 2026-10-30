@@ -622,7 +622,10 @@ Before the next separately authorized release, complete these external steps:
    retains repository write access. Review repository/environment secrets and
    organization-secret access after the transfer. The checked-in workflows
    reference only the automatic `GITHUB_TOKEN`; PyPI and MCP publication need
-   no new credential. Do not disable protection to get a green run.
+   no new credential. The required `gitleaks` job uses the checksum-pinned
+   standalone open-source CLI; the organization-only license required by
+   `gitleaks-action` is not needed. Keep its full-history scan and fail-closed
+   result. Do not disable protection to get a green run.
 3. **Discovery and hosting.** Update the repository URL on OpenSSF Best
    Practices project 15800 and verify Scorecard at the new repository path.
    If GitHub Pages is enabled, review its source, custom domain, DNS, HTTPS,

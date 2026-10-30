@@ -213,19 +213,38 @@ def test_secrets_scan_workflow_is_full_history_and_read_only() -> None:
     job = workflow["jobs"]["gitleaks"]
     steps = job["steps"]
     checkout = steps[0]
-    gitleaks_step = steps[1]
+    install = steps[1]
+    scan = steps[2]
+    report = steps[3]
     workflow_text = (_ROOT / ".github" / "workflows" / "secrets-scan.yml").read_text(encoding="utf-8")
-    expected_secret_ref = "${{ secrets." + "GITHUB_TOKEN" + " }}"
 
     assert {"pull_request", "push", "schedule"} <= set(triggers)
     assert workflow["permissions"] == _READ_ONLY_PERMISSIONS
     assert job["timeout-minutes"] == 15
     assert checkout["with"]["persist-credentials"] is False
     assert checkout["with"]["fetch-depth"] == 0
-    assert "gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3" in workflow_text
-    assert gitleaks_step["env"]["GITHUB_TOKEN"] == expected_secret_ref
-    assert gitleaks_step["env"]["GITLEAKS_ENABLE_UPLOAD_ARTIFACT"] == "true"
-    assert gitleaks_step["env"]["GITLEAKS_ENABLE_SUMMARY"] == "true"
+    assert install["env"] == {
+        "GITLEAKS_VERSION": "8.30.1",
+        "GITLEAKS_SHA256": "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb",
+    }
+    assert "sha256sum --check --strict" in install["run"]
+    assert install["run"].index("sha256sum --check --strict") < install["run"].index("tar -xzf")
+    assert 'test "$("$install_dir/gitleaks" version)" = "$GITLEAKS_VERSION"' in install["run"]
+    assert 'git . --log-opts="--all"' in scan["run"]
+    assert "--redact=100 --exit-code=1" in scan["run"]
+    assert "--report-format=sarif" in scan["run"]
+    assert "|| status=$?" in scan["run"]
+    assert 'exit "$status"' in scan["run"]
+    assert "GITHUB_STEP_SUMMARY" in scan["run"]
+    assert not job.get("continue-on-error", False)
+    assert all(not step.get("continue-on-error", False) for step in steps)
+    assert report["if"] == "always() && steps.scan.outcome != 'skipped'"
+    assert report["uses"] == "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9"
+    assert report["with"]["path"] == "${{ runner.temp }}/gitleaks.sarif"
+    assert report["with"]["if-no-files-found"] == "error"
+    assert report["with"]["retention-days"] == 7
+    assert "secrets." not in workflow_text
+    assert "--baseline-path" not in scan["run"]
 
 
 def test_workflow_actions_are_pinned_with_readable_version_comments() -> None:
