@@ -32,6 +32,11 @@ Tool surface changes: no CLI command or flag changes.
 
 ### Changed
 
+- Update current repository links, installer download instructions, package
+  metadata, plugin marketplace, schemas, and release tooling for
+  `pueo-labs/recon`. Prepare `io.github.pueo-labs/recon` and its matching PyPI
+  README marker for a future release. Keep the `recon-tool` package identity,
+  existing release versions, and historical provenance unchanged.
 - Date the Anthropic and Mistral apex domain-verification TXT rules from
   the current vendor pages, and point each rule at that page. The Anthropic
   record is documented for Team, Enterprise, and Console SSO setup. The

@@ -4,11 +4,11 @@
   "version": "2.27.0",
   "description": "Public-metadata domain intelligence through the recon MCP server and portable skills.",
   "author": {
-    "name": "blisspixel",
-    "url": "https://github.com/blisspixel"
+    "name": "pueo-labs",
+    "url": "https://github.com/pueo-labs"
   },
-  "homepage": "https://github.com/blisspixel/recon",
-  "repository": "https://github.com/blisspixel/recon",
+  "homepage": "https://github.com/pueo-labs/recon",
+  "repository": "https://github.com/pueo-labs/recon",
   "license": "Apache-2.0",
   "keywords": [
     "recon",

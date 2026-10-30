@@ -379,7 +379,7 @@ def build_review_bundle_schema(lookup_schema: dict[str, Any]) -> dict[str, Any]:
     }
     return {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": "https://raw.githubusercontent.com/blisspixel/recon/main/docs/review-bundle-schema.json",
+        "$id": "https://raw.githubusercontent.com/pueo-labs/recon/main/docs/review-bundle-schema.json",
         "title": "recon ReviewBundle v1",
         "description": "Self-contained schema for deterministic, caller-owned single-namespace review artifacts.",
         **_closed(top_properties, required=REVIEW_BUNDLE_TOP_LEVEL_FIELDS),

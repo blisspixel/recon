@@ -10,7 +10,7 @@ from typing import Literal, cast
 from recon_tool.network_policy import CollectionPolicy
 
 DNS_CAPABILITY_PREFIX = "recon.dns_view.v1: "
-DNS_SETUP_GUIDE = "https://github.com/blisspixel/recon/blob/main/docs/mcp.md#dns-view-isolation"
+DNS_SETUP_GUIDE = "https://github.com/pueo-labs/recon/blob/main/docs/mcp.md#dns-view-isolation"
 DNS_SETUP_NEXT = f"Fix or remove the RECON_DNS_* settings in the MCP server configuration: {DNS_SETUP_GUIDE}"
 DNS_CHECK_NAME = "DNS collection view"
 

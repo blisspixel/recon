@@ -15,7 +15,7 @@ RUN uv sync --frozen --no-dev --no-editable
 
 FROM ${PYTHON_IMAGE} AS runtime
 
-LABEL org.opencontainers.image.source="https://github.com/blisspixel/recon" \
+LABEL org.opencontainers.image.source="https://github.com/pueo-labs/recon" \
       org.opencontainers.image.licenses="Apache-2.0"
 
 RUN useradd --create-home --uid 10001 --shell /usr/sbin/nologin recon \

@@ -27,7 +27,7 @@ SDKFamily = Literal["v1", "v2"]
 # constructor has no ``title`` or ``description`` parameter. v2 accepts all
 # three and copies them onto both initialize and ``server/discover``.
 SERVER_TITLE = "recon"
-SERVER_WEBSITE_URL = "https://github.com/blisspixel/recon"
+SERVER_WEBSITE_URL = "https://github.com/pueo-labs/recon"
 
 
 def server_description() -> str:

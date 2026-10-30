@@ -38,9 +38,9 @@ def _root(tmp_path: Path, *, plugin_version: str = "2.2.8", project_version: str
 def test_render_uses_the_plugin_version_and_fixed_marketplace_identity(tmp_path: Path) -> None:
     document = json.loads(rendered_bytes(_root(tmp_path)))
 
-    assert document["name"] == MARKETPLACE_NAME
+    assert document["name"] == MARKETPLACE_NAME == "pueo-labs-recon"
     assert document["description"] == DESCRIPTION
-    assert document["owner"] == {"name": "blisspixel"}
+    assert document["owner"] == {"name": "pueo-labs"}
     assert document["plugins"] == [
         {
             "name": "recon",

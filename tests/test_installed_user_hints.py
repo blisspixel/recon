@@ -17,7 +17,7 @@ from recon_tool.merger import merge_results
 from recon_tool.models import SourceResult
 from recon_tool.server.lookup import lookup_tenant
 
-_GUIDE = "https://github.com/blisspixel/recon/blob/main/docs/weak-areas.md"
+_GUIDE = "https://github.com/pueo-labs/recon/blob/main/docs/weak-areas.md"
 
 
 @pytest.mark.parametrize("width", [40, 80, 100, 120])

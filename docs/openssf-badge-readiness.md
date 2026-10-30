@@ -145,7 +145,7 @@ The maintainer also requested a check of existing issues and GitHub security
 review history. The 2026-10-20 public tracker snapshot contains 26 closed
 maintainer-authored issues: 11 bug reports and 10 enhancement requests. Five
 bug reports and all ten enhancement requests have public comments. For
-example, [issue 221](https://github.com/blisspixel/recon/issues/221) records a
+example, [issue 221](https://github.com/pueo-labs/recon/issues/221) records a
 reported defect, follow-up, linked fix and closeout. This is real maintenance
 history. The questionnaire's automated guidance excludes top contributors
 when sampling external response history, so these records alone do not settle

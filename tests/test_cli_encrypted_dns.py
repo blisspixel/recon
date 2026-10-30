@@ -26,7 +26,7 @@ from recon_tool.network_policy import CollectionPolicy, cli_collection_policy, c
 
 runner = CliRunner()
 RESOLVE_PATH = "recon_tool.resolver.resolve_tenant"
-GUIDE = "https://github.com/blisspixel/recon/blob/main/docs/getting-started.md#encrypted-dns"
+GUIDE = "https://github.com/pueo-labs/recon/blob/main/docs/getting-started.md#encrypted-dns"
 INVALID = {"RECON_DNS_VIEW": "caller-safe", "RECON_DNS_TLS_NAME": "resolver.example.org"}
 
 

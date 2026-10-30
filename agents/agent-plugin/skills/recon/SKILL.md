@@ -4,7 +4,7 @@ description: Public-metadata domain intelligence - Microsoft 365 / Google Worksp
 license: Apache-2.0
 compatibility: 'Requires recon-tool 2.27.0 or a compatible v2 release and Python 3.11+. Use connected MCP tools or a shell with recon on PATH. Live lookups require public network access. '
 metadata:
-  author: blisspixel
+  author: pueo-labs
   version: 2.27.0
 ---
 
@@ -56,7 +56,7 @@ recon --version
 
 If the command is not found:
 
-> "`recon-tool` is not installed. It's a Python CLI from github.com/blisspixel/recon that reads public DNS, identity endpoints, and certificate transparency - no credentials needed. Install with `pip install recon-tool`? (Python 3.11+ required.)"
+> "`recon-tool` is not installed. It's a Python CLI from github.com/pueo-labs/recon that reads public DNS, identity endpoints, and certificate transparency - no credentials needed. Install with `pip install recon-tool`? (Python 3.11+ required.)"
 
 Wait for explicit approval, then `pip install recon-tool` followed by `recon doctor` to verify connectivity. If `recon --version` succeeds, continue immediately - do not re-prompt on subsequent calls in the same session.
 
@@ -168,7 +168,7 @@ may grow materially with certificate-transparency and evidence data, so inline
 output consumes context for no benefit. Instead:
 
 1. Capture stdout from the Bash call. Use your file-write tool to save it to `recon-<validated-domain>.json` in the current working directory (or a path the user specifies). Never substitute the unvalidated domain into a shell redirect.
-2. Reply with a 3-line headline only (field names per the stable v2.0 contract in [`docs/recon-schema.json`](https://github.com/blisspixel/recon/blob/v2.27.0/docs/recon-schema.json)):
+2. Reply with a 3-line headline only (field names per the stable v2.0 contract in [`docs/recon-schema.json`](https://github.com/pueo-labs/recon/blob/v2.27.0/docs/recon-schema.json)):
    > **{display_name}** - {provider}, confidence {confidence}.
    > {N services detected, {ct_subdomain_count} CT subdomains, email security {email_security_score}/5}.
    > Full JSON saved to `recon-{domain}.json`. Ready for the next ask.
@@ -262,7 +262,7 @@ The operator supplies a group of related apexes - parent + subsidiaries, an M&A 
 
 Tracking change over time:
 
-1. `recon delta <domain>` (CLI) compares the current resolution against the cached snapshot at `~/.recon/cache/`. The output is a `DeltaReport` (see `$defs/DeltaReport` in [`docs/recon-schema.json`](https://github.com/blisspixel/recon/blob/v2.27.0/docs/recon-schema.json)) with explicit `added_*` / `removed_*` / `changed_*` fields. Report the deltas; do not narrate causes.
+1. `recon delta <domain>` (CLI) compares the current resolution against the cached snapshot at `~/.recon/cache/`. The output is a `DeltaReport` (see `$defs/DeltaReport` in [`docs/recon-schema.json`](https://github.com/pueo-labs/recon/blob/v2.27.0/docs/recon-schema.json)) with explicit `added_*` / `removed_*` / `changed_*` fields. Report the deltas; do not narrate causes.
 2. **First-run case.** A domain that has never been resolved on this machine has no baseline. `recon delta` reports "No cached snapshot," asks the operator to run the ordinary lookup first, and exits with code 3 without emitting a delta. Surface that no-baseline state rather than reporting "no changes."
 
 ## Picking a profile

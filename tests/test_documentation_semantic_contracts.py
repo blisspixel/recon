@@ -52,7 +52,7 @@ def test_public_package_and_development_metadata_use_current_language() -> None:
     description = project["description"]
 
     contributing = _read("CONTRIBUTING.md")
-    assert "https://github.com/blisspixel/recon/blob/main/CONTRIBUTING.md" in readme
+    assert "https://github.com/pueo-labs/recon/blob/main/CONTRIBUTING.md" in readme
     assert "uv run pre-commit install" in contributing
     assert "uv run pre-commit install --hook-type commit-msg" in contributing
     assert "`uv run python scripts/check.py` is the canonical local gate" in contributing
@@ -68,7 +68,7 @@ def test_optional_cloud_docs_preserve_the_local_default_and_operator_boundary() 
 
     assert "Local execution is the default" in readme
     assert "project does not operate a hosted service" in readme
-    assert "https://github.com/blisspixel/recon/blob/main/docs/README.md" in readme
+    assert "https://github.com/pueo-labs/recon/blob/main/docs/README.md" in readme
     assert "optional-cloud-deployment-plan.md" in _read("docs/README.md")
     for text in (short_roadmap, roadmap, plan):
         assert "optional" in text.lower()

@@ -95,10 +95,10 @@ dependencies = [
 recon = "recon_tool.cli:run"
 
 [project.urls]
-Homepage = "https://github.com/blisspixel/recon"
-Repository = "https://github.com/blisspixel/recon"
-Changelog = "https://github.com/blisspixel/recon/blob/main/CHANGELOG.md"
-Issues = "https://github.com/blisspixel/recon/issues"
+Homepage = "https://github.com/pueo-labs/recon"
+Repository = "https://github.com/pueo-labs/recon"
+Changelog = "https://github.com/pueo-labs/recon/blob/main/CHANGELOG.md"
+Issues = "https://github.com/pueo-labs/recon/issues"
 
 [build-system]
 requires = ["hatchling==1.32.4"]

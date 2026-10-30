@@ -376,7 +376,7 @@ release can go directly to original-job verification, including if immutable.
 For an absent release, use the maintainer session to create a draft with the
 exact `vX.Y.Z` tag and title, notes extracted from that version's checked
 `CHANGELOG.md` section, and only the four sealed files. The command shape is
-`gh release create vX.Y.Z --repo blisspixel/recon --verify-tag --draft
+`gh release create vX.Y.Z --repo pueo-labs/recon --verify-tag --draft
 --title vX.Y.Z --notes-file <notes-file> <wheel> <sdist> <sbom> <provenance>`.
 Use explicit file paths, not a wildcard over a mixed directory. Do not use
 automatically generated contributor notes. Inspect the draft author and every
@@ -405,7 +405,7 @@ Promote that same numeric object with the maintainer session, replacing the
 placeholders only with the verified draft ID and stable version:
 
 ```bash
-gh api --method PATCH "repos/blisspixel/recon/releases/<draft-numeric-id>" \
+gh api --method PATCH "repos/pueo-labs/recon/releases/<draft-numeric-id>" \
   -f tag_name=vX.Y.Z -F draft=false -F prerelease=false -f make_latest=true
 ```
 
@@ -595,3 +595,69 @@ Current tested range: **Python 3.11 through 3.15**.
 
 Dropping a Python version is a compatibility change and should be called out in
 `CHANGELOG.md`. A minor release should warn first when practical.
+
+## Repository transfer checklist
+
+The 2026-10-29 transfer changes the repository to `pueo-labs/recon`, not the
+PyPI project name. Keep `recon-tool`, the `recon` command, and existing release
+versions. This change prepares metadata only: it does not publish a package,
+move a tag, replace old artifacts, or migrate an existing registry record.
+
+Before the next separately authorized release, complete these external steps:
+
+1. **PyPI Trusted Publishing.** On the existing `recon-tool` project's
+   Publishing settings, register the GitHub owner `pueo-labs`, repository
+   `recon`, workflow filename `release.yml`, and environment `pypi`. Verify the
+   new configuration, then remove the obsolete publisher for the old owner.
+   Do not rename or recreate the PyPI project, upload another 2.27.0, or add a
+   long-lived API token. The workflow already uses OIDC. See the
+   [PyPI configuration guide](https://docs.pypi.org/trusted-publishers/adding-a-publisher/).
+   PyPI project URLs and the rendered description come from uploaded package
+   metadata; merging this change does not update the already published files.
+2. **GitHub controls.** Check organization Actions policy and repository app
+   access, required status checks and rulesets/branch protection, release-tag
+   protection, and the existing `pypi` environment's permitted refs and
+   reviewers. Keep the human `@blisspixel` CODEOWNER and release author/uploader
+   checks; an organization is not a human account. Confirm that maintainer
+   retains repository write access. Review repository/environment secrets and
+   organization-secret access after the transfer. The checked-in workflows
+   reference only the automatic `GITHUB_TOKEN`; PyPI and MCP publication need
+   no new credential. The required `gitleaks` job uses the checksum-pinned
+   standalone open-source CLI; the organization-only license required by
+   `gitleaks-action` is not needed. Keep its full-history scan and fail-closed
+   result. Do not disable protection to get a green run.
+3. **Discovery and hosting.** Update the repository URL on OpenSSF Best
+   Practices project 15800 and verify Scorecard at the new repository path.
+   If GitHub Pages is enabled, review its source, custom domain, DNS, HTTPS,
+   and public URL; this repository has no Pages deployment workflow. Check
+   external integrations and local Git remotes. Existing Claude Code users
+   should follow the [marketplace migration](../agents/claude-code/README.md#marketplace-migration).
+4. **MCP Registry, in order.** `server.json` and the README now prepare
+   `io.github.pueo-labs/recon`. The official rules allow
+   `io.github.<orgname>/<server>`; the hyphenated organization is retained.
+   [GitHub OIDC](https://modelcontextprotocol.io/registry/github-actions)
+   authenticates the repository-owner namespace. Keep the job's
+   `id-token: write`, pinned and verified publisher, and dependency on PyPI
+   parity. First publish a separately approved new package version containing
+   `<!-- mcp-name: io.github.pueo-labs/recon -->` in its PyPI description, then
+   let the tag's workflow publish the matching registry entry. The
+   [PyPI ownership check](https://modelcontextprotocol.io/registry/package-types)
+   reads the published description, not this checkout. Until then, v2.27.0
+   remains under `io.github.blisspixel/recon`; do not retry that immutable
+   version with new package metadata or claim the new entry is already live.
+5. **Deprecate the old registry entry only after the new entry is verified.**
+   With separate authorization and authentication as the old namespace owner
+   (`blisspixel`), use the pinned publisher's
+   [status command](https://github.com/modelcontextprotocol/registry/blob/v1.8.1/docs/reference/cli/commands.md).
+   Do not try this with the new repository's OIDC identity, which does not
+   own the old namespace. Deprecation preserves history; do not delete it.
+
+   ```bash
+   mcp-publisher login github
+   mcp-publisher status --status deprecated --all-versions \
+     --message "Moved to io.github.pueo-labs/recon." io.github.blisspixel/recon
+   ```
+
+   Re-read the old entry to confirm its deprecated status and migration
+   message, and the new entry to confirm the intended package/version. No
+   registry status change is part of this repository-only transfer.

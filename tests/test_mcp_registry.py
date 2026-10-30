@@ -38,6 +38,21 @@ def test_fresh_registry_file_agrees_with_the_project_version(tmp_path: Path) -> 
     assert registry_document("2.2.8")["$schema"] == SCHEMA_URL
 
 
+def test_registry_identity_uses_the_organization_without_renaming_the_package() -> None:
+    document = registry_document("2.27.0")
+    assert document["name"] == "io.github.pueo-labs/recon"
+    assert document["repository"] == {
+        "url": "https://github.com/pueo-labs/recon",
+        "source": "github",
+        "id": "1207478328",
+    }
+    assert document["websiteUrl"] == "https://github.com/pueo-labs/recon"
+    assert MCP_NAME_LINE == "<!-- mcp-name: io.github.pueo-labs/recon -->"
+    packages = cast(list[dict[str, object]], document["packages"])
+    assert packages[0]["identifier"] == "recon-tool"
+    assert packages[0]["version"] == "2.27.0"
+
+
 def test_generated_document_matches_the_vendored_schema() -> None:
     assert schema_problems(registry_document("2.26.1")) == []
 
@@ -123,5 +138,13 @@ def test_registry_gate_is_wired_into_local_and_ci_gates() -> None:
     assert "MCP_PUBLISHER_VERSION: v1.8.1" in release
     assert "releases/latest" not in release
     assert "./mcp-publisher login github-oidc" in release
+    assert 'test "$GITHUB_REPOSITORY" = "pueo-labs/recon"' in release
+    assert '"io.github.${GITHUB_REPOSITORY_OWNER}/recon"' in release
+    registry_job = release.split("publish-mcp-registry:", 1)[1].split("github-release:", 1)[0]
+    assert "needs: [verify-pypi-parity]" in registry_job
+    assert "id-token: write" in registry_job
+    assert registry_job.index("Validate repository and registry namespace") < registry_job.index(
+        "./mcp-publisher login github-oidc"
+    )
     assert "uv sync" not in release.split("publish-mcp-registry:", 1)[1].split("github-release:", 1)[0]
     assert "download-artifact" not in release.split("publish-mcp-registry:", 1)[1].split("github-release:", 1)[0]

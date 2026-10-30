@@ -78,14 +78,14 @@ def test_helper_guidance_provides_one_command_and_reviewable_alternative() -> No
 
     for label, text in texts.items():
         if label in {"README", "Getting Started"}:
-            assert "raw.githubusercontent.com/blisspixel/recon/main/scripts/install.sh | bash" in text, label
-            assert "raw.githubusercontent.com/blisspixel/recon/main/scripts/install.ps1 | iex" in text, label
+            assert "raw.githubusercontent.com/pueo-labs/recon/main/scripts/install.sh | bash" in text, label
+            assert "raw.githubusercontent.com/pueo-labs/recon/main/scripts/install.ps1 | iex" in text, label
             assert "review" in text.lower(), label
             assert "pip install recon-tool" in text, label
             assert "recon update" in text, label
     assert "blob/main/scripts/install" not in texts["README"]
     assert "docs/getting-started.md#install-or-update" in texts["README"]
-    assert "https://github.com/blisspixel/recon/releases/latest" in texts["Getting Started"]
+    assert "https://github.com/pueo-labs/recon/releases/latest" in texts["Getting Started"]
     assert "scripts/install.sh" in texts["README"]
     assert "scripts/install.ps1" in texts["README"]
     assert "bash scripts/install.sh" in texts["Unix installer"]

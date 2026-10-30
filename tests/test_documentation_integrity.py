@@ -161,7 +161,7 @@ def test_security_triage_rules_preserve_revision_and_bypass_distinctions() -> No
         ):
             assert required in text.lower()
     residual = ledger.split("## Closed in v2.6.4:", 1)[1].split("\n## ", 1)[0]
-    assert "https://github.com/blisspixel/recon/releases/tag/v2.19.0" in residual
+    assert "https://github.com/pueo-labs/recon/releases/tag/v2.19.0" in residual
     assert "unreleased" not in residual.lower()
 
 

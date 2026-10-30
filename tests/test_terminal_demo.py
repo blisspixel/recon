@@ -72,7 +72,7 @@ def test_readme_embeds_and_labels_the_synthetic_demo() -> None:
     normalized = " ".join(readme.split())
     attributes = (ROOT / ".gitattributes").read_text(encoding="utf-8").splitlines()
 
-    assert "https://raw.githubusercontent.com/blisspixel/recon/main/docs/assets/terminal-demo.svg" in readme
+    assert "https://raw.githubusercontent.com/pueo-labs/recon/main/docs/assets/terminal-demo.svg" in readme
     assert "deterministic, no-network fixture" in normalized
     assert "Example Industries Ltd" in readme
     assert "No real organization is depicted" in normalized

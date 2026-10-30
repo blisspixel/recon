@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/blisspixel/recon/main/docs/observation-capsule-schema.json",
+  "$id": "https://raw.githubusercontent.com/pueo-labs/recon/main/docs/observation-capsule-schema.json",
   "title": "recon observation capsule records",
   "description": "Caller-owned observation capsule, offline replay, and classified delta records. This contract is separate from recon's stable lookup JSON schema.",
   "oneOf": [

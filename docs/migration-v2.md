@@ -138,5 +138,5 @@ schema is present in the installed wheel.
 
 ## Questions
 
-- File issues at https://github.com/blisspixel/recon/issues
+- File issues at https://github.com/pueo-labs/recon/issues
 - Security reports per `SECURITY.md`.

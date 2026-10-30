@@ -1,9 +1,9 @@
 # CAL14 historical design RFC: node-dependent missingness
 
 Status: implemented. This RFC was authored on 2026-06-04 at commit
-[`0605e228`](https://github.com/blisspixel/recon/commit/0605e22884a540aa6fcc8a6cea226be0433e1df3)
+[`0605e228`](https://github.com/pueo-labs/recon/commit/0605e22884a540aa6fcc8a6cea226be0433e1df3)
 and implemented on 2026-06-05 at commit
-[`957e1f6d`](https://github.com/blisspixel/recon/commit/957e1f6d109faf04ceb80c7eabe90105c5c4ddca).
+[`957e1f6d`](https://github.com/pueo-labs/recon/commit/957e1f6d109faf04ceb80c7eabe90105c5c4ddca).
 The current runtime and `src/recon_tool/data/bayesian_network.yaml` are the
 normative sources. This record preserves the pre-implementation diagnosis,
 historical measurements, proposed parameters, and review questions that led to

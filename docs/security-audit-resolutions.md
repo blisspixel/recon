@@ -226,7 +226,7 @@ validated result. Missing hosts, resolution errors, empty answers, and invalid
 addresses now refuse the request before transport. Public addresses remain
 allowed. That release retained a separate address-pinning TOCTOU residual;
 the connection-backend fix shipped in
-[v2.19.0](https://github.com/blisspixel/recon/releases/tag/v2.19.0) addresses it.
+[v2.19.0](https://github.com/pueo-labs/recon/releases/tag/v2.19.0) addresses it.
 The earlier v2.6.4 release did not yet include that later repair.
 
 Importing the MCP server previously installed a process-wide handler on the
@@ -620,7 +620,7 @@ v1.9.3.5, v1.9.4, v1.9.13 and v1.9.14 defenses above. Those receipts do not
 close the distinct public-looking split-horizon path. The boundary repair
 below is included in v2.22.0 and closes the lower-trust caller/operator
 DNS-view crossing. It is absent from v2.21.6. Release and local installation
-evidence are tracked in [issue 257](https://github.com/blisspixel/recon/issues/257);
+evidence are tracked in [issue 257](https://github.com/pueo-labs/recon/issues/257);
 a release number does not establish deployment on other machines.
 
 **Residual behavior and observers.** An attacker can supply a public-looking

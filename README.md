@@ -1,12 +1,12 @@
 # recon
 
-<!-- mcp-name: io.github.blisspixel/recon -->
+<!-- mcp-name: io.github.pueo-labs/recon -->
 
-[![CI](https://github.com/blisspixel/recon/actions/workflows/ci.yml/badge.svg)](https://github.com/blisspixel/recon/actions/workflows/ci.yml)
+[![CI](https://github.com/pueo-labs/recon/actions/workflows/ci.yml/badge.svg)](https://github.com/pueo-labs/recon/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/recon-tool.svg?cacheSeconds=300)](https://pypi.org/project/recon-tool/)
 [![Python](https://img.shields.io/pypi/pyversions/recon-tool.svg?cacheSeconds=300)](https://pypi.org/project/recon-tool/)
-[![License](https://img.shields.io/pypi/l/recon-tool.svg?cacheSeconds=300)](https://github.com/blisspixel/recon/blob/main/LICENSE)
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/blisspixel/recon/badge)](https://scorecard.dev/viewer/?uri=github.com/blisspixel/recon)
+[![License](https://img.shields.io/pypi/l/recon-tool.svg?cacheSeconds=300)](https://github.com/pueo-labs/recon/blob/main/LICENSE)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/pueo-labs/recon/badge)](https://scorecard.dev/viewer/?uri=github.com/pueo-labs/recon)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15800/badge)](https://www.bestpractices.dev/projects/15800)
 
 Point recon at a domain to see its **public technology and identity
@@ -20,7 +20,7 @@ security verdict. A domain does not establish an organization's boundaries.
 
 ## See the Output
 
-![Synthetic recon output in a modern Linux terminal](https://raw.githubusercontent.com/blisspixel/recon/main/docs/assets/terminal-demo.svg)
+![Synthetic recon output in a modern Linux terminal](https://raw.githubusercontent.com/pueo-labs/recon/main/docs/assets/terminal-demo.svg)
 
 **Synthetic illustration, generated, not captured.** The real formatter renders
 a deterministic, no-network fixture for Example Industries Ltd. No real
@@ -73,13 +73,13 @@ Insights
 **macOS / Linux:**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/blisspixel/recon/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/pueo-labs/recon/main/scripts/install.sh | bash
 ```
 
 **Windows (PowerShell):**
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/blisspixel/recon/main/scripts/install.ps1 | iex"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/pueo-labs/recon/main/scripts/install.ps1 | iex"
 ```
 
 The installer sets up recon for your user account, including Python when needed.
@@ -88,7 +88,7 @@ runtime; 3.11 through 3.15 remain supported. Already have a supported Python? Us
 `pip install recon-tool` in a virtual environment, or `uv tool install --python 3.15 recon-tool` /
 `pipx install --python python3.15 recon-tool` on managed distributions like Arch Linux and Omarchy.
 For review-before-run instructions, other package managers, updates, and recovery,
-see the [installation guide](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md#install-or-update).
+see the [installation guide](https://github.com/pueo-labs/recon/blob/main/docs/getting-started.md#install-or-update).
 
 ```bash
 recon --version      # offline install check
@@ -108,7 +108,7 @@ Ordinary lookups may reuse the 24-hour result cache and say so when they do; a
 result whose collection had unavailable sources is never reused. Use
 `--no-cache` to bypass the cache for both reading and writing;
 certificate-transparency enrichment has a separate cache. See
-[first lookup and cache behavior](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md#first-lookup).
+[first lookup and cache behavior](https://github.com/pueo-labs/recon/blob/main/docs/getting-started.md#first-lookup).
 
 ## Common Commands
 
@@ -129,8 +129,8 @@ These examples use reserved domains; real lookups will not reproduce the
 synthetic illustration above. For multi-domain reviews, recon describes
 observed similarities and differences without inferring ownership or a
 corporate relationship. See the
-[evidence-first review workflow](https://github.com/blisspixel/recon/blob/main/docs/defender-workflow.md)
-and [batch guide](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md#batch-and-delta).
+[evidence-first review workflow](https://github.com/pueo-labs/recon/blob/main/docs/defender-workflow.md)
+and [batch guide](https://github.com/pueo-labs/recon/blob/main/docs/getting-started.md#batch-and-delta).
 
 ## Use with an Agent
 
@@ -148,13 +148,13 @@ Missing evidence means "not observed", not "not used"; collection failures
 remain explicit. Local execution is the default, and the project does not
 operate a hosted service.
 
-See [MCP setup and supported clients](https://github.com/blisspixel/recon/blob/main/docs/mcp.md)
-and [skills, plugins, and their validation status](https://github.com/blisspixel/recon/blob/main/agents/README.md).
+See [MCP setup and supported clients](https://github.com/pueo-labs/recon/blob/main/docs/mcp.md)
+and [skills, plugins, and their validation status](https://github.com/pueo-labs/recon/blob/main/agents/README.md).
 
 ### Omarchy Desktop Shell Integration
 
 recon includes a thin, keyboard-first desktop shell plugin for [Omarchy](https://omarchy.org)
-located in [`integrations/omarchy/`](https://github.com/blisspixel/recon/blob/main/integrations/omarchy/):
+located in [`integrations/omarchy/`](https://github.com/pueo-labs/recon/blob/main/integrations/omarchy/):
 
 - **Keyboard-driven workflow**: focus domain input automatically, press `Enter` to run
   bounded inspection, and press `Ctrl+D` to toggle baseline delta comparison.
@@ -163,36 +163,36 @@ located in [`integrations/omarchy/`](https://github.com/blisspixel/recon/blob/ma
 - **Safe clipboard handling**: pasting text never triggers an automatic network request.
 - **Zero background daemons**: runs unprivileged inside Omarchy's Quickshell environment.
 
-See [`integrations/omarchy/README.md`](https://github.com/blisspixel/recon/blob/main/integrations/omarchy/README.md) for installation and shortcuts.
+See [`integrations/omarchy/README.md`](https://github.com/pueo-labs/recon/blob/main/integrations/omarchy/README.md) for installation and shortcuts.
 
 ## Documentation
 
 | Need | Guide |
 |---|---|
-| Install, update, uninstall, or troubleshoot | [Getting started](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md) |
-| Find a command or flag | [CLI reference](https://github.com/blisspixel/recon/blob/main/docs/cli-surface.md) |
-| Build automation or hand off evidence | [JSON schema](https://github.com/blisspixel/recon/blob/main/docs/schema.md), [review bundles](https://github.com/blisspixel/recon/blob/main/docs/review-bundles.md) |
-| Understand results and their limits | [How it works](https://github.com/blisspixel/recon/blob/main/docs/how-it-works.md), [limitations](https://github.com/blisspixel/recon/blob/main/docs/limitations.md), [reporting observations](https://github.com/blisspixel/recon/blob/main/docs/reporting-observations.md) |
-| Linux and Omarchy environment setup | [Linux / Omarchy guide](https://github.com/blisspixel/recon/blob/main/docs/omarchy-and-linux.md) |
-| Check plans and shipped changes | [Roadmap](https://github.com/blisspixel/recon/blob/main/ROADMAP.md), [changelog](https://github.com/blisspixel/recon/blob/main/CHANGELOG.md) |
-| Find architecture, security, research, or release procedures | [Full documentation index](https://github.com/blisspixel/recon/blob/main/docs/README.md) |
+| Install, update, uninstall, or troubleshoot | [Getting started](https://github.com/pueo-labs/recon/blob/main/docs/getting-started.md) |
+| Find a command or flag | [CLI reference](https://github.com/pueo-labs/recon/blob/main/docs/cli-surface.md) |
+| Build automation or hand off evidence | [JSON schema](https://github.com/pueo-labs/recon/blob/main/docs/schema.md), [review bundles](https://github.com/pueo-labs/recon/blob/main/docs/review-bundles.md) |
+| Understand results and their limits | [How it works](https://github.com/pueo-labs/recon/blob/main/docs/how-it-works.md), [limitations](https://github.com/pueo-labs/recon/blob/main/docs/limitations.md), [reporting observations](https://github.com/pueo-labs/recon/blob/main/docs/reporting-observations.md) |
+| Linux and Omarchy environment setup | [Linux / Omarchy guide](https://github.com/pueo-labs/recon/blob/main/docs/omarchy-and-linux.md) |
+| Check plans and shipped changes | [Roadmap](https://github.com/pueo-labs/recon/blob/main/ROADMAP.md), [changelog](https://github.com/pueo-labs/recon/blob/main/CHANGELOG.md) |
+| Find architecture, security, research, or release procedures | [Full documentation index](https://github.com/pueo-labs/recon/blob/main/docs/README.md) |
 
 ## Contributing and Support
 
 Catalog corrections and documented vendor patterns are especially useful.
-Start with [CONTRIBUTING.md](https://github.com/blisspixel/recon/blob/main/CONTRIBUTING.md)
+Start with [CONTRIBUTING.md](https://github.com/pueo-labs/recon/blob/main/CONTRIBUTING.md)
 for setup, verification, and contribution requirements; coding agents should
-also read [AGENTS.md](https://github.com/blisspixel/recon/blob/main/AGENTS.md).
+also read [AGENTS.md](https://github.com/pueo-labs/recon/blob/main/AGENTS.md).
 For repeatable catalog work, start with the harness-neutral
-[maintenance skill and offline example](https://github.com/blisspixel/recon/blob/main/agents/maintainer/skills/recon-catalog-maintenance/SKILL.md).
+[maintenance skill and offline example](https://github.com/pueo-labs/recon/blob/main/agents/maintainer/skills/recon-catalog-maintenance/SKILL.md).
 
-Use [issues](https://github.com/blisspixel/recon/issues) for bugs and feature
+Use [issues](https://github.com/pueo-labs/recon/issues) for bugs and feature
 requests. Keep public examples reserved and synthetic; never post evaluated
 company domains, tenant IDs, or per-domain results. See the
-[private reporting paths](https://github.com/blisspixel/recon/blob/main/docs/data-handling-policy.md#private-non-security-reports)
-and [security policy](https://github.com/blisspixel/recon/blob/main/SECURITY.md).
-Intended for [defensive use](https://github.com/blisspixel/recon/blob/main/docs/legal.md).
+[private reporting paths](https://github.com/pueo-labs/recon/blob/main/docs/data-handling-policy.md#private-non-security-reports)
+and [security policy](https://github.com/pueo-labs/recon/blob/main/SECURITY.md).
+Intended for [defensive use](https://github.com/pueo-labs/recon/blob/main/docs/legal.md).
 
 ## License
 
-[Apache 2.0](https://github.com/blisspixel/recon/blob/main/LICENSE).
+[Apache 2.0](https://github.com/pueo-labs/recon/blob/main/LICENSE).

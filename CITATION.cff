@@ -15,8 +15,8 @@ authors:
   - family-names: Seal
     given-names: Nick
     # orcid: "https://orcid.org/0000-0000-0000-0000"  # add when available
-repository-code: "https://github.com/blisspixel/recon"
-url: "https://github.com/blisspixel/recon"
+repository-code: "https://github.com/pueo-labs/recon"
+url: "https://github.com/pueo-labs/recon"
 license: Apache-2.0
 version: 2.27.0
 date-released: "2026-10-27"

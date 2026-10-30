@@ -210,7 +210,7 @@
           "description": "Public-metadata domain intelligence - Microsoft 365 / Google Workspace tenant identification, email security configuration (DMARC, DKIM, SPF, MTA-STS, BIMI), SaaS fingerprinting from DNS, certificate-transparency findings, related-domain discovery. Use when a domain name appears alongside phrases like \"what does <company> use\", \"tenant\", \"DMARC\", \"email security posture\", \"SaaS stack\", \"fingerprint\", \"passive recon\", or \"vendor diligence\". Passive in scope - never use for active scanning, port scans, credentialed access, or vulnerability checks.",
           "license": "Apache-2.0",
           "metadata": {
-            "author": "blisspixel",
+            "author": "pueo-labs",
             "version": "2.27.0"
           },
           "name": "recon"
@@ -225,7 +225,7 @@
           "description": "Triage recon fingerprint candidates across the bounded DNS catalog surface. Reads private single-domain discovery output, aggregate catalog baselines, or candidate queues, then classifies candidates as pending, promoted, rejected, or deferred under the v2.14 catalog-quality gates. Use when the user asks to find missing fingerprints, review unclassified DNS observations, or improve catalog coverage.",
           "license": "Apache-2.0",
           "metadata": {
-            "author": "blisspixel",
+            "author": "pueo-labs",
             "version": "2.27.0"
           },
           "name": "recon-fingerprint-triage"
@@ -2172,7 +2172,7 @@
       "SurfaceAttribution",
       "UnclassifiedCnameChain"
     ],
-    "id": "https://raw.githubusercontent.com/blisspixel/recon/main/docs/recon-schema.json",
+    "id": "https://raw.githubusercontent.com/pueo-labs/recon/main/docs/recon-schema.json",
     "path": "docs/recon-schema.json",
     "required_top_level_fields": [
       "tenant_id",

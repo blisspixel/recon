@@ -157,7 +157,7 @@ def test_surface_inventory_has_agent_surfaces() -> None:
         assert maintainer_skill["frontmatter"]["name"] == name
         assert "metadata" not in maintainer_skill["frontmatter"]
     portable_skill = guidance_files["agents/agent-plugin/skills/recon/SKILL.md"]["frontmatter"]
-    assert portable_skill["metadata"] == {"author": "blisspixel", "version": package_version}
+    assert portable_skill["metadata"] == {"author": "pueo-labs", "version": package_version}
     assert "allowed-tools" not in portable_skill
     assert "argument-hint" not in portable_skill
 

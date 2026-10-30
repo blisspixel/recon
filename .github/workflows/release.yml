@@ -539,6 +539,13 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Validate repository and registry namespace
+        # GitHub OIDC grants the repository owner's namespace, not the actor's.
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "pueo-labs/recon"
+          test "$(jq -r '.name' server.json)" = "io.github.${GITHUB_REPOSITORY_OWNER}/recon"
+
       - name: Install cosign
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
 

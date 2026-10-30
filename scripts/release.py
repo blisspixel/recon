@@ -316,8 +316,8 @@ def _bump_supply_chain_recipe(current: str, new: str) -> None:
     content = _SUPPLY_CHAIN_DOC.read_text(encoding="utf-8")
     replacements = (
         (
-            f"git clone --branch v{current} --single-branch https://github.com/blisspixel/recon.git recon-{current}",
-            f"git clone --branch v{new} --single-branch https://github.com/blisspixel/recon.git recon-{new}",
+            f"git clone --branch v{current} --single-branch https://github.com/pueo-labs/recon.git recon-{current}",
+            f"git clone --branch v{new} --single-branch https://github.com/pueo-labs/recon.git recon-{new}",
             1,
         ),
         (f"cd recon-{current}", f"cd recon-{new}", 1),
@@ -546,7 +546,7 @@ def _offer_release_push(new_version: str) -> None:
             f"Atomic push failed with exit code {result.returncode}; the local commit and tag were preserved"
         )
     print(f"\nTag v{new_version} pushed; publication pending. Watch the pipeline:")
-    print("  https://github.com/blisspixel/recon/actions")
+    print("  https://github.com/pueo-labs/recon/actions")
 
 
 def _run_release(*, dry: bool, prepare_only: bool = False) -> None:

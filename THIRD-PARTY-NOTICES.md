@@ -6,7 +6,7 @@ It depends on third-party open-source packages, each under its own license.
 The **authoritative, complete, machine-readable inventory** of every runtime
 dependency (direct and transitive) and its license is the CycloneDX SBOM
 (`recon-tool-<version>.cdx.json`) attached to each
-[GitHub Release](https://github.com/blisspixel/recon/releases), generated from
+[GitHub Release](https://github.com/pueo-labs/recon/releases), generated from
 the hash-pinned `uv.lock`. See [docs/supply-chain.md](docs/supply-chain.md).
 
 This file records the license obligations that warrant a human-readable notice.

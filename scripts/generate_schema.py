@@ -144,6 +144,7 @@ def build_schema(template: Mapping[str, Any]) -> dict[str, Any]:
         raise ValueError("; ".join(details))
 
     generated = dict(template)
+    generated["$id"] = "https://raw.githubusercontent.com/pueo-labs/recon/main/docs/recon-schema.json"
     generated["required"] = _ordered_required(template)
     generated["properties"] = {str(key): template_properties[key] for key in template_properties}
     definitions = copy.deepcopy(template.get("$defs", {}))

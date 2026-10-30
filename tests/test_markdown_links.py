@@ -160,21 +160,21 @@ def test_checker_validates_canonical_repository_targets(tmp_path: Path) -> None:
     source.write_text(
         "\n".join(
             (
-                "[valid](https://github.com/blisspixel/recon/blob/main/docs/guide.md#real-heading)",
-                "[missing](https://github.com/blisspixel/recon/blob/main/docs/missing.md)",
-                "[bad anchor](https://github.com/blisspixel/recon/blob/main/docs/guide.md#missing)",
-                "[escape](https://github.com/blisspixel/recon/tree/main/../outside)",
-                "[case and port](https://GITHUB.com:443/BlissPixel/ReCon/blob/main/docs/missing-case.md)",
+                "[valid](https://github.com/pueo-labs/recon/blob/main/docs/guide.md#real-heading)",
+                "[missing](https://github.com/pueo-labs/recon/blob/main/docs/missing.md)",
+                "[bad anchor](https://github.com/pueo-labs/recon/blob/main/docs/guide.md#missing)",
+                "[escape](https://github.com/pueo-labs/recon/tree/main/../outside)",
+                "[case and port](https://GITHUB.com:443/Pueo-Labs/ReCon/blob/main/docs/missing-case.md)",
             )
         ),
         encoding="utf-8",
     )
 
     assert dangling_links([source], root=tmp_path) == [
-        "README.md:2: missing link target: https://github.com/blisspixel/recon/blob/main/docs/missing.md",
-        "README.md:3: missing heading anchor: https://github.com/blisspixel/recon/blob/main/docs/guide.md#missing",
-        "README.md:4: link escapes repository: https://github.com/blisspixel/recon/tree/main/../outside",
-        "README.md:5: missing link target: https://GITHUB.com:443/BlissPixel/ReCon/blob/main/docs/missing-case.md",
+        "README.md:2: missing link target: https://github.com/pueo-labs/recon/blob/main/docs/missing.md",
+        "README.md:3: missing heading anchor: https://github.com/pueo-labs/recon/blob/main/docs/guide.md#missing",
+        "README.md:4: link escapes repository: https://github.com/pueo-labs/recon/tree/main/../outside",
+        "README.md:5: missing link target: https://GITHUB.com:443/Pueo-Labs/ReCon/blob/main/docs/missing-case.md",
     ]
 
 

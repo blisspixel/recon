@@ -49,7 +49,7 @@ class GenerationError(ValueError):
 
 
 def _release_link(path: str, version: str) -> str:
-    return f"[`{path}`](https://github.com/blisspixel/recon/blob/v{version}/{path})"
+    return f"[`{path}`](https://github.com/pueo-labs/recon/blob/v{version}/{path})"
 
 
 def _portable_output_modes(body: str) -> str:
@@ -213,7 +213,7 @@ def _portable_skill(skill_id: str, source: Path, version: str) -> bytes:
                 else ""
             )
         ),
-        "metadata": {"author": "blisspixel", "version": version},
+        "metadata": {"author": "pueo-labs", "version": version},
     }
     frontmatter = yaml.safe_dump(
         portable,
@@ -243,7 +243,7 @@ def _native_triage() -> bytes:
 
 def _readme(version: str) -> bytes:
     declaration_url = (
-        f"https://github.com/blisspixel/recon/blob/v{version}/docs/agent-portability-evaluation-declaration.md"
+        f"https://github.com/pueo-labs/recon/blob/v{version}/docs/agent-portability-evaluation-declaration.md"
     )
     text = f"""\
     # recon Agent Plugins candidate
@@ -336,9 +336,9 @@ def rendered_files() -> dict[Path, bytes]:
         "name": "recon",
         "version": version,
         "description": "Public-metadata domain intelligence through the recon MCP server and portable skills.",
-        "author": {"name": "blisspixel", "url": "https://github.com/blisspixel"},
-        "homepage": "https://github.com/blisspixel/recon",
-        "repository": "https://github.com/blisspixel/recon",
+        "author": {"name": "pueo-labs", "url": "https://github.com/pueo-labs"},
+        "homepage": "https://github.com/pueo-labs/recon",
+        "repository": "https://github.com/pueo-labs/recon",
         "license": "Apache-2.0",
         "keywords": ["recon", "dns", "domain-intelligence", "mcp", "agent-skills"],
     }

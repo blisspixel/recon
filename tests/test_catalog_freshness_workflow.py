@@ -108,7 +108,7 @@ def test_proposal_claim_serializes_rule_intents_and_requires_remote_resolution(t
     assert created
     assert freshness.claim_proposal(tmp_path, second) == (False, claim)
     freshness.resolve_proposal(
-        tmp_path, claim, pr_url="https://github.com/blisspixel/recon/pull/274", conclusion="merged"
+        tmp_path, claim, pr_url="https://github.com/pueo-labs/recon/pull/274", conclusion="merged"
     )
     assert freshness.claim_proposal(tmp_path, first) == (False, claim)
     created_second, claim_second = freshness.claim_proposal(tmp_path, second)

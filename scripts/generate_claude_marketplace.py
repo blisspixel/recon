@@ -14,8 +14,8 @@ ROOT = Path(__file__).resolve().parents[1]
 MARKETPLACE_PATH = Path(".claude-plugin") / "marketplace.json"
 PLUGIN_MANIFEST = Path("agents/claude-code/.claude-plugin/plugin.json")
 
-MARKETPLACE_NAME = "blisspixel-recon"
-OWNER_NAME = "blisspixel"
+MARKETPLACE_NAME = "pueo-labs-recon"
+OWNER_NAME = "pueo-labs"
 PLUGIN_NAME = "recon"
 PLUGIN_SOURCE = "./agents/claude-code"
 DESCRIPTION = "Public-metadata domain intelligence: recon MCP server plus usage and triage skills."

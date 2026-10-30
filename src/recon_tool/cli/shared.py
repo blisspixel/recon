@@ -37,7 +37,7 @@ _BLOCK_INDENT = 8
 _MIN_HANGING_DETAIL = 24
 
 
-_ENCRYPTED_DNS_GUIDE = "https://github.com/blisspixel/recon/blob/main/docs/getting-started.md#encrypted-dns"
+_ENCRYPTED_DNS_GUIDE = "https://github.com/pueo-labs/recon/blob/main/docs/getting-started.md#encrypted-dns"
 
 
 def cli_collection_context() -> AbstractContextManager[None]:

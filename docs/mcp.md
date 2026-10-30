@@ -283,7 +283,7 @@ the title is absent. `name` values stay the stable contract.
 
 On mcp 2.0.0 and newer, `server/discover` and the initialize `serverInfo`
 carry `title` `recon`, the one-line package description, and `websiteUrl`
-`https://github.com/blisspixel/recon`. recon publishes no icon. The v1.28.1
+`https://github.com/pueo-labs/recon`. recon publishes no icon. The v1.28.1
 rollback pin forwards `websiteUrl` and the tool, resource, and prompt titles.
 Its constructor has no server title or description parameter, so initialize
 on that pin omits those two fields.
@@ -706,7 +706,7 @@ to disk or sharing data and disappear when the server exits.
 
 | Client | Config file location |
 |--------|---------------------|
-| Claude Code | Released MCP path: `recon mcp install --client=claude-code`. Marketplace plugin path: `claude plugin marketplace add blisspixel/recon`, then `claude plugin install recon@blisspixel-recon`. The plugin still launches `recon` from PATH. |
+| Claude Code | Released MCP path: `recon mcp install --client=claude-code`. Marketplace plugin path: `claude plugin marketplace add pueo-labs/recon`, then `claude plugin install recon@pueo-labs-recon`. The plugin still launches `recon` from PATH. |
 | Claude Desktop | `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) |
 | Cursor | `.cursor/mcp.json` in your project or `~/.cursor/mcp.json` globally |
 | VS Code + Copilot | `.vscode/mcp.json` in a workspace, or `mcp.json` in the active user profile |
@@ -728,14 +728,18 @@ registration from also running `recon mcp install` are covered under
 [Client approval policy](#client-approval-policy).
 
 The MCP Registry entry is metadata for clients that install from an index.
-`server.json` names `io.github.blisspixel/recon` and declares
+`server.json` names `io.github.pueo-labs/recon` and declares
 `uvx --from recon-tool recon mcp`. That command runs the `recon` console
 script from the `recon-tool` package. A client that inserts the package
 identifier between the runtime arguments and the package arguments builds
 a different command, so that insertion does not match this entry.
 `recon mcp install` remains the interpreter-bound path. The Registry
 record points at the PyPI release. It is not a second build, and the
-Registry is preview.
+Registry is preview. The organization entry is prepared, not yet published:
+the existing v2.27.0 package still identifies `io.github.blisspixel/recon`.
+Follow the [repository transfer checklist](release-process.md#repository-transfer-checklist)
+for the next authorized release and old-entry deprecation. Existing marketplace
+users should follow the [marketplace migration](../agents/claude-code/README.md#marketplace-migration).
 
 Per-agent install scaffolds (config snippets + guidance templates) live under [`agents/`](../agents/), one folder per client.
 
